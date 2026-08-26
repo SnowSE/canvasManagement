@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { resolveRelativeMdHrefsInHtml } from "./urlUtils";
-import { markdownToHtmlNoImages } from "./htmlMarkdownUtils";
+import {
+  canvasPageSlug,
+  resolveRelativeMdHrefsForCanvas,
+  resolveRelativeMdHrefsInHtml,
+} from "./urlUtils";
+import { LocalCourseSettings } from "@/features/local/course/localCourseSettings";
+import { markdownToHtmlNoImages, markdownToHTMLSafe } from "./htmlMarkdownUtils";
 
 describe("resolveRelativeMdHrefsInHtml", () => {
   it("rewrites a relative page link to the in-app module item route", () => {
@@ -61,6 +66,66 @@ describe("resolveRelativeMdHrefsInHtml", () => {
     );
     expect(html).toContain(
       'href="/course/distributed/modules/01%20Chaos%20KV/page/KV%20Wire%20Protocol%20Spec"'
+    );
+  });
+});
+
+describe("resolveRelativeMdHrefsForCanvas", () => {
+  it("rewrites a relative page link to the canvas page slug url", () => {
+    const html = resolveRelativeMdHrefsForCanvas(
+      markdownToHtmlNoImages(
+        "Read the [KV Wire Protocol Spec](../pages/KV%20Wire%20Protocol%20Spec.md) first"
+      ),
+      1254132
+    );
+    expect(html).toContain(
+      'href="https://snow.instructure.com/courses/1254132/pages/kv-wire-protocol-spec"'
+    );
+  });
+
+  it("slugifies titles the way canvas does", () => {
+    expect(canvasPageSlug("KV Wire Protocol Spec")).toBe("kv-wire-protocol-spec");
+    expect(canvasPageSlug("W01: Single-Node KV Store!")).toBe(
+      "w01-single-node-kv-store"
+    );
+    expect(canvasPageSlug("Tips & Tricks")).toBe("tips-and-tricks");
+  });
+
+  it("resolves assignment and quiz links through the canvas ids", () => {
+    const html =
+      '<a href="../assignments/W01%20Single-Node%20KV%20Store.md">hw</a> ' +
+      '<a href="../../02%20Raft/quizzes/W03%20Reading%20Quiz.md">quiz</a>';
+    const result = resolveRelativeMdHrefsForCanvas(html, 1254132, {
+      assignments: [{ name: "W01 Single-Node KV Store", id: 555 }],
+      quizzes: [{ title: "W03 Reading Quiz", id: 777 }],
+    });
+    expect(result).toContain(
+      'href="https://snow.instructure.com/courses/1254132/assignments/555"'
+    );
+    expect(result).toContain(
+      'href="https://snow.instructure.com/courses/1254132/quizzes/777"'
+    );
+  });
+
+  it("leaves assignment and quiz links alone when the target is not in canvas yet", () => {
+    const html =
+      '<a href="../assignments/W01%20Single-Node%20KV%20Store.md">hw</a>';
+    expect(resolveRelativeMdHrefsForCanvas(html, 1)).toBe(html);
+    expect(
+      resolveRelativeMdHrefsForCanvas(html, 1, {
+        assignments: [{ name: "Other", id: 1 }],
+      })
+    ).toBe(html);
+  });
+
+  it("is applied by markdownToHTMLSafe", () => {
+    const html = markdownToHTMLSafe({
+      markdownString: "[spec](../pages/KV%20Wire%20Protocol%20Spec.md)",
+      settings: { canvasId: 42, assets: [] } as unknown as LocalCourseSettings,
+      convertImages: false,
+    });
+    expect(html).toContain(
+      'href="https://snow.instructure.com/courses/42/pages/kv-wire-protocol-spec"'
     );
   });
 });

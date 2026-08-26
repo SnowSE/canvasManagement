@@ -5,6 +5,7 @@ import { rateLimitAwareDelete, rateLimitAwarePost } from "./canvasWebRequestUtil
 import { LocalCourseSettings } from "@/features/local/course/localCourseSettings";
 import { axiosClient } from "@/services/axiosUtils";
 import { markdownToHTMLSafe } from "@/services/htmlMarkdownUtils";
+import { CanvasLinkTargets } from "@/services/urlUtils";
 
 export const canvasPageService = {
   async getAll(courseId: number): Promise<CanvasPage[]> {
@@ -29,14 +30,19 @@ export const canvasPageService = {
   async create(
     canvasCourseId: number,
     page: LocalCoursePage,
-    settings: LocalCourseSettings
+    settings: LocalCourseSettings,
+    canvasLinkTargets?: CanvasLinkTargets
   ): Promise<CanvasPage> {
     console.log(`Creating course page: ${page.name}`);
     const url = `${canvasApi}/courses/${canvasCourseId}/pages`;
     const body = {
       wiki_page: {
         title: page.name,
-        body: markdownToHTMLSafe({ markdownString: page.text, settings }),
+        body: markdownToHTMLSafe({
+          markdownString: page.text,
+          settings,
+          canvasLinkTargets,
+        }),
       },
     };
 
@@ -51,14 +57,19 @@ export const canvasPageService = {
     courseId: number,
     canvasPageId: number,
     page: LocalCoursePage,
-    settings: LocalCourseSettings
+    settings: LocalCourseSettings,
+    canvasLinkTargets?: CanvasLinkTargets
   ): Promise<void> {
     console.log(`Updating course page: ${page.name}`);
     const url = `${canvasApi}/courses/${courseId}/pages/${canvasPageId}`;
     const body = {
       wiki_page: {
         title: page.name,
-        body: markdownToHTMLSafe({ markdownString: page.text, settings }),
+        body: markdownToHTMLSafe({
+          markdownString: page.text,
+          settings,
+          canvasLinkTargets,
+        }),
       },
     };
     await axiosClient.put(url, body);

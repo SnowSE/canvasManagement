@@ -8,6 +8,7 @@ import { useLocalCourseSettingsQuery } from "@/features/local/course/localCourse
 import { canvasModuleService } from "../services/canvasModuleService";
 import { canvasAssignmentService } from "../services/canvasAssignmentService";
 import toast from "react-hot-toast";
+import { useCanvasLinkTargets } from "./useCanvasLinkTargets";
 
 export const canvasAssignmentKeys = {
   assignments: (canvasCourseId: number) =>
@@ -28,6 +29,7 @@ export const useAddAssignmentToCanvasMutation = () => {
   const { data: canvasModules } = useCanvasModulesQuery();
   const addModule = useAddCanvasModuleMutation();
   const queryClient = useQueryClient();
+  const canvasLinkTargets = useCanvasLinkTargets();
 
   return useMutation({
     mutationFn: async ({
@@ -51,6 +53,7 @@ export const useAddAssignmentToCanvasMutation = () => {
         assignment,
         settings,
         assignmentGroup?.canvasId,
+        canvasLinkTargets,
       );
       const canvasModule = canvasModules.find((c) => c.name === moduleName);
       const moduleId = canvasModule
@@ -80,6 +83,7 @@ export const useAddAssignmentToCanvasMutation = () => {
 export const useUpdateAssignmentInCanvasMutation = () => {
   const { data: settings } = useLocalCourseSettingsQuery();
   const queryClient = useQueryClient();
+  const canvasLinkTargets = useCanvasLinkTargets();
 
   return useMutation({
     mutationFn: async ({
@@ -98,6 +102,7 @@ export const useUpdateAssignmentInCanvasMutation = () => {
         assignment,
         settings,
         assignmentGroup?.canvasId,
+        canvasLinkTargets,
       );
     },
     onSuccess: () => {

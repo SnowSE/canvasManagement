@@ -3,7 +3,8 @@
 import { axiosClient } from "@/services/axiosUtils";
 import { AxiosResponseHeaders, RawAxiosResponseHeaders } from "axios";
 
-export const baseCanvasUrl = "https://snow.instructure.com";
+import { baseCanvasUrl } from "@/services/urlUtils";
+export { baseCanvasUrl };
 export const canvasApi = baseCanvasUrl + "/api/v1";
 
 const getNextUrl = (

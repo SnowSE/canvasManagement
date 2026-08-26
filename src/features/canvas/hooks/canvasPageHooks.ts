@@ -7,6 +7,7 @@ import {
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import { canvasModuleService } from "../services/canvasModuleService";
 import { canvasPageService } from "../services/canvasPageService";
+import { useCanvasLinkTargets } from "./useCanvasLinkTargets";
 
 export const canvasPageKeys = {
   pagesInCourse: (courseCanvasId: number) => [
@@ -29,6 +30,7 @@ export const useCreateCanvasPageMutation = () => {
   const queryClient = useQueryClient();
   const { data: canvasModules } = useCanvasModulesQuery();
   const addModule = useAddCanvasModuleMutation();
+  const canvasLinkTargets = useCanvasLinkTargets();
 
   return useMutation({
     mutationFn: async ({
@@ -45,7 +47,8 @@ export const useCreateCanvasPageMutation = () => {
       const canvasPage = await canvasPageService.create(
         settings.canvasId,
         page,
-        settings
+        settings,
+        canvasLinkTargets
       );
 
       const canvasModule = canvasModules.find((c) => c.name === moduleName);
@@ -72,6 +75,7 @@ export const useCreateCanvasPageMutation = () => {
 export const useUpdateCanvasPageMutation = () => {
   const { data: settings } = useLocalCourseSettingsQuery();
   const queryClient = useQueryClient();
+  const canvasLinkTargets = useCanvasLinkTargets();
   return useMutation({
     mutationFn: async ({
       page,
@@ -80,7 +84,13 @@ export const useUpdateCanvasPageMutation = () => {
       page: LocalCoursePage;
       canvasPageId: number;
     }) =>
-      canvasPageService.update(settings.canvasId, canvasPageId, page, settings),
+      canvasPageService.update(
+        settings.canvasId,
+        canvasPageId,
+        page,
+        settings,
+        canvasLinkTargets
+      ),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: canvasPageKeys.pagesInCourse(settings.canvasId),

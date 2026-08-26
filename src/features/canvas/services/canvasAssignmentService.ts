@@ -8,6 +8,7 @@ import { getRubricCriterion } from "./canvasRubricUtils";
 import { LocalCourseSettings } from "@/features/local/course/localCourseSettings";
 import { axiosClient } from "@/services/axiosUtils";
 import { markdownToHTMLSafe } from "@/services/htmlMarkdownUtils";
+import { CanvasLinkTargets } from "@/services/urlUtils";
 import { getClassroomReplaceText } from "@/features/local/classroom50/classroom50UrlUtils";
 import { rateLimitAwarePost } from "./canvasWebRequestUtils";
 
@@ -29,7 +30,8 @@ export const canvasAssignmentService = {
     canvasCourseId: number,
     localAssignment: LocalAssignment,
     settings: LocalCourseSettings,
-    canvasAssignmentGroupId?: number
+    canvasAssignmentGroupId?: number,
+    canvasLinkTargets?: CanvasLinkTargets
   ) {
     console.log(`Creating assignment: ${localAssignment.name}`);
     const url = `${canvasApi}/courses/${canvasCourseId}/assignments`;
@@ -41,6 +43,7 @@ export const canvasAssignmentService = {
         settings,
         strict: true,
       }),
+      canvasLinkTargets,
     });
 
     const body = {
@@ -78,7 +81,8 @@ export const canvasAssignmentService = {
     canvasAssignmentId: number,
     localAssignment: LocalAssignment,
     settings: LocalCourseSettings,
-    canvasAssignmentGroupId?: number
+    canvasAssignmentGroupId?: number,
+    canvasLinkTargets?: CanvasLinkTargets
   ) {
     console.log(`Updating assignment: ${localAssignment.name}`);
     const url = `${canvasApi}/courses/${courseId}/assignments/${canvasAssignmentId}`;
@@ -99,6 +103,7 @@ export const canvasAssignmentService = {
             settings,
             strict: true,
           }),
+          canvasLinkTargets,
         }),
         due_at: getDateFromString(localAssignment.dueAt)?.toISOString(),
         lock_at:

@@ -4,6 +4,7 @@ import DOMPurify from "isomorphic-dompurify";
 import markedKatex from "marked-katex-extension";
 import pako from "pako";
 import { LocalCourseSettings } from "@/features/local/course/localCourseSettings";
+import { CanvasLinkTargets, resolveRelativeMdHrefsForCanvas } from "./urlUtils";
 
 const mermaidExtension = {
   name: "mermaid",
@@ -111,13 +112,20 @@ export function markdownToHTMLSafe({
   settings,
   convertImages = true,
   replaceText = [],
+  canvasLinkTargets,
 }: {
   markdownString: string;
   settings: LocalCourseSettings;
   convertImages?: boolean;
   replaceText?: { source: string; destination: string; strict?: boolean }[];
+  // canvas assignments/quizzes, used to resolve relative .md links to them
+  canvasLinkTargets?: CanvasLinkTargets;
 }) {
-  const html = markdownToHtmlNoImages(markdownString);
+  const html = resolveRelativeMdHrefsForCanvas(
+    markdownToHtmlNoImages(markdownString),
+    settings.canvasId,
+    canvasLinkTargets
+  );
   const replacedHtml = replaceText.reduce(
     (acc, { source, destination, strict = false }) => {
       if (strict && acc.includes(source)) {

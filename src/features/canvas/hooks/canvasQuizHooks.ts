@@ -7,6 +7,7 @@ import { LocalQuiz } from "@/features/local/quizzes/models/localQuiz";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import { canvasModuleService } from "../services/canvasModuleService";
 import { canvasQuizService } from "../services/canvasQuizService";
+import { useCanvasLinkTargets } from "./useCanvasLinkTargets";
 
 export const canvasQuizKeys = {
   quizzes: (canvasCourseId: number) =>
@@ -27,6 +28,7 @@ export const useAddQuizToCanvasMutation = () => {
   const queryClient = useQueryClient();
   const { data: canvasModules } = useCanvasModulesQuery();
   const addModule = useAddCanvasModuleMutation();
+  const canvasLinkTargets = useCanvasLinkTargets();
 
   return useMutation({
     mutationFn: async ({
@@ -47,7 +49,8 @@ export const useAddQuizToCanvasMutation = () => {
         settings.canvasId,
         quiz,
         settings,
-        assignmentGroup?.canvasId
+        assignmentGroup?.canvasId,
+        canvasLinkTargets
       );
 
       const canvasModule = canvasModules.find((c) => c.name === moduleName);

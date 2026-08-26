@@ -14,6 +14,7 @@ import {
 import { markdownToHTMLSafe } from "@/services/htmlMarkdownUtils";
 import { getClassroomReplaceText } from "@/features/local/classroom50/classroom50UrlUtils";
 import { htmlIsCloseEnough } from "@/services/utils/htmlIsCloseEnough";
+import { CanvasLinkTargets } from "@/services/urlUtils";
 
 export type ItemSyncStatus = {
   status: "localOnly" | "incomplete" | "published";
@@ -112,6 +113,7 @@ function checkAssignment(
   assignment: LocalAssignment,
   canvasAssignment: CanvasAssignment,
   settings: LocalCourseSettings,
+  canvasLinkTargets?: CanvasLinkTargets,
 ): ItemSyncStatus | null {
   if (assignment.unlockAt && !canvasAssignment.unlock_at)
     return { status: "incomplete", message: "unlock date not in canvas" };
@@ -151,6 +153,7 @@ function checkAssignment(
         markdownString: assignment.description,
         settings,
         replaceText: getClassroomReplaceText({ assignment, settings }),
+        canvasLinkTargets,
       }),
       canvasAssignment.description,
     );
@@ -174,11 +177,13 @@ export function getSyncStatus({
   canvasItem,
   type,
   settings,
+  canvasLinkTargets,
 }: {
   item: LocalQuiz | LocalAssignment | LocalCoursePage;
   canvasItem: CanvasQuiz | CanvasAssignment | CanvasPage | undefined;
   type: "assignment" | "page" | "quiz";
   settings: LocalCourseSettings;
+  canvasLinkTargets?: CanvasLinkTargets;
 }): ItemSyncStatus {
   if (!canvasItem) return { status: "localOnly", message: "not in canvas" };
 
@@ -195,6 +200,7 @@ export function getSyncStatus({
       item as LocalAssignment,
       canvasItem as CanvasAssignment,
       settings,
+      canvasLinkTargets,
     );
   }
 

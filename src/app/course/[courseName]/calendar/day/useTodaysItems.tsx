@@ -50,6 +50,10 @@ export function useTodaysItems(day: string) {
               canvasItem: canvasAssignment,
               type: "assignment",
               settings,
+              canvasLinkTargets: {
+                assignments: canvasAssignments,
+                quizzes: canvasQuizzes,
+              },
             }),
           };
         }),

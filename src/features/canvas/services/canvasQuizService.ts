@@ -10,6 +10,7 @@ import {
 } from "@/features/local/quizzes/models/localQuizQuestion";
 import { LocalCourseSettings } from "@/features/local/course/localCourseSettings";
 import { markdownToHTMLSafe } from "@/services/htmlMarkdownUtils";
+import { CanvasLinkTargets } from "@/services/urlUtils";
 import { escapeMatchingText } from "@/services/utils/questionHtmlUtils";
 import {
   rateLimitAwareDelete,
@@ -318,7 +319,8 @@ export const canvasQuizService = {
     canvasCourseId: number,
     localQuiz: LocalQuiz,
     settings: LocalCourseSettings,
-    canvasAssignmentGroupId?: number
+    canvasAssignmentGroupId?: number,
+    canvasLinkTargets?: CanvasLinkTargets
   ) {
     console.log("Creating quiz", localQuiz);
 
@@ -330,6 +332,7 @@ export const canvasQuizService = {
         description: markdownToHTMLSafe({
           markdownString: localQuiz.description,
           settings,
+          canvasLinkTargets,
         }),
         shuffle_answers: localQuiz.shuffleAnswers,
         access_code: localQuiz.password,

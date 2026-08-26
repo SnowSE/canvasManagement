@@ -8,20 +8,23 @@ import { LocalCoursePage } from "@/features/local/pages/localCoursePageModels";
 import { LocalQuiz } from "@/features/local/quizzes/models/localQuiz";
 import { LocalCourseSettings } from "@/features/local/course/localCourseSettings";
 import { getSyncStatus } from "./getAssignmentSyncStatus";
+import { CanvasLinkTargets } from "@/services/urlUtils";
 
 export const getStatus = ({
   item,
   canvasItem,
   type,
   settings,
+  canvasLinkTargets,
 }: {
   item: LocalQuiz | LocalAssignment | LocalCoursePage;
   canvasItem?: CanvasQuiz | CanvasAssignment | CanvasPage;
   type: "assignment" | "page" | "quiz";
   settings: LocalCourseSettings;
+  canvasLinkTargets?: CanvasLinkTargets;
 }): {
   status: "localOnly" | "incomplete" | "published";
   message: ReactNode;
 } => {
-  return getSyncStatus({ item, canvasItem, type, settings });
+  return getSyncStatus({ item, canvasItem, type, settings, canvasLinkTargets });
 };
