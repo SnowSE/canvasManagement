@@ -65,6 +65,50 @@ description`;
     expect(quiz.description.trim()).toBe(expectedDescription.trim());
   });
 
+  it("can parse markdown quiz with unlock date and round trip it", () => {
+    const name = "Test Quiz";
+    const rawMarkdownQuiz = `
+ShuffleAnswers: true
+OneQuestionAtATime: false
+DueAt: 08/21/2023 23:59:00
+UnlockAt: 08/14/2023 00:00:00
+LockAt: 08/21/2023 23:59:00
+AssignmentGroup: Assignments
+AllowedAttempts: -1
+Description: this is the description
+---
+`;
+
+    const quiz = quizMarkdownUtils.parseMarkdown(rawMarkdownQuiz, name);
+
+    expect(quiz.unlockAt).toBe("08/14/2023 00:00:00");
+    expect(quiz.lockAt).toBe("08/21/2023 23:59:00");
+
+    const markdown = quizMarkdownUtils.toMarkdown(quiz);
+    const reparsed = quizMarkdownUtils.parseMarkdown(markdown, name);
+    expect(reparsed.unlockAt).toBe("08/14/2023 00:00:00");
+    expect(reparsed.lockAt).toBe("08/21/2023 23:59:00");
+  });
+
+  it("does not confuse UnlockAt with LockAt when lock date is missing", () => {
+    const name = "Test Quiz";
+    const rawMarkdownQuiz = `
+UnlockAt: 08/14/2023 00:00:00
+ShuffleAnswers: true
+OneQuestionAtATime: false
+DueAt: 08/21/2023 23:59:00
+AssignmentGroup: Assignments
+AllowedAttempts: -1
+Description: this is the description
+---
+`;
+
+    const quiz = quizMarkdownUtils.parseMarkdown(rawMarkdownQuiz, name);
+
+    expect(quiz.unlockAt).toBe("08/14/2023 00:00:00");
+    expect(quiz.lockAt).toBeUndefined();
+  });
+
   it("can parse markdown quiz with password", () => {
     const password = "this-is-the-password";
     const name = "Test Quiz";

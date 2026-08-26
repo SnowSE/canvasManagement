@@ -28,6 +28,10 @@ export default function QuizPreview({
         </div>
       </div>
       <div className="columns-2">
+        <div className="text-end">Unlock At</div>
+        <div>{quiz.unlockAt}</div>
+      </div>
+      <div className="columns-2">
         <div className="text-end">Due Date</div>
         <div>{quiz.dueAt}</div>
       </div>

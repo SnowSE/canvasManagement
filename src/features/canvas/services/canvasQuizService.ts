@@ -283,6 +283,9 @@ export const canvasQuizService = {
         lock_at: quiz.lock_at
           ? new Date(quiz.lock_at).toLocaleString()
           : undefined,
+        unlock_at: quiz.unlock_at
+          ? new Date(quiz.unlock_at).toLocaleString()
+          : undefined,
       }));
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
@@ -343,6 +346,12 @@ export const canvasQuizService = {
         lock_at: localQuiz.lockAt
           ? getDateFromStringOrThrow(
               localQuiz.lockAt,
+              "creating quiz"
+            ).toISOString()
+          : undefined,
+        unlock_at: localQuiz.unlockAt
+          ? getDateFromStringOrThrow(
+              localQuiz.unlockAt,
               "creating quiz"
             ).toISOString()
           : undefined,

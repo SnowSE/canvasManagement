@@ -9,6 +9,10 @@ export const zodLocalQuiz = z.object({
     .string()
     .optional()
     .describe("Password required to access the quiz"),
+  unlockAt: z
+    .string()
+    .optional()
+    .describe("Date and time when the quiz becomes available (MM/DD/YYYY HH:MM:SS)"),
   lockAt: z.string().optional(),
   dueAt: z.string(),
   shuffleAnswers: z.boolean(),

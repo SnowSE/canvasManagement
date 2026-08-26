@@ -49,6 +49,11 @@ export const prepQuizForNewSemester = (
       oldSemesterStartDate,
       newSemesterStartDate
     ),
+    unlockAt: newDateOffset(
+      quiz.unlockAt,
+      oldSemesterStartDate,
+      newSemesterStartDate
+    ),
   };
 };
 

@@ -97,6 +97,9 @@ function checkQuiz(
   quiz: LocalQuiz,
   canvasQuiz: CanvasQuiz,
 ): ItemSyncStatus | null {
+  if (quiz.unlockAt && !canvasQuiz.unlock_at)
+    return { status: "incomplete", message: "unlock date not in canvas" };
+
   return checkDueDateAndLock(
     quiz.dueAt,
     quiz.lockAt,

@@ -135,6 +135,11 @@ export function useItemDropOnDay({
             previousQuiz.lockAt,
             dayAsDate
           ),
+          unlockAt: getNewLockDate(
+            previousQuiz.dueAt,
+            previousQuiz.unlockAt,
+            dayAsDate
+          ),
         };
         updateQuizMutation.mutate({
           quiz,

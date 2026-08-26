@@ -7,7 +7,8 @@ import { quizQuestionMarkdownUtils } from "./quizQuestionMarkdownUtils";
 import { FeedbackDelimiters } from "./quizFeedbackMarkdownUtils";
 
 const extractLabelValue = (input: string, label: string): string => {
-  const pattern = new RegExp(`${label}: (.*?)\n`);
+  // anchored to line start so "LockAt" cannot match inside "UnlockAt"
+  const pattern = new RegExp(`^${label}: (.*?)\n`, "m");
   const match = pattern.exec(input);
   return match ? match[1].trim() : "";
 };
@@ -81,6 +82,9 @@ const getQuizWithOnlySettings = (settings: string, name: string): LocalQuiz => {
   const rawLockAt = extractLabelValue(settings, "LockAt");
   const lockAt = verifyDateStringOrUndefined(rawLockAt);
 
+  const rawUnlockAt = extractLabelValue(settings, "UnlockAt");
+  const unlockAt = verifyDateStringOrUndefined(rawUnlockAt);
+
   const description = extractDescription(settings);
   const localAssignmentGroupName = extractLabelValue(
     settings,
@@ -91,6 +95,7 @@ const getQuizWithOnlySettings = (settings: string, name: string): LocalQuiz => {
     name,
     description,
     password,
+    unlockAt,
     lockAt,
     dueAt,
     shuffleAnswers,
@@ -121,7 +126,8 @@ export const quizMarkdownUtils = {
     const questionDelimiter = "\n\n---\n\n";
     const questionMarkdown = questionMarkdownArray.join(questionDelimiter);
 
-    return `LockAt: ${quiz.lockAt ?? ""}
+    return `UnlockAt: ${quiz.unlockAt ?? ""}
+LockAt: ${quiz.lockAt ?? ""}
 DueAt: ${quiz.dueAt}
 Password: ${quiz.password ?? ""}
 ShuffleAnswers: ${quiz.shuffleAnswers.toString().toLowerCase()}
