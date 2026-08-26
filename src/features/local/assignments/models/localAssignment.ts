@@ -11,6 +11,7 @@ import { z } from "zod";
 export interface LocalAssignment extends IModuleItem {
   name: string;
   description: string;
+  unlockAt?: string; // 08/21/2023 23:59:00
   lockAt?: string; // 08/21/2023 23:59:00
   dueAt: string; // 08/21/2023 23:59:00
   localAssignmentGroupName?: string;
@@ -23,6 +24,12 @@ export interface LocalAssignment extends IModuleItem {
 export const zodLocalAssignment = z.object({
   name: z.string(),
   description: z.string(),
+  unlockAt: z
+    .string()
+    .optional()
+    .describe(
+      "Date and time when the assignment becomes available (MM/DD/YYYY HH:MM:SS)"
+    ),
   lockAt: z
     .string()
     .optional()

@@ -55,6 +55,7 @@ const parseRatingFromMarkdown = (rawMarkdown: string): RubricRating => {
 };
 
 const parseSettings = (input: string) => {
+  const rawUnlockAt = extractLabelValue(input, "UnlockAt");
   const rawLockAt = extractLabelValue(input, "LockAt");
   const rawDueAt = extractLabelValue(input, "DueAt");
   const assignmentGroupName = extractLabelValue(input, "AssignmentGroupName");
@@ -64,12 +65,14 @@ const parseSettings = (input: string) => {
 
   const dueAt = verifyDateOrThrow(rawDueAt, "DueAt");
   const lockAt = verifyDateStringOrUndefined(rawLockAt);
+  const unlockAt = verifyDateStringOrUndefined(rawUnlockAt);
 
   return {
     assignmentGroupName,
     submissionTypes,
     fileUploadExtensions,
     dueAt,
+    unlockAt,
     lockAt,
     classroom50Slug,
   };
@@ -149,6 +152,7 @@ export const assignmentMarkdownParser = {
       submissionTypes,
       fileUploadExtensions,
       dueAt,
+      unlockAt,
       lockAt,
       classroom50Slug,
     } = parseSettings(settingsString);
@@ -169,6 +173,7 @@ export const assignmentMarkdownParser = {
       submissionTypes: submissionTypes,
       allowedFileUploadExtensions: fileUploadExtensions,
       dueAt: dueAt,
+      unlockAt: unlockAt,
       lockAt: lockAt,
       rubric: rubric,
       description: description,

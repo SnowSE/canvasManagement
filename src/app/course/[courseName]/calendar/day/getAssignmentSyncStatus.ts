@@ -113,6 +113,9 @@ function checkAssignment(
   canvasAssignment: CanvasAssignment,
   settings: LocalCourseSettings,
 ): ItemSyncStatus | null {
+  if (assignment.unlockAt && !canvasAssignment.unlock_at)
+    return { status: "incomplete", message: "unlock date not in canvas" };
+
   const dueLockStatus = checkDueDateAndLock(
     assignment.dueAt,
     assignment.lockAt,

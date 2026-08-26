@@ -31,6 +31,55 @@ describe("AssignmentMarkdownTests", () => {
     expect(parsedAssignment).toEqual(assignment);
   });
 
+  it("assignment with unlockAt date can round trip", () => {
+    const name = "test assignment";
+    const assignment: LocalAssignment = {
+      name,
+      description: "here is the description",
+      dueAt: "08/21/2023 23:59:00",
+      unlockAt: "08/14/2023 00:00:00",
+      lockAt: "08/21/2023 23:59:00",
+      submissionTypes: [AssignmentSubmissionType.ONLINE_UPLOAD],
+      localAssignmentGroupName: "Final Project",
+      rubric: [{ points: 4, label: "do task 1" }],
+      allowedFileUploadExtensions: [],
+    };
+
+    const assignmentMarkdown =
+      assignmentMarkdownSerializer.toMarkdown(assignment);
+    const parsedAssignment = assignmentMarkdownParser.parseMarkdown(
+      assignmentMarkdown,
+      name
+    );
+
+    expect(parsedAssignment).toEqual(assignment);
+  });
+
+  it("does not confuse UnlockAt with LockAt when lock date is missing", () => {
+    const name = "test assignment";
+    const rawMarkdown = `UnlockAt: 08/14/2023 00:00:00
+DueAt: 08/21/2023 23:59:00
+AssignmentGroupName: Final Project
+SubmissionTypes:
+- online_upload
+AllowedFileUploadExtensions:
+---
+
+here is the description
+
+## Rubric
+
+- 4pts: do task 1`;
+
+    const parsedAssignment = assignmentMarkdownParser.parseMarkdown(
+      rawMarkdown,
+      name
+    );
+
+    expect(parsedAssignment.unlockAt).toBe("08/14/2023 00:00:00");
+    expect(parsedAssignment.lockAt).toBeUndefined();
+  });
+
   it("assignment with empty rubric can be parsed", () => {
     const name = "test assignment";
     const assignment: LocalAssignment = {

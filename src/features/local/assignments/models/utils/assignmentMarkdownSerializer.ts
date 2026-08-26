@@ -21,6 +21,8 @@ const settingsToMarkdown = (assignment: LocalAssignment) => {
   const printableDueDate = assignment.dueAt.toString().replace("\u202F", " ");
   const printableLockAt =
     assignment.lockAt?.toString().replace("\u202F", " ") || "";
+  const printableUnlockAt =
+    assignment.unlockAt?.toString().replace("\u202F", " ") || "";
 
   const submissionTypesMarkdown = assignment.submissionTypes
     .map((submissionType: AssignmentSubmissionType) => `- ${submissionType}`)
@@ -32,6 +34,7 @@ const settingsToMarkdown = (assignment: LocalAssignment) => {
       .join("\n");
 
   const settingsMarkdownArr = [
+    `UnlockAt: ${printableUnlockAt}`,
     `LockAt: ${printableLockAt}`,
     `DueAt: ${printableDueDate}`,
     `AssignmentGroupName: ${assignment.localAssignmentGroupName}`,

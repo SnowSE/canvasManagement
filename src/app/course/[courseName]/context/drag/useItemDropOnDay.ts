@@ -187,6 +187,11 @@ export function useItemDropOnDay({
             previousAssignment.lockAt,
             dayAsDate
           ),
+          unlockAt: getNewLockDate(
+            previousAssignment.dueAt,
+            previousAssignment.unlockAt,
+            dayAsDate
+          ),
         };
         updateAssignmentMutation.mutate({
           assignment,

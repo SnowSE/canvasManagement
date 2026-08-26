@@ -44,6 +44,13 @@ export default function AssignmentPreview({
     <div className="h-full overflow-y-auto ">
       <section>
         <div className="flex">
+          <div className="flex-1 text-end pe-3">Unlock Date</div>
+          <div className="flex-1">
+            {assignment.unlockAt &&
+              formatHumanReadableDate(assignment.unlockAt)}
+          </div>
+        </div>
+        <div className="flex">
           <div className="flex-1 text-end pe-3">Due Date</div>
           <div className="flex-1">
             {formatHumanReadableDate(assignment.dueAt)}

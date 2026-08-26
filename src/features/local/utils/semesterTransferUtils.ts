@@ -27,6 +27,11 @@ export const prepAssignmentForNewSemester = (
       oldSemesterStartDate,
       newSemesterStartDate
     ),
+    unlockAt: newDateOffset(
+      assignment.unlockAt,
+      oldSemesterStartDate,
+      newSemesterStartDate
+    ),
   };
 };
 

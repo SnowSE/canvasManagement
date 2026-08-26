@@ -19,6 +19,9 @@ export const canvasAssignmentService = {
       ...a,
       due_at: a.due_at ? new Date(a.due_at).toLocaleString() : undefined, // timezones?
       lock_at: a.lock_at ? new Date(a.lock_at).toLocaleString() : undefined, // timezones?
+      unlock_at: a.unlock_at
+        ? new Date(a.unlock_at).toLocaleString()
+        : undefined, // timezones?
     }));
   },
 
@@ -54,6 +57,9 @@ export const canvasAssignmentService = {
         lock_at:
           localAssignment.lockAt &&
           getDateFromString(localAssignment.lockAt)?.toISOString(),
+        unlock_at:
+          localAssignment.unlockAt &&
+          getDateFromString(localAssignment.unlockAt)?.toISOString(),
         points_possible: assignmentPoints(localAssignment.rubric),
         assignment_group_id: canvasAssignmentGroupId,
       },
@@ -98,6 +104,9 @@ export const canvasAssignmentService = {
         lock_at:
           localAssignment.lockAt &&
           getDateFromString(localAssignment.lockAt)?.toISOString(),
+        unlock_at:
+          localAssignment.unlockAt &&
+          getDateFromString(localAssignment.unlockAt)?.toISOString(),
         points_possible: assignmentPoints(localAssignment.rubric),
         assignment_group_id: canvasAssignmentGroupId,
       },
