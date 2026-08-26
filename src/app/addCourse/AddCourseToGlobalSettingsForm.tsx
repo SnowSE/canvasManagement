@@ -31,7 +31,7 @@ import {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const sampleCompose = `services:
   canvas_manager:
-    image: alexmickelson/canvas_management:2 # pull this image regularly
+    image: snowcollege/canvas_management:4 # pull this image regularly
     user: 1000:1000 # userid:groupid that matches file ownership on host system (probably leave like this)
     ports:
       - 8080:3000 # hostPort:containerPort - you can change the host port if you like

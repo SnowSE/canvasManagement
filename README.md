@@ -11,7 +11,7 @@ All class data files are stored in markdown files in a folder. I recommend makin
 ```yml
 services:
   canvas_manager:
-    image: alexmickelson/canvas_management:3
+    image: snowcollege/canvas_management:4
     user: "1000:1000"
     container_name: canvas-manager
     ports:
