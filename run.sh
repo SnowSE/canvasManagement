@@ -16,7 +16,7 @@ docker run -it --rm \
   -e "NEXT_PUBLIC_ENABLE_FILE_SYNC=true" \
   "${ENV_FILE_ARGS[@]}" \
   -u 1000:1000 \
-  -p 3000:3000 \
+  -p 127.0.0.1:3000:3000 \
   -w /app \
   -v .:/app \
   -v ~/.canvas-manager-dev-home:/home/node \
