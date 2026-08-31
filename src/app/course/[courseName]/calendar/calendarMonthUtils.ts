@@ -48,11 +48,16 @@ function createCalendarMonth(year: number, month: number): CalendarMonthModel {
       })
     )
     .filter((week) => {
-      const lastDate = getDateFromStringOrThrow(
-        week.at(-1)!,
+      // only drop a trailing week that is pure next-month filler; a week
+      // ending in the next month may still hold this month's last days
+      const firstDate = getDateFromStringOrThrow(
+        week.at(0)!,
         "filtering out last week of month"
       );
-      return lastDate.getMonth() <= month - 1;
+      return !(
+        firstDate.getFullYear() > year ||
+        (firstDate.getFullYear() === year && firstDate.getMonth() > month - 1)
+      );
     });
 
   const weeks = daysByWeek.map((week) =>
