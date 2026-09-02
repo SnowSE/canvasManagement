@@ -26,6 +26,10 @@ const helpString = (settings: LocalCourseSettings) => {
   return `Assignment Group Names:
 - ${groupNames}
 
+Markdown works in question text and in answers, including encoded blocks --
+{{name:encoding}} paired with an "encoded-name=" fenced block. See the
+assignment help for an example.
+
 QUESTION REFERENCE
 ---
 Points: 2

@@ -56,6 +56,36 @@ flowchart TD
     C -->|Three| F[fa:fa-car Car]
 \`\`\`
 
+## Encoded blocks
+
+For a service that takes content in its url (a practice quiz, a diagram
+renderer), name a fenced block and reference it from a link or image with
+{{name:encoding}}. The block stays readable here; the encoded value is
+substituted when publishing. Add "hide" to keep the block itself off the page.
+
+Take the [practice quiz](https://teichert.github.io/quizhub/?t={{pq:base64}}) first.
+
+\`\`\`\`quiztext encoded-name=pq hide
+Points: 1000
+---
+What does this print?
+\`\`\`c#
+Console.Write('h');
+Console.Write('i');
+\`\`\`
+
+*a) hi
+b) Compile error
+\`\`\`\`
+
+Note the four backticks: the outer fence needs MORE backticks than any fence
+inside it, or the first inner \`\`\` ends the block early and the rest of the
+quiz (answers included) gets published onto the page.
+
+Encodings are base64, pako (compressed, for much shorter urls) and urlencoded.
+The encoding is chosen where it is used, so one block can feed several links.
+"hide" works on any fenced block, with or without a name.
+
 ## LaTeX Math
 
 **Inline math:** The Fibonacci sequence is defined as: $F(n) = F(n-1) + F(n-2)$ where $F(0) = 0$ and $F(1) = 1$.
