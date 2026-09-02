@@ -26,11 +26,14 @@ export const localPageMarkdownUtils = {
   },
 
   parseMarkdown: (pageMarkdown: string, name: string) => {
-    const rawSettings = pageMarkdown.split("---")[0];
+    const rawSettings = pageMarkdown.split("---\n")[0];
     const rawDate = extractLabelValue(rawSettings, "DueDateForOrdering");
     const dueAt = verifyDateOrThrow(rawDate, "page DueDateForOrdering");
 
-    const text = pageMarkdown.split("---\n")[1];
+    // A page's body can itself contain "---" lines (e.g. a v2-syntax quiz's
+    // question separators), so only the first "---\n" is the frontmatter
+    // delimiter -- everything else belongs to the body and must be kept.
+    const text = pageMarkdown.split("---\n").slice(1).join("---\n");
 
     const page: LocalCoursePage = {
       name,
