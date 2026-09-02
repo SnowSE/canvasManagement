@@ -22,7 +22,9 @@ export default function CourseList() {
 
   const coursesByStartDate = groupByStartDate(allSettings);
 
-  const sortedDates = Object.keys(coursesByStartDate).sort().reverse();
+  // oldest first: on desktop terms flow left-to-right (oldest -> newest);
+  // on mobile the column is reversed so the newest term sits on top.
+  const sortedDates = Object.keys(coursesByStartDate).sort();
 
   return (
     <div>
@@ -31,7 +33,7 @@ export default function CourseList() {
         value={isDeleting}
         onChange={(set) => setIsDeleting(set)}
       />
-      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:justify-center">
+      <div className="flex flex-col-reverse sm:flex-row sm:flex-wrap sm:justify-center">
         {sortedDates.map((startDate) => (
           <div
             key={startDate}
