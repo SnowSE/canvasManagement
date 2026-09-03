@@ -31,6 +31,21 @@ RUN CGO_ENABLED=0 go build -o gh-teacher .
 
 FROM node:22-alpine AS production
 
+# Build identity, passed in by build.sh / the deploy workflow. The app reads the
+# env vars to know what it is running, and the update checker reads the labels
+# off the published image on Docker Hub to see whether something newer exists.
+ARG GIT_SHA=""
+ARG BUILD_DATE=""
+ARG IMAGE_REPO="snowcollege/canvas_management"
+ARG IMAGE_TAG=""
+ENV GIT_SHA=$GIT_SHA \
+    BUILD_DATE=$BUILD_DATE \
+    UPDATE_CHECK_IMAGE=$IMAGE_REPO \
+    UPDATE_CHECK_TAG=$IMAGE_TAG
+LABEL org.opencontainers.image.revision=$GIT_SHA \
+      org.opencontainers.image.created=$BUILD_DATE \
+      org.opencontainers.image.source="https://github.com/SnowSE/canvasManagement"
+
 WORKDIR /app
 
 RUN npm install -g pnpm

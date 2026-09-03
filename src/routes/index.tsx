@@ -3,6 +3,7 @@ import CourseList from "@/app/CourseList";
 import { AddExistingCourseToGlobalSettings } from "@/app/addCourse/AddExistingCourseToGlobalSettings";
 import AddCourseToGlobalSettings from "@/app/addCourse/AddNewCourse";
 import TodaysLectures from "@/app/todaysLectures/TodaysLectures";
+import UpdateAvailableBanner from "@/app/UpdateAvailableBanner";
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -14,6 +15,7 @@ function Home() {
       <div className="w-full xl:w-[900px] mx-auto px-3">
         <br />
         <br />
+        <UpdateAvailableBanner />
         <br />
         <br />
         <div className=" flex justify-center">

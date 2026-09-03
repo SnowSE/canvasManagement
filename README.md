@@ -57,6 +57,30 @@ You can now embed an image in an assignment by adding something like this line.
 ![formulas](/images/facultyFiles/1405/lab-04-simple-math-formulas.png)
 ```
 
+## Update Indicator
+
+The home page shows a banner when a newer image than the one you are running
+has been pushed to Docker Hub, with the list of commits that are in it. Nothing
+updates automatically; run your reset script (`docker compose pull && docker
+compose up -d`) when you want to pick it up.
+
+How it works: `build.sh` bakes the git commit into the image (`GIT_SHA` env
+var and the `org.opencontainers.image.revision` label). Once an hour the server
+reads that label off the published `snowcollege/canvas_management:4` manifest
+using anonymous Docker Hub requests, and if the commit differs it asks the
+GitHub compare API for the commits in between. Nothing is sent anywhere except
+the two public APIs.
+
+Environment variables:
+
+- `DISABLE_UPDATE_CHECK=true` turns the check off (e.g. offline use).
+- `UPDATE_CHECK_TAG` is the tag to compare against, defaults to the major
+  version the image was built as (`4`). Set it if you pin something else in
+  your compose file.
+- `UPDATE_CHECK_IMAGE` defaults to `snowcollege/canvas_management`.
+
+Local `pnpm dev` runs have no `GIT_SHA` and skip the check.
+
 # ideas
 
 file uploads

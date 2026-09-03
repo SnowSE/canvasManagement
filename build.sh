@@ -8,6 +8,12 @@ MAJOR_VERSION="4"
 MINOR_VERSION="0"
 VERSION="$MAJOR_VERSION.$MINOR_VERSION"
 
+# Baked into the image so the running app can tell users when a newer image
+# has been published (see src/features/local/version). CI sets GIT_SHA from
+# github.sha; local builds fall back to the checked-out commit.
+GIT_SHA="${GIT_SHA:-$(git rev-parse HEAD 2>/dev/null || echo "")}"
+BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
 TAG_FLAG=false
 PUSH_FLAG=false
 
@@ -28,7 +34,12 @@ while getopts ":tp" opt; do
 done
 
 
-docker build -t canvas_management:$VERSION .
+docker build \
+  --build-arg GIT_SHA="$GIT_SHA" \
+  --build-arg BUILD_DATE="$BUILD_DATE" \
+  --build-arg IMAGE_REPO="$DOCKERHUB_ORG/canvas_management" \
+  --build-arg IMAGE_TAG="$MAJOR_VERSION" \
+  -t canvas_management:$VERSION .
 
 
 if [ "$TAG_FLAG" = true ]; then
