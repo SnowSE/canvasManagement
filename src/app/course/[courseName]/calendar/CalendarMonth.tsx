@@ -1,5 +1,5 @@
 "use client";
-import { CalendarMonthModel, getWeekNumber } from "./calendarMonthUtils";
+import { CalendarMonthModel, isMonthPast } from "./calendarMonthUtils";
 import { Expandable } from "@/components/Expandable";
 import { CalendarWeek } from "./CalendarWeek";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
@@ -9,8 +9,6 @@ import DownChevron from "@/components/icons/DownChevron";
 import { DayOfWeek } from "@/features/local/course/localCourseSettings";
 
 export const CalendarMonth = ({ month }: { month: CalendarMonthModel }) => {
-  // const weekInMilliseconds = 604_800_000;
-  const four_days_in_milliseconds = 345_600_000;
   const { data: settings } = useLocalCourseSettingsQuery();
   const startDate = getDateFromStringOrThrow(
     settings.startDate,
@@ -19,18 +17,8 @@ export const CalendarMonth = ({ month }: { month: CalendarMonthModel }) => {
 
   const isPastSemester = Date.now() > new Date(settings.endDate).getTime();
 
-  const pastWeekNumber = getWeekNumber(
-    startDate,
-    new Date(Date.now() - four_days_in_milliseconds)
-  );
-
-  const startOfMonthWeekNumber = getWeekNumber(
-    startDate,
-    new Date(month.year, month.month, 1)
-  );
-
   const shouldCollapse =
-    pastWeekNumber >= startOfMonthWeekNumber && !isPastSemester;
+    isMonthPast(startDate, month, new Date()) && !isPastSemester;
 
   const monthName = new Date(month.year, month.month - 1, 1).toLocaleString(
     "default",

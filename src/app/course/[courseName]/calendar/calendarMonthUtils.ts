@@ -111,3 +111,18 @@ const getPreviousSunday = (date: Date) => {
 
   return result;
 };
+
+/**
+ * A month stays expanded through the week that holds the first day of the
+ * next month, and collapses once we reach the second week of that month.
+ */
+export const isMonthPast = (
+  startDate: Date,
+  month: Pick<CalendarMonthModel, "year" | "month">,
+  today: Date
+) => {
+  const firstOfNextMonth = new Date(month.year, month.month, 1);
+  return (
+    getWeekNumber(startDate, today) > getWeekNumber(startDate, firstOfNextMonth)
+  );
+};
