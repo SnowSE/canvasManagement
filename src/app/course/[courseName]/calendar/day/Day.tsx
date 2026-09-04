@@ -23,7 +23,14 @@ export default function Day({ day, month }: { day: string; month: number }) {
   const { itemDropOnDay } = useDraggingContext();
 
   const { todaysItems } = useTodaysItems(day);
-  const isInSameMonth = dayAsDate.getMonth() + 1 == month;
+
+  // a week that straddles two months is drawn in both, but each month only
+  // fills in its own days — the neighbouring month's cells stay blank so the
+  // grid lines up the way a printed calendar does. On mobile days stack in a
+  // single column, so the blanks are dropped entirely there.
+  if (dayAsDate.getMonth() + 1 !== month) {
+    return <div className="hidden md:block sm:m-1 m-0.5 min-h-10" />;
+  }
   const classOnThisDay = settings.daysOfWeek.includes(getDayOfWeek(dayAsDate));
 
   // maybe this is slow?
@@ -61,23 +68,12 @@ export default function Day({ day, month }: { day: string; month: number }) {
 
   const todayClasses = isToday
     ? " border  border-blue-700 shadow-[0_0px_10px_0px] shadow-blue-500/50 "
-    : " ";
-
-  const monthClass =
-    isInSameMonth && !isToday ? " border border-slate-700 " : " ";
-
-  // on mobile days stack in a single column, so out-of-month filler days
-  // would show up twice (once in each adjacent month) — hide them there
-  const mobileVisibilityClass = isInSameMonth ? " " : " hidden md:block ";
+    : " border border-slate-700 ";
 
   return (
     <div
       className={
-        " rounded-lg sm:m-1 m-0.5 min-h-10 " +
-        mobileVisibilityClass +
-        meetingClasses +
-        monthClass +
-        todayClasses
+        " rounded-lg sm:m-1 m-0.5 min-h-10 " + meetingClasses + todayClasses
       }
       onDrop={(e) => itemDropOnDay(e, day)}
       onDragOver={(e) => e.preventDefault()}
