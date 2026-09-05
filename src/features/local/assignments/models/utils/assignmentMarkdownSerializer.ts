@@ -33,11 +33,38 @@ const settingsToMarkdown = (assignment: LocalAssignment) => {
       .map((fileExtension: string) => `- ${fileExtension}`)
       .join("\n");
 
+  // GroupSet / GradeIndividually / Schedule are only written when set, so
+  // files that never use them stay exactly as they are today
+  const groupLines = assignment.groupSet
+    ? [
+        `GroupSet: ${assignment.groupSet}`,
+        `GradeIndividually: ${assignment.gradeIndividually ?? false}`,
+      ]
+    : assignment.gradeIndividually !== undefined
+      ? [`GradeIndividually: ${assignment.gradeIndividually}`]
+      : [];
+
+  const scheduleLines =
+    assignment.schedule && assignment.schedule.length > 0
+      ? [
+          "Schedule:\n" +
+            assignment.schedule
+              .map(
+                (entry) =>
+                  `  ${entry.date}:` +
+                  entry.students.map((s) => `\n    - ${s}`).join("")
+              )
+              .join("\n"),
+        ]
+      : [];
+
   const settingsMarkdownArr = [
     `UnlockAt: ${printableUnlockAt}`,
     `LockAt: ${printableLockAt}`,
     `DueAt: ${printableDueDate}`,
     `AssignmentGroupName: ${assignment.localAssignmentGroupName}`,
+    ...groupLines,
+    ...scheduleLines,
     `Classroom50Slug: ${assignment.classroom50Slug ?? ""}`,
     `SubmissionTypes:\n${submissionTypesMarkdown}`,
     `AllowedFileUploadExtensions:\n${allowedFileUploadExtensionsMarkdown}`,

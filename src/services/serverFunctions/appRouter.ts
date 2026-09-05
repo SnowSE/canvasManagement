@@ -12,6 +12,7 @@ import { canvasFileRouter } from "@/features/canvas/services/canvasFileRouter";
 import { courseRouter } from "@/features/local/course/courseRouter";
 import { classroom50Router } from "@/features/local/classroom50/classroom50Router";
 import { versionRouter } from "@/features/local/version/versionRouter";
+import { rosterRouter } from "@/features/canvas/roster/rosterRouter";
 
 export const trpcAppRouter = router({
   course: courseRouter,
@@ -26,6 +27,7 @@ export const trpcAppRouter = router({
   globalSettings: globalSettingsRouter,
   classroom50: classroom50Router,
   version: versionRouter,
+  roster: rosterRouter,
 });
 
 export const createCaller = createCallerFactory(trpcAppRouter);

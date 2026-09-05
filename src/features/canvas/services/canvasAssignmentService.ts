@@ -10,11 +10,21 @@ import { axiosClient } from "@/services/axiosUtils";
 import { markdownToHTMLSafe } from "@/services/htmlMarkdownUtils";
 import { CanvasLinkTargets } from "@/services/urlUtils";
 import { getClassroomReplaceText } from "@/features/local/classroom50/classroom50UrlUtils";
-import { rateLimitAwarePost } from "./canvasWebRequestUtils";
+import { rateLimitAwareDelete, rateLimitAwarePost } from "./canvasWebRequestUtils";
+import { CanvasAssignmentOverride } from "@/features/canvas/models/assignments/canvasAssignmentOverride";
+import { OverrideSpec } from "@/features/local/assignments/models/utils/scheduleUtils";
+
+/** Group-set and per-student-date settings resolved against Canvas ids before publishing. */
+export interface CanvasAssignmentPublishOptions {
+  groupCategoryId?: number;
+  gradeIndividually?: boolean;
+  overrides?: OverrideSpec[];
+}
 
 export const canvasAssignmentService = {
   async getAll(courseId: number): Promise<CanvasAssignment[]> {
-    const url = `${canvasApi}/courses/${courseId}/assignments`; //per_page=100
+    // overrides ride along so the calendar can check scheduled students
+    const url = `${canvasApi}/courses/${courseId}/assignments?include[]=overrides`;
     const assignments = await paginatedRequest<CanvasAssignment[]>({ url });
     return assignments.map((a) => ({
       ...a,
@@ -31,7 +41,8 @@ export const canvasAssignmentService = {
     localAssignment: LocalAssignment,
     settings: LocalCourseSettings,
     canvasAssignmentGroupId?: number,
-    canvasLinkTargets?: CanvasLinkTargets
+    canvasLinkTargets?: CanvasLinkTargets,
+    publishOptions?: CanvasAssignmentPublishOptions
   ) {
     console.log(`Creating assignment: ${localAssignment.name}`);
     const url = `${canvasApi}/courses/${canvasCourseId}/assignments`;
@@ -65,6 +76,7 @@ export const canvasAssignmentService = {
           getDateFromString(localAssignment.unlockAt)?.toISOString(),
         points_possible: assignmentPoints(localAssignment.rubric),
         assignment_group_id: canvasAssignmentGroupId,
+        ...groupFields(publishOptions),
       },
     };
 
@@ -72,6 +84,11 @@ export const canvasAssignmentService = {
     const canvasAssignment = response.data;
 
     await createRubric(canvasCourseId, canvasAssignment.id, localAssignment);
+    await syncStudentOverrides(
+      canvasCourseId,
+      canvasAssignment,
+      publishOptions?.overrides ?? []
+    );
 
     return canvasAssignment.id;
   },
@@ -82,7 +99,8 @@ export const canvasAssignmentService = {
     localAssignment: LocalAssignment,
     settings: LocalCourseSettings,
     canvasAssignmentGroupId?: number,
-    canvasLinkTargets?: CanvasLinkTargets
+    canvasLinkTargets?: CanvasLinkTargets,
+    publishOptions?: CanvasAssignmentPublishOptions
   ) {
     console.log(`Updating assignment: ${localAssignment.name}`);
     const url = `${canvasApi}/courses/${courseId}/assignments/${canvasAssignmentId}`;
@@ -114,11 +132,28 @@ export const canvasAssignmentService = {
           getDateFromString(localAssignment.unlockAt)?.toISOString(),
         points_possible: assignmentPoints(localAssignment.rubric),
         assignment_group_id: canvasAssignmentGroupId,
+        ...groupFields(publishOptions),
       },
     };
 
-    await axiosClient.put(url, body);
+    const { data: canvasAssignment } = await axiosClient.put<CanvasAssignment>(
+      url,
+      body
+    );
     await createRubric(courseId, canvasAssignmentId, localAssignment);
+    await syncStudentOverrides(
+      courseId,
+      canvasAssignment,
+      publishOptions?.overrides ?? []
+    );
+  },
+
+  async getOverrides(
+    courseId: number,
+    canvasAssignmentId: number
+  ): Promise<CanvasAssignmentOverride[]> {
+    const url = `${canvasApi}/courses/${courseId}/assignments/${canvasAssignmentId}/overrides`;
+    return await paginatedRequest<CanvasAssignmentOverride[]>({ url });
   },
 
   async delete(
@@ -135,6 +170,43 @@ export const canvasAssignmentService = {
       throw new Error("Failed to delete assignment");
     }
   },
+};
+
+// group_category_id is sent explicitly (null clears it) so removing GroupSet
+// from a file also removes the group setting in Canvas
+const groupFields = (options?: CanvasAssignmentPublishOptions) => ({
+  group_category_id: options?.groupCategoryId ?? null,
+  grade_group_students_individually: options?.gradeIndividually ?? false,
+});
+
+// Replace the assignment's per-student overrides with the scheduled ones.
+// Section overrides (no student_ids) are left alone.
+const syncStudentOverrides = async (
+  courseId: number,
+  canvasAssignment: CanvasAssignment,
+  wanted: OverrideSpec[]
+) => {
+  if (wanted.length === 0 && !canvasAssignment.has_overrides) return;
+
+  const existing = await canvasAssignmentService.getOverrides(
+    courseId,
+    canvasAssignment.id
+  );
+  const studentOverrides = existing.filter(
+    (o) => o.student_ids && o.student_ids.length > 0
+  );
+  const baseUrl = `${canvasApi}/courses/${courseId}/assignments/${canvasAssignment.id}/overrides`;
+
+  for (const override of studentOverrides) {
+    await rateLimitAwareDelete(`${baseUrl}/${override.id}`);
+  }
+  for (const spec of wanted) {
+    await rateLimitAwarePost(baseUrl, { assignment_override: spec });
+  }
+  if (studentOverrides.length > 0 || wanted.length > 0)
+    console.log(
+      `Replaced ${studentOverrides.length} student override(s) with ${wanted.length} for ${canvasAssignment.name}`
+    );
 };
 
 const createRubric = async (

@@ -1,11 +1,13 @@
 import {
+  getDateFromString,
   verifyDateOrThrow,
   verifyDateStringOrUndefined,
 } from "../../../utils/timeUtils";
 import { AssignmentSubmissionType } from "../assignmentSubmissionType";
-import { LocalAssignment } from "../localAssignment";
+import { AssignmentScheduleEntry, LocalAssignment } from "../localAssignment";
 import { RubricItem, RubricRating } from "../rubricItem";
 import { extractLabelValue } from "./markdownUtils";
+import { getDateOnlyMarkdownString } from "../../../utils/timeUtils";
 
 const parseFileUploadExtensions = (input: string) => {
   const allowedFileUploadExtensions: string[] = [];
@@ -30,6 +32,58 @@ const parseFileUploadExtensions = (input: string) => {
   }
 
   return allowedFileUploadExtensions;
+};
+
+// Schedule:
+//   09/18/2026:
+//     - Mccormick, Bradley
+//     - Ginn, Landon
+// Dates are keys indented under Schedule, students are list items indented
+// further. The block ends at the first line that is not indented.
+const parseSchedule = (input: string): AssignmentScheduleEntry[] => {
+  const lines = input.split("\n");
+  const start = lines.findIndex((line) => /^Schedule:\s*$/.test(line));
+  if (start === -1) return [];
+
+  const entries: AssignmentScheduleEntry[] = [];
+  for (const line of lines.slice(start + 1)) {
+    if (line.trim() === "") continue;
+    if (!/^\s/.test(line)) break; // block over
+
+    const dateMatch = /^\s+(\d{1,2}\/\d{1,2}\/\d{4}):\s*$/.exec(line);
+    if (dateMatch) {
+      const date = getDateFromString(dateMatch[1]);
+      if (!date)
+        throw new Error(`Invalid Schedule date: "${dateMatch[1]}" (use MM/DD/YYYY)`);
+      entries.push({ date: getDateOnlyMarkdownString(date), students: [] });
+      continue;
+    }
+
+    const studentMatch = /^\s+-\s*(.*)$/.exec(line);
+    if (studentMatch) {
+      const current = entries[entries.length - 1];
+      if (!current)
+        throw new Error(
+          `Schedule student "${studentMatch[1].trim()}" must be listed under a date`
+        );
+      const student = studentMatch[1].trim();
+      if (student) current.students.push(student);
+      continue;
+    }
+
+    throw new Error(
+      `Unexpected line in Schedule: "${line.trim()}" (expected "MM/DD/YYYY:" or "- Last, First")`
+    );
+  }
+  return entries;
+};
+
+const parseBoolean = (raw: string, label: string): boolean | undefined => {
+  const value = raw.trim().toLowerCase();
+  if (value === "") return undefined;
+  if (value === "true" || value === "yes") return true;
+  if (value === "false" || value === "no") return false;
+  throw new Error(`${label} must be true or false, got "${raw}"`);
 };
 
 const pointsPattern = /\s*-\s*(-?\d+(?:\.\d+)?)\s*pt(s)?:/;
@@ -62,6 +116,12 @@ const parseSettings = (input: string) => {
   const submissionTypes = parseSubmissionTypes(input);
   const fileUploadExtensions = parseFileUploadExtensions(input);
   const classroom50Slug = extractLabelValue(input, "Classroom50Slug");
+  const groupSet = extractLabelValue(input, "GroupSet");
+  const gradeIndividually = parseBoolean(
+    extractLabelValue(input, "GradeIndividually"),
+    "GradeIndividually"
+  );
+  const schedule = parseSchedule(input);
 
   const dueAt = verifyDateOrThrow(rawDueAt, "DueAt");
   const lockAt = verifyDateStringOrUndefined(rawLockAt);
@@ -75,6 +135,9 @@ const parseSettings = (input: string) => {
     unlockAt,
     lockAt,
     classroom50Slug,
+    groupSet,
+    gradeIndividually,
+    schedule,
   };
 };
 
@@ -155,6 +218,9 @@ export const assignmentMarkdownParser = {
       unlockAt,
       lockAt,
       classroom50Slug,
+      groupSet,
+      gradeIndividually,
+      schedule,
     } = parseSettings(settingsString);
 
     const description = input
@@ -180,6 +246,15 @@ export const assignmentMarkdownParser = {
     };
     if (classroom50Slug) {
       assignment.classroom50Slug = classroom50Slug;
+    }
+    if (groupSet) {
+      assignment.groupSet = groupSet;
+    }
+    if (gradeIndividually !== undefined) {
+      assignment.gradeIndividually = gradeIndividually;
+    }
+    if (schedule.length > 0) {
+      assignment.schedule = schedule;
     }
     return assignment;
   },
