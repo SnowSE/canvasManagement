@@ -7,7 +7,7 @@ import { ReactNode } from "react";
 import { LocalCoursePage } from "@/features/local/pages/localCoursePageModels";
 import { LocalQuiz } from "@/features/local/quizzes/models/localQuiz";
 import { LocalCourseSettings } from "@/features/local/course/localCourseSettings";
-import { getSyncStatus } from "./getAssignmentSyncStatus";
+import { getSyncStatus, RosterForStatus } from "./getAssignmentSyncStatus";
 import { CanvasLinkTargets } from "@/services/urlUtils";
 
 export const getStatus = ({
@@ -16,15 +16,24 @@ export const getStatus = ({
   type,
   settings,
   canvasLinkTargets,
+  roster,
 }: {
   item: LocalQuiz | LocalAssignment | LocalCoursePage;
   canvasItem?: CanvasQuiz | CanvasAssignment | CanvasPage;
   type: "assignment" | "page" | "quiz";
   settings: LocalCourseSettings;
   canvasLinkTargets?: CanvasLinkTargets;
+  roster?: RosterForStatus;
 }): {
   status: "localOnly" | "incomplete" | "published";
   message: ReactNode;
 } => {
-  return getSyncStatus({ item, canvasItem, type, settings, canvasLinkTargets });
+  return getSyncStatus({
+    item,
+    canvasItem,
+    type,
+    settings,
+    canvasLinkTargets,
+    roster,
+  });
 };

@@ -81,16 +81,19 @@ export default function Day({ day, month }: { day: string; month: number }) {
       <div className="draggingDay flex flex-col">
         <DayTitle day={day} dayAsDate={dayAsDate} />
         <div className="grow">
-          {todaysItems.map(({ type, item, moduleName, status, message }) => (
-            <ItemInDay
-              key={`${type}-${item.name}`}
-              type={type}
-              moduleName={moduleName}
-              item={item}
-              status={status}
-              message={message}
-            />
-          ))}
+          {todaysItems.map(
+            ({ type, item, moduleName, status, message, scheduleEntry }) => (
+              <ItemInDay
+                key={`${type}-${item.name}-${scheduleEntry?.date ?? "due"}`}
+                type={type}
+                moduleName={moduleName}
+                item={item}
+                status={status}
+                message={message}
+                scheduleEntry={scheduleEntry}
+              />
+            ),
+          )}
         </div>
         <div>
           {holidayNameToday.map((n) => (

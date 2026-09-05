@@ -10,6 +10,8 @@ import HolidayConfig from "./HolidayConfig";
 import SettingsHeader from "./SettingsHeader";
 import StartAndEndDate from "./StartAndEndDate";
 import SubmissionDefaults from "./SubmissionDefaults";
+import StudentsSettings from "./StudentsSettings";
+import GroupsSettings from "./GroupsSettings";
 
 export default function AllSettings() {
   return (
@@ -22,6 +24,8 @@ export default function AllSettings() {
       <DefaultFileUploadTypes />
       <DefaultDueTime />
       <AssignmentGroupManagement />
+      <StudentsSettings />
+      <GroupsSettings />
       <HolidayConfig />
       <CanvasNavigationManagement />
       <div className="p-16"></div>

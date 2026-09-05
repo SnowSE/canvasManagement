@@ -6,6 +6,8 @@ export interface DraggableItem {
   item: IModuleItem;
   sourceModuleName: string | undefined; // undefined for lectures
   type: "quiz" | "assignment" | "page" | "lecture";
+  // when dragging one batch of an assignment's Schedule: that batch's date
+  scheduleDate?: string;
 }
 
 export interface DraggingContextInterface {

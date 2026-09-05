@@ -6,6 +6,11 @@ import { RubricItem, rubricItemIsExtraCredit } from "@/features/local/assignment
 import { assignmentPoints } from "@/features/local/assignments/models/utils/assignmentPointsUtils";
 import { formatHumanReadableDate } from "@/services/utils/dateFormat";
 import React, { Fragment } from "react";
+import {
+  scheduledDueDate,
+  studentDisplayName,
+} from "@/features/local/assignments/models/utils/scheduleUtils";
+import { useRosterStudentsQuery } from "@/features/canvas/roster/rosterHooks";
 
 function RubricItemRow({ rubricItem }: { rubricItem: RubricItem }) {
   const isExtraCredit = rubricItemIsExtraCredit(rubricItem);
@@ -35,6 +40,7 @@ export default function AssignmentPreview({
   assignment: LocalAssignment;
 }) {
   const { data: settings } = useLocalCourseSettingsQuery();
+  const { data: roster } = useRosterStudentsQuery();
   const totalPoints = assignmentPoints(assignment.rubric);
   const extraPoints = assignment.rubric.reduce(
     (sum, cur) => (rubricItemIsExtraCredit(cur) ? sum + cur.points : sum),
@@ -66,6 +72,46 @@ export default function AssignmentPreview({
           <div className="flex-1 text-end pe-3">Assignment Group Name</div>
           <div className="flex-1">{assignment.localAssignmentGroupName}</div>
         </div>
+        {assignment.groupSet && (
+          <div className="flex">
+            <div className="flex-1 text-end pe-3">Group Set</div>
+            <div className="flex-1">
+              {assignment.groupSet}
+              <span className="text-gray-400">
+                {assignment.gradeIndividually
+                  ? " · each member graded individually"
+                  : " · one grade per group"}
+              </span>
+            </div>
+          </div>
+        )}
+        {assignment.schedule && assignment.schedule.length > 0 && (
+          <div className="flex">
+            <div className="flex-1 text-end pe-3">Schedule</div>
+            <div className="flex-1">
+              {assignment.schedule.map((entry) => (
+                <div key={entry.date}>
+                  <span className="font-medium">
+                    {formatHumanReadableDate(
+                      scheduledDueDate(entry.date, assignment.dueAt)
+                    )}
+                  </span>
+                  <span className="text-gray-400">
+                    {entry.students.length > 0
+                      ? " · " +
+                        entry.students
+                          .map((t) => studentDisplayName(t, roster?.students))
+                          .join("; ")
+                      : " · no students yet"}
+                  </span>
+                </div>
+              ))}
+              <div className="text-gray-400 text-sm">
+                everyone else: {formatHumanReadableDate(assignment.dueAt)}
+              </div>
+            </div>
+          </div>
+        )}
         <div className="flex">
           <div className="flex-1 text-end pe-3">Submission Types</div>
           <div className="flex-1">

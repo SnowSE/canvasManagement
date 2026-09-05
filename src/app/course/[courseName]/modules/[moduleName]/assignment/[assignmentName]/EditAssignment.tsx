@@ -17,6 +17,7 @@ import { UpdateAssignmentName } from "./UpdateAssignmentName";
 import { Spinner } from "@/components/Spinner";
 import { getAssignmentHelpString } from "./getAssignmentHelpString";
 import { EditLayout } from "@/components/EditLayout";
+import { useRosterGroupSetsQuery } from "@/features/canvas/roster/rosterHooks";
 import {
   useAssignmentQuery,
   useUpdateAssignmentMutation,
@@ -32,6 +33,7 @@ export default function EditAssignment({
 }) {
   const { courseName } = useCourseContext();
   const { data: settings } = useLocalCourseSettingsQuery();
+  const { data: groupSetsData } = useRosterGroupSetsQuery();
   const {
     data: assignment,
     dataUpdatedAt: serverDataUpdatedAt,
@@ -131,7 +133,12 @@ export default function EditAssignment({
         showHelp ? (
           <>
             <pre>
-              <code>{getAssignmentHelpString(settings)}</code>
+              <code>
+                {getAssignmentHelpString(
+                  settings,
+                  groupSetsData?.groupSets.map((g) => g.name) ?? [],
+                )}
+              </code>
             </pre>
             <a
               href="https://www.markdownguide.org/cheat-sheet/"

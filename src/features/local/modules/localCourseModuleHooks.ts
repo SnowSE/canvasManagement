@@ -12,6 +12,20 @@ import {
   useSuspenseQueries,
 } from "@tanstack/react-query";
 
+type DayBucket = CalendarItemsInterface[string][string];
+const emptyBucket: DayBucket = { assignments: [], quizzes: [], pages: [] };
+
+function addToDay(
+  items: CalendarItemsInterface,
+  day: string,
+  moduleName: string,
+  update: (bucket: DayBucket) => DayBucket,
+): CalendarItemsInterface {
+  const modules = items[day] ?? {};
+  const bucket = modules[moduleName] ?? emptyBucket;
+  return { ...items, [day]: { ...modules, [moduleName]: update(bucket) } };
+}
+
 export const useModuleNamesQuery = () => {
   const { courseName } = useCourseContext();
   const trpc = useTRPC();
@@ -150,21 +164,23 @@ export const useCourseAssignmentsByModuleByDateQuery = () => {
           "due at for assignment in items context",
         ),
       );
-      const previousModules = previous[dueDay] ?? {};
-      const previousModule = previousModules[moduleName] ?? {
-        assignments: [],
-      };
-      const updatedModule = {
-        ...previousModule,
-        assignments: [...previousModule.assignments, assignment],
-      };
-      return {
-        ...previous,
-        [dueDay]: {
-          ...previousModules,
-          [moduleName]: updatedModule,
-        },
-      };
+      const withDue = addToDay(previous, dueDay, moduleName, (bucket) => ({
+        ...bucket,
+        assignments: [...bucket.assignments, assignment],
+      }));
+      // each Schedule date shows the assignment again for that batch
+      return (assignment.schedule ?? []).reduce((acc, entry) => {
+        const scheduledDay = getDateOnlyMarkdownString(
+          getDateFromStringOrThrow(entry.date, "schedule date in items context"),
+        );
+        return addToDay(acc, scheduledDay, moduleName, (bucket) => ({
+          ...bucket,
+          scheduledAssignments: [
+            ...(bucket.scheduledAssignments ?? []),
+            { assignment, entry },
+          ],
+        }));
+      }, withDue);
     },
     {} as CalendarItemsInterface,
   );

@@ -12,6 +12,12 @@ import { useCanvasAssignmentsQuery } from "@/features/canvas/hooks/canvasAssignm
 import { useCanvasPagesQuery } from "@/features/canvas/hooks/canvasPageHooks";
 import { useCanvasQuizzesQuery } from "@/features/canvas/hooks/canvasQuizHooks";
 import { IModuleItem } from "@/features/local/modules/IModuleItem";
+import {
+  useRosterGroupSetsQuery,
+  useRosterStudentsQuery,
+} from "@/features/canvas/roster/rosterHooks";
+import { getScheduleEntryStatus } from "./getAssignmentSyncStatus";
+import { AssignmentScheduleEntry } from "@/features/local/assignments/models/localAssignment";
 
 export type TodayItem = {
   type: "assignment" | "quiz" | "page";
@@ -19,6 +25,8 @@ export type TodayItem = {
   moduleName: string;
   status: "localOnly" | "incomplete" | "published";
   message: ReactNode;
+  // set when this is one batch of an assignment's Schedule rather than its DueAt
+  scheduleEntry?: AssignmentScheduleEntry;
 };
 
 export function useTodaysItems(day: string) {
@@ -34,6 +42,9 @@ export function useTodaysItems(day: string) {
   const { data: canvasAssignments } = useCanvasAssignmentsQuery();
   const { data: canvasQuizzes } = useCanvasQuizzesQuery();
   const { data: canvasPages } = useCanvasPagesQuery();
+  const { data: rosterStudents } = useRosterStudentsQuery();
+  const { data: rosterGroupSets } = useRosterGroupSetsQuery();
+  const roster = { students: rosterStudents, groupSets: rosterGroupSets };
 
   const assignments: TodayItem[] = todaysModules
     ? Object.keys(todaysModules).flatMap((moduleName) =>
@@ -54,9 +65,34 @@ export function useTodaysItems(day: string) {
                 assignments: canvasAssignments,
                 quizzes: canvasQuizzes,
               },
+              roster,
             }),
           };
         }),
+      )
+    : [];
+
+  const scheduledAssignments: TodayItem[] = todaysModules
+    ? Object.keys(todaysModules).flatMap((moduleName) =>
+        (todaysModules[moduleName].scheduledAssignments ?? []).map(
+          ({ assignment, entry }) => {
+            const canvasAssignment = canvasAssignments?.find(
+              (c) => c.name === assignment.name,
+            );
+            return {
+              type: "assignment" as const,
+              item: assignment,
+              moduleName,
+              scheduleEntry: entry,
+              ...getScheduleEntryStatus(
+                assignment,
+                entry,
+                canvasAssignment,
+                roster,
+              ),
+            };
+          },
+        ),
       )
     : [];
 
@@ -98,7 +134,12 @@ export function useTodaysItems(day: string) {
       )
     : [];
 
-  const todaysItems = [...assignments, ...quizzes, ...pages].sort((a, b) => {
+  const todaysItems = [
+    ...assignments,
+    ...scheduledAssignments,
+    ...quizzes,
+    ...pages,
+  ].sort((a, b) => {
     const dateDiff =
       getDateFromStringOrThrow(a.item.dueAt, "sorting today items").getTime() -
       getDateFromStringOrThrow(b.item.dueAt, "sorting today items").getTime();

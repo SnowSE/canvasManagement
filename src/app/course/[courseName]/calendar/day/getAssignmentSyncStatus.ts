@@ -15,6 +15,21 @@ import { markdownToHTMLSafe } from "@/services/htmlMarkdownUtils";
 import { getClassroomReplaceText } from "@/features/local/classroom50/classroom50UrlUtils";
 import { htmlIsCloseEnough } from "@/services/utils/htmlIsCloseEnough";
 import { CanvasLinkTargets } from "@/services/urlUtils";
+import {
+  GroupSetsSnapshot,
+  StudentsSnapshot,
+} from "@/features/canvas/roster/rosterModels";
+import {
+  overrideMatches,
+  scheduleToOverrides,
+} from "@/features/local/assignments/models/utils/scheduleUtils";
+import { AssignmentScheduleEntry } from "@/features/local/assignments/models/localAssignment";
+
+/** Roster + group sets from the server cache; undefined while still loading. */
+export interface RosterForStatus {
+  students?: StudentsSnapshot;
+  groupSets?: GroupSetsSnapshot;
+}
 
 export type ItemSyncStatus = {
   status: "localOnly" | "incomplete" | "published";
@@ -109,14 +124,126 @@ function checkQuiz(
   );
 }
 
+function checkGroupSet(
+  assignment: LocalAssignment,
+  canvasAssignment: CanvasAssignment,
+  roster?: RosterForStatus,
+): ItemSyncStatus | null {
+  if (!assignment.groupSet) {
+    if (canvasAssignment.group_category_id)
+      return {
+        status: "incomplete",
+        message: "canvas has a group set but the file has no GroupSet",
+      };
+    return null;
+  }
+  const groupSets = roster?.groupSets?.groupSets;
+  if (!groupSets) return null; // still loading, don't flag
+  const groupSet = groupSets.find(
+    (g) => g.name.toLowerCase() === assignment.groupSet!.toLowerCase(),
+  );
+  if (!groupSet)
+    return {
+      status: "incomplete",
+      message: `group set "${assignment.groupSet}" not found in canvas`,
+    };
+  if (canvasAssignment.group_category_id !== groupSet.id)
+    return { status: "incomplete", message: "group set differs in canvas" };
+  if (
+    (canvasAssignment.grade_group_students_individually ?? false) !==
+    (assignment.gradeIndividually ?? false)
+  )
+    return {
+      status: "incomplete",
+      message: "grade individually setting differs in canvas",
+    };
+  return null;
+}
+
+/** Status of one Schedule date's students against the assignment's Canvas overrides. */
+export function getScheduleEntryStatus(
+  assignment: LocalAssignment,
+  entry: AssignmentScheduleEntry,
+  canvasAssignment: CanvasAssignment | undefined,
+  roster?: RosterForStatus,
+): ItemSyncStatus {
+  if (!canvasAssignment) return { status: "localOnly", message: "not in canvas" };
+  const students = roster?.students?.students;
+  if (!students) return { status: "published", message: "" }; // roster loading
+  const { overrides, unknown, duplicates } = scheduleToOverrides(
+    { ...assignment, schedule: [entry] },
+    students,
+  );
+  if (unknown.length > 0)
+    return {
+      status: "incomplete",
+      message: `not in the canvas roster: ${unknown.join(", ")}`,
+    };
+  if (duplicates.length > 0)
+    return {
+      status: "incomplete",
+      message: `listed more than once: ${duplicates.join(", ")}`,
+    };
+  if (overrides.length === 0) return { status: "published", message: "" };
+  const matched = (canvasAssignment.overrides ?? []).some((o) =>
+    overrideMatches(o, overrides[0]),
+  );
+  if (!matched)
+    return {
+      status: "incomplete",
+      message: `canvas override for ${entry.date} missing or different`,
+    };
+  return { status: "published", message: "" };
+}
+
+function checkSchedule(
+  assignment: LocalAssignment,
+  canvasAssignment: CanvasAssignment,
+  roster?: RosterForStatus,
+): ItemSyncStatus | null {
+  const entries = assignment.schedule ?? [];
+  const students = roster?.students?.students;
+  if (!students) return null;
+  for (const entry of entries) {
+    const entryStatus = getScheduleEntryStatus(
+      assignment,
+      entry,
+      canvasAssignment,
+      roster,
+    );
+    if (entryStatus.status !== "published") return entryStatus;
+  }
+  // student overrides in canvas that the file no longer has
+  const wanted = scheduleToOverrides(assignment, students).overrides;
+  const extra = (canvasAssignment.overrides ?? []).filter(
+    (o) =>
+      o.student_ids &&
+      o.student_ids.length > 0 &&
+      !wanted.some((w) => overrideMatches(o, w)),
+  );
+  if (extra.length > 0)
+    return {
+      status: "incomplete",
+      message: `canvas has ${extra.length} student override(s) not in the schedule`,
+    };
+  return null;
+}
+
 function checkAssignment(
   assignment: LocalAssignment,
   canvasAssignment: CanvasAssignment,
   settings: LocalCourseSettings,
   canvasLinkTargets?: CanvasLinkTargets,
+  roster?: RosterForStatus,
 ): ItemSyncStatus | null {
   if (assignment.unlockAt && !canvasAssignment.unlock_at)
     return { status: "incomplete", message: "unlock date not in canvas" };
+
+  const groupStatus = checkGroupSet(assignment, canvasAssignment, roster);
+  if (groupStatus) return groupStatus;
+
+  const scheduleStatus = checkSchedule(assignment, canvasAssignment, roster);
+  if (scheduleStatus) return scheduleStatus;
 
   const dueLockStatus = checkDueDateAndLock(
     assignment.dueAt,
@@ -178,12 +305,14 @@ export function getSyncStatus({
   type,
   settings,
   canvasLinkTargets,
+  roster,
 }: {
   item: LocalQuiz | LocalAssignment | LocalCoursePage;
   canvasItem: CanvasQuiz | CanvasAssignment | CanvasPage | undefined;
   type: "assignment" | "page" | "quiz";
   settings: LocalCourseSettings;
   canvasLinkTargets?: CanvasLinkTargets;
+  roster?: RosterForStatus;
 }): ItemSyncStatus {
   if (!canvasItem) return { status: "localOnly", message: "not in canvas" };
 
@@ -201,6 +330,7 @@ export function getSyncStatus({
       canvasItem as CanvasAssignment,
       settings,
       canvasLinkTargets,
+      roster,
     );
   }
 

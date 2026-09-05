@@ -47,6 +47,8 @@ export default function CalendarItemsContextProvider({
           assignments: assignmentModulesInDay[moduleName]
             ? assignmentModulesInDay[moduleName].assignments
             : [],
+          scheduledAssignments:
+            assignmentModulesInDay[moduleName]?.scheduledAssignments ?? [],
           quizzes: quizModulesInDay[moduleName]
             ? quizModulesInDay[moduleName].quizzes
             : [],

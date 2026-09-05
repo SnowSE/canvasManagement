@@ -2,11 +2,35 @@
 import { AssignmentSubmissionType } from "@/features/local/assignments/models/assignmentSubmissionType";
 import { LocalCourseSettings } from "@/features/local/course/localCourseSettings";
 
-export function getAssignmentHelpString(settings: LocalCourseSettings) {
+export function getAssignmentHelpString(
+  settings: LocalCourseSettings,
+  groupSetNames: string[] = []
+) {
   const groupNames = settings.assignmentGroups.map((g) => g.name).join("\n- ");
+  const groupSets =
+    groupSetNames.length > 0
+      ? groupSetNames.join("\n- ")
+      : "(none in Canvas yet - create one on the Canvas People > Groups page, then sync in course settings)";
   const helpString = `
 Assignment Group Names:
 - ${groupNames}
+
+Group Set Names (student groups, makes this a group assignment):
+- ${groupSets}
+GroupSet: Project Teams
+GradeIndividually: false     (true = each member graded separately)
+
+Schedule: per-student due dates (Canvas overrides). Students not listed
+keep DueAt. Type "- " under a date to pick from students not yet scheduled;
+the file stores each student's Canvas id (no names in the repo) and the
+editor shows the name next to it.
+Schedule:
+  09/18/2026:
+    - 2986905
+    - 2339770
+  10/09/2026:
+    - 2414797
+
 SubmissionTypes:
 - ${AssignmentSubmissionType.ONLINE_TEXT_ENTRY}
 - ${AssignmentSubmissionType.ONLINE_UPLOAD}

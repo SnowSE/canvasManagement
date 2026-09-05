@@ -179,6 +179,23 @@ export function useItemDropOnDay({
           return;
         }
         const previousAssignment = itemBeingDragged.item as LocalAssignment;
+        if (itemBeingDragged.scheduleDate) {
+          // only this batch moves; the assignment's own dates stay put
+          const newDay = getDateOnlyMarkdownString(dayAsDate);
+          const scheduleDate = itemBeingDragged.scheduleDate;
+          const schedule = (previousAssignment.schedule ?? []).map((entry) =>
+            entry.date === scheduleDate ? { ...entry, date: newDay } : entry
+          );
+          updateAssignmentMutation.mutate({
+            assignment: { ...previousAssignment, schedule },
+            previousModuleName: itemBeingDragged.sourceModuleName,
+            moduleName: itemBeingDragged.sourceModuleName,
+            assignmentName: previousAssignment.name,
+            previousAssignmentName: previousAssignment.name,
+            courseName: settings.name,
+          });
+          return;
+        }
         const assignment: LocalAssignment = {
           ...previousAssignment,
           dueAt: dateToMarkdownString(dayAsDate),
