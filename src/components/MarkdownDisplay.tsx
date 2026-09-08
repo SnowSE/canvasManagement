@@ -23,7 +23,7 @@ export default function MarkdownDisplay({
 }) {
   const { data: settings } = useLocalCourseSettingsQuery();
   return (
-    <SuspenseAndErrorHandling>
+    <SuspenseAndErrorHandling resetKeys={[markdown]}>
       <DangerousInnerMarkdown
         markdown={markdown}
         settings={settings}
