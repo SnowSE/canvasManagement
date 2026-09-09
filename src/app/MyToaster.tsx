@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { Toaster } from "react-hot-toast";
+import toast, { Toaster, ToastBar } from "react-hot-toast";
 
 export const MyToaster = () => {
 
@@ -26,7 +26,25 @@ export const MyToaster = () => {
         success: {
           duration: 3000,
         },
+
+        // Errors describe something still broken, so they stay put instead of
+        // timing out. They are cleared either by whatever raised them (see
+        // SuspenseAndErrorHandling, which dismisses its toast once the error
+        // is gone) or by clicking the toast.
+        error: {
+          duration: Infinity,
+        },
       }}
-    />
+    >
+      {(t) => (
+        <div
+          onClick={() => toast.dismiss(t.id)}
+          title="click to dismiss"
+          className="contents cursor-pointer"
+        >
+          <ToastBar toast={t} />
+        </div>
+      )}
+    </Toaster>
   );
 };
