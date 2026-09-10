@@ -123,6 +123,7 @@ export default function EditQuiz({
 
   const { clientIsAuthoritative, text, textUpdate, monacoKey } =
     useAuthoritativeUpdates({
+      itemKey: `quiz:${moduleName}/${quizName}`,
       serverUpdatedAt: serverDataUpdatedAt,
       startingText: quizMarkdownUtils.toMarkdown(quiz, feedbackDelimiters),
     });

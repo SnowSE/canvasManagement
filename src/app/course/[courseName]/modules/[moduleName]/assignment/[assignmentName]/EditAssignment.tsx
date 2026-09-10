@@ -51,6 +51,7 @@ export default function EditAssignment({
     serverUpdatedAt,
     clientDataUpdatedAt,
   } = useAuthoritativeUpdates({
+    itemKey: `assignment:${moduleName}/${assignmentName}`,
     serverUpdatedAt: serverDataUpdatedAt,
     startingText: localAssignmentMarkdown.toMarkdown(assignment),
   });
