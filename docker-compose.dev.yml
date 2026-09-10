@@ -1,7 +1,7 @@
 services:
   canvas_manager:
     image: node:22
-    user: "1000:1000"
+    user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
     container_name: canvas-dev
     command: npx --yes pnpm dev
     working_dir: /app
@@ -12,6 +12,9 @@ services:
     environment:
       - storageDirectory=/app/storage
       - TZ=America/Denver
+      # a uid other than 1000 has no passwd entry in the node image, so HOME
+      # would otherwise fall back to an unwritable "/"
+      - HOME=/tmp
       - NEXT_PUBLIC_ENABLE_FILE_SYNC=true
       - REDIS_URL=redis://redis:6379
     volumes:
