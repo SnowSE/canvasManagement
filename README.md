@@ -12,7 +12,7 @@ All class data files are stored in markdown files in a folder. I recommend makin
 services:
   canvas_manager:
     image: snowcollege/canvas_management:4
-    user: "1000:1000"
+    user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
     container_name: canvas-manager
     ports:
       - 3000:3000
@@ -34,6 +34,32 @@ The `globalSettings.yml` file specifies which folders in your storage directory 
 
 ```yml
 courses: []
+```
+
+### Which user the container runs as
+
+`user:` sets the account the container runs as, and it should be the account
+that owns your storage folder on the host. If those do not match, either the
+container cannot write to the folder -- canvas manager fails when it tries to
+save -- or, if the folder is permissive enough for it to write anyway, the
+files it creates come out owned by the container's account rather than yours,
+and you cannot edit them on the host.
+
+On a single-user Linux machine that account is usually `1000:1000`, which is
+the default in the compose file above, so you can leave it alone. Check with
+`id -u` and `id -g`; if they print anything else, set `DOCKER_UID` and
+`DOCKER_GID` in your `.env`:
+
+```sh
+# .env, alongside CANVAS_TOKEN
+DOCKER_UID=1001
+DOCKER_GID=1002
+```
+
+or pass them one command at a time:
+
+```sh
+DOCKER_UID=$(id -u) DOCKER_GID=$(id -g) docker compose up
 ```
 
 
