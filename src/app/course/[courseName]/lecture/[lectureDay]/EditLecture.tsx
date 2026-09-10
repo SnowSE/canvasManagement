@@ -36,6 +36,7 @@ export default function EditLecture({ lectureDay }: { lectureDay: string }) {
 
   const { clientIsAuthoritative, text, textUpdate, monacoKey } =
     useAuthoritativeUpdates({
+      itemKey: `lecture:${lectureDay}`,
       serverUpdatedAt: serverDataUpdatedAt,
       startingText: getLectureTextOrDefault(lecture, lectureDay),
     });

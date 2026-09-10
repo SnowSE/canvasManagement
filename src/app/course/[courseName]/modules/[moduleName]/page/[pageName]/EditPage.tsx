@@ -33,6 +33,7 @@ export default function EditPage({
 
   const { clientIsAuthoritative, text, textUpdate, monacoKey } =
     useAuthoritativeUpdates({
+      itemKey: `page:${moduleName}/${pageName}`,
       serverUpdatedAt: dataUpdatedAt,
       startingText: localPageMarkdownUtils.toMarkdown(page),
     });
