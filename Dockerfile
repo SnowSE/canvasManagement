@@ -1,3 +1,10 @@
+# Pinned so that rebuilding a tag cannot silently change the package manager.
+# An unpinned `npm install -g pnpm` floated 11 -> 12 between two rebuilds of
+# tag 4, and pnpm 12 tightened a file mode in a way that broke startup for
+# every container uid but node's -- see the chmod in the production stage.
+# Override with --build-arg PNPM_VERSION=... to build against an older line.
+ARG PNPM_VERSION=12.3.4
+
 FROM node:22-alpine AS builder
 
 WORKDIR /app
@@ -5,7 +12,8 @@ WORKDIR /app
 ENV CI=true
 ENV pnpm_config_ignore_scripts=true
 
-RUN npm install -g pnpm
+ARG PNPM_VERSION
+RUN npm install -g pnpm@$PNPM_VERSION
 
 COPY pnpm-lock.yaml ./
 COPY package.json ./
@@ -48,7 +56,8 @@ LABEL org.opencontainers.image.revision=$GIT_SHA \
 
 WORKDIR /app
 
-RUN npm install -g pnpm
+ARG PNPM_VERSION
+RUN npm install -g pnpm@$PNPM_VERSION
 
 # gh + the gh-teacher extension; authenticated via the GH_TOKEN env var at runtime
 RUN apk add --no-cache github-cli git
@@ -66,6 +75,21 @@ COPY --from=builder /app/.output ./.output
 COPY --from=builder /app/public ./public
 
 RUN mkdir -p storage && rm -rf /app/storage/*
-RUN chown -R node:node /app
+# The operator picks the uid, so that it can own the mounted storage volume.
+# pnpm 12 writes node_modules/.pnpm-workspace-state-v1.json as 0600 and reads
+# it on `pnpm run` to decide whether deps are current; a uid that cannot read
+# it starts an install instead and dies purging a node_modules it also cannot
+# write, with ERR_PNPM_PACKAGE_MANAGER_REMOVE_MODULES_DIR. Matched with find
+# rather than a shell glob so a rename to -v2 cannot fail the build.
+RUN chown -R node:node /app \
+ && find /app/node_modules -maxdepth 1 -name '.pnpm-workspace-state-*.json' \
+      -exec chmod a+r {} +
+
+# A uid other than node's has no passwd entry, so HOME falls back to an
+# unwritable "/", and gh then looks for its extensions under /.local/share/gh
+# instead of node's home: the Classroom 50 buttons silently do nothing. That
+# tree is world-readable and gh only reads it -- GH_TOKEN supplies the auth.
+# Set after the installs above so the build itself is unaffected.
+ENV HOME=/home/node
 
 CMD [ "pnpm", "run", "start" ]

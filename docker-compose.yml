@@ -1,7 +1,10 @@
 services:
   canvas_manager:
     image: snowcollege/canvas_management:4
-    user: "1000:1000"
+    # Whoever owns your storage volume on the host -- see the README. Named
+    # DOCKER_UID rather than UID because bash makes UID readonly, so
+    # `UID=$(id -u) docker compose up` errors instead of overriding it.
+    user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
     container_name: canvas-manager
     ports:
       - 3000:3000
