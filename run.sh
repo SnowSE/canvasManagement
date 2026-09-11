@@ -1,5 +1,16 @@
 #!/bin/bash
 
+# -d runs detached and without a TTY, which is what agents and CI need:
+# `-it` fails outright with no TTY attached. Everything else is identical, so
+# there is only ever one copy of the docker invocation to keep correct.
+MODE_ARGS=(-it --rm)
+while getopts ":d" opt; do
+  case ${opt} in
+    d) MODE_ARGS=(-d) ;;
+    \?) echo "Usage: $0 [-d]   (-d: detached, for agents/CI)" >&2; exit 1 ;;
+  esac
+done
+
 docker rm -f canvas-manager-2 2>/dev/null || true
 
 # persistent home for the dev container: keeps the gh cli, its extensions,
@@ -9,13 +20,14 @@ mkdir -p ~/.canvas-manager-dev-home
 ENV_FILE_ARGS=()
 [ -f .env ] && ENV_FILE_ARGS=(--env-file .env)
 
-docker run -it --rm \
+docker run "${MODE_ARGS[@]}" \
   --name canvas-manager-2 \
   -e TZ=America/Denver \
   -e NODE_ENV=development \
   -e "NEXT_PUBLIC_ENABLE_FILE_SYNC=true" \
   "${ENV_FILE_ARGS[@]}" \
-  -u 1000:1000 \
+  -u "$(id -u):$(id -g)" \
+  -e HOME=/home/node \
   -p 127.0.0.1:3000:3000 \
   -w /app \
   -v .:/app \

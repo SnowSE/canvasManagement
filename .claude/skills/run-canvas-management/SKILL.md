@@ -34,34 +34,30 @@ the app. Do these first.
 
 ```bash
 npx tsc --noEmit                              # clean
-npx vitest run                                # 192 passed / 34 files
-npx eslint . --config eslint.config.mjs       # 0 errors, 20 known warnings
+npx vitest run                                # 0 failures, 200+ tests, 35+ files
+npx eslint . --config eslint.config.mjs       # 0 errors (around a couple dozen warnings)
 npx vite build                                # nitro output in .output/
 ```
 
-The 20 eslint warnings are React Compiler rules (`react-hooks/refs`, `purity`,
+The eslint warnings are React Compiler rules (`react-hooks/refs`, `purity`,
 `set-state-in-effect`) deliberately downgraded in `eslint.config.mjs`. Zero
-errors is the passing condition.
+*errors* is the passing condition; the warning count is not.
+
+Numbers here are floors, not exact figures, so they stay true as the repo grows.
+Keep it that way — an exact count reads as a real failure once it drifts.
 
 ## Run (agent path)
 
-**1. Start the dev server detached.** This is `run.sh` minus its `-it`, which
-fails without a TTY:
+**1. Start the dev server detached:**
 
 ```bash
-docker rm -f canvas-manager-2 >/dev/null 2>&1
-docker run -d --name canvas-manager-2 \
-  -e TZ=America/Denver -e NODE_ENV=development -e NEXT_PUBLIC_ENABLE_FILE_SYNC=true \
-  --env-file .env -u 1000:1000 -p 3000:3000 -w /app \
-  -v .:/app \
-  -v ~/.canvas-manager-dev-home:/home/node \
-  -v ~/faculty/:/app/storage/ \
-  -v ~/snowse_public/:/app/public/images/public \
-  -v ~/myclasses/facultyFiles:/app/public/images/facultyFiles \
-  node sh -c 'export PATH="$HOME/.local/bin:$PATH"; npx --yes pnpm@11 dev'
+./run.sh -d
 ```
 
-**2. Wait for it** (ready in about 10 seconds):
+`-d` skips the `-it` flags that need a TTY. Mounts, uid and env come from
+`run.sh`.
+
+**2. Wait for it** (the loop is the check; don't wait a fixed duration):
 
 ```bash
 until curl -sf -o /dev/null --max-time 3 http://localhost:3000/; do sleep 2; done
@@ -81,9 +77,9 @@ docker run --rm --network host \
 ```
 
 Each route prints its screenshot path plus the computed background, text colour,
-CSS rule count, and the first 120 characters of body text. A styled page reports
-`cssRules: 106` and `background: oklch(0.13 0.028 261.692)` (that is
-`bg-gray-950`). Single-digit `cssRules` means Tailwind never compiled.
+CSS rule count, and the first 120 characters of body text. Single-digit
+`cssRules` means Tailwind never compiled; a styled page reports a dark
+`background` and a rule count in the hundreds.
 
 **4. Look at the screenshot.** Read `/tmp/cm-shots/<route-slug>.png`. The driver
 exits non-zero on an empty body, but a page can render and still be wrong.
@@ -122,7 +118,8 @@ pnpm 11 store at `/app/.pnpm-store`; the host has pnpm 10 and refuses to touch i
 Install through a throwaway container instead:
 
 ```bash
-docker run --rm -u 1000:1000 -w /app -v .:/app -v ~/.canvas-manager-dev-home:/home/node \
+docker run --rm -u "$(id -u):$(id -g)" -e HOME=/home/node -w /app \
+  -v .:/app -v ~/.canvas-manager-dev-home:/home/node \
   node sh -c 'npx --yes pnpm@11 add -D <package> --store-dir /app/.pnpm-store'
 ```
 
@@ -142,7 +139,7 @@ the install is not churning `node_modules` underneath a running vite.
 - **Without the `~/faculty` mount the app renders zero courses** and looks broken
   rather than misconfigured.
 - **Expected noise, not failures:** a `Hydration failed because the server
-  rendered text didn't match the client` pageerror on every load, and roughly 60
+  rendered text didn't match the client` pageerror on every load, and a batch of
   `Error loading Quiz ...: question 1: no answers` lines in the server log at
   boot. The quiz errors are malformed content files in `~/faculty`, not code.
 - **`networkidle` alone is too early.** TanStack Start streams the shell first;
@@ -159,3 +156,5 @@ the install is not churning `node_modules` underneath a running vite.
 | `ERR_MODULE_NOT_FOUND: playwright` | The driver was run outside its install directory. Keep the `cp /skill/driver.mjs /tmp/pw/` step. |
 | Driver prints `EMPTY BODY` and exits 1 | The app did not render. Check `docker logs canvas-manager-2` for a vite or SSR crash. |
 | Port 3000 in use | A previous `canvas-manager-2` is still up: `docker rm -f canvas-manager-2`. |
+| Host `npx vitest`/`tsc` fails `EACCES` under `node_modules` | The tree is owned by another uid, from a container that ran as root. `docker run --rm -w /app -v .:/app node chown -R $(id -u):$(id -g) node_modules .pnpm-store` |
+| rolldown `Cannot convert undefined or null to object` loading the vite config | `node_modules` was installed under a different libc than it is run under (Alpine vs Debian), so the native binding cannot load. Reinstall from the same image you run in. |
