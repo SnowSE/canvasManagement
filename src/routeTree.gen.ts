@@ -21,6 +21,8 @@ import { Route as CourseCourseNameLectureLectureDayPreviewRouteImport } from './
 import { Route as CourseCourseNameModulesModuleNameAssignmentAssignmentNameRouteImport } from './routes/course/$courseName/modules/$moduleName/assignment.$assignmentName'
 import { Route as CourseCourseNameModulesModuleNamePagePageNameRouteImport } from './routes/course/$courseName/modules/$moduleName/page.$pageName'
 import { Route as CourseCourseNameModulesModuleNameQuizQuizNameRouteImport } from './routes/course/$courseName/modules/$moduleName/quiz.$quizName'
+import { Route as CourseCourseNameModulesModuleNameAssignmentAssignmentNameCompareRouteImport } from './routes/course/$courseName/modules/$moduleName/assignment.$assignmentName_.compare'
+import { Route as CourseCourseNameModulesModuleNameQuizQuizNameCompareRouteImport } from './routes/course/$courseName/modules/$moduleName/quiz.$quizName_.compare'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -88,6 +90,20 @@ const CourseCourseNameModulesModuleNameQuizQuizNameRoute =
     path: '/modules/$moduleName/quiz/$quizName',
     getParentRoute: () => CourseCourseNameRoute,
   } as any)
+const CourseCourseNameModulesModuleNameAssignmentAssignmentNameCompareRoute =
+  CourseCourseNameModulesModuleNameAssignmentAssignmentNameCompareRouteImport.update(
+    {
+      id: '/modules/$moduleName/assignment/$assignmentName_/compare',
+      path: '/modules/$moduleName/assignment/$assignmentName/compare',
+      getParentRoute: () => CourseCourseNameRoute,
+    } as any,
+  )
+const CourseCourseNameModulesModuleNameQuizQuizNameCompareRoute =
+  CourseCourseNameModulesModuleNameQuizQuizNameCompareRouteImport.update({
+    id: '/modules/$moduleName/quiz/$quizName_/compare',
+    path: '/modules/$moduleName/quiz/$quizName/compare',
+    getParentRoute: () => CourseCourseNameRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -102,6 +118,8 @@ export interface FileRoutesByFullPath {
   '/course/$courseName/modules/$moduleName/assignment/$assignmentName': typeof CourseCourseNameModulesModuleNameAssignmentAssignmentNameRoute
   '/course/$courseName/modules/$moduleName/page/$pageName': typeof CourseCourseNameModulesModuleNamePagePageNameRoute
   '/course/$courseName/modules/$moduleName/quiz/$quizName': typeof CourseCourseNameModulesModuleNameQuizQuizNameRoute
+  '/course/$courseName/modules/$moduleName/assignment/$assignmentName/compare': typeof CourseCourseNameModulesModuleNameAssignmentAssignmentNameCompareRoute
+  '/course/$courseName/modules/$moduleName/quiz/$quizName/compare': typeof CourseCourseNameModulesModuleNameQuizQuizNameCompareRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -115,6 +133,8 @@ export interface FileRoutesByTo {
   '/course/$courseName/modules/$moduleName/assignment/$assignmentName': typeof CourseCourseNameModulesModuleNameAssignmentAssignmentNameRoute
   '/course/$courseName/modules/$moduleName/page/$pageName': typeof CourseCourseNameModulesModuleNamePagePageNameRoute
   '/course/$courseName/modules/$moduleName/quiz/$quizName': typeof CourseCourseNameModulesModuleNameQuizQuizNameRoute
+  '/course/$courseName/modules/$moduleName/assignment/$assignmentName/compare': typeof CourseCourseNameModulesModuleNameAssignmentAssignmentNameCompareRoute
+  '/course/$courseName/modules/$moduleName/quiz/$quizName/compare': typeof CourseCourseNameModulesModuleNameQuizQuizNameCompareRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -130,6 +150,8 @@ export interface FileRoutesById {
   '/course/$courseName/modules/$moduleName/assignment/$assignmentName': typeof CourseCourseNameModulesModuleNameAssignmentAssignmentNameRoute
   '/course/$courseName/modules/$moduleName/page/$pageName': typeof CourseCourseNameModulesModuleNamePagePageNameRoute
   '/course/$courseName/modules/$moduleName/quiz/$quizName': typeof CourseCourseNameModulesModuleNameQuizQuizNameRoute
+  '/course/$courseName/modules/$moduleName/assignment/$assignmentName_/compare': typeof CourseCourseNameModulesModuleNameAssignmentAssignmentNameCompareRoute
+  '/course/$courseName/modules/$moduleName/quiz/$quizName_/compare': typeof CourseCourseNameModulesModuleNameQuizQuizNameCompareRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -146,6 +168,8 @@ export interface FileRouteTypes {
     | '/course/$courseName/modules/$moduleName/assignment/$assignmentName'
     | '/course/$courseName/modules/$moduleName/page/$pageName'
     | '/course/$courseName/modules/$moduleName/quiz/$quizName'
+    | '/course/$courseName/modules/$moduleName/assignment/$assignmentName/compare'
+    | '/course/$courseName/modules/$moduleName/quiz/$quizName/compare'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -159,6 +183,8 @@ export interface FileRouteTypes {
     | '/course/$courseName/modules/$moduleName/assignment/$assignmentName'
     | '/course/$courseName/modules/$moduleName/page/$pageName'
     | '/course/$courseName/modules/$moduleName/quiz/$quizName'
+    | '/course/$courseName/modules/$moduleName/assignment/$assignmentName/compare'
+    | '/course/$courseName/modules/$moduleName/quiz/$quizName/compare'
   id:
     | '__root__'
     | '/'
@@ -173,6 +199,8 @@ export interface FileRouteTypes {
     | '/course/$courseName/modules/$moduleName/assignment/$assignmentName'
     | '/course/$courseName/modules/$moduleName/page/$pageName'
     | '/course/$courseName/modules/$moduleName/quiz/$quizName'
+    | '/course/$courseName/modules/$moduleName/assignment/$assignmentName_/compare'
+    | '/course/$courseName/modules/$moduleName/quiz/$quizName_/compare'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -269,6 +297,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CourseCourseNameModulesModuleNameQuizQuizNameRouteImport
       parentRoute: typeof CourseCourseNameRoute
     }
+    '/course/$courseName/modules/$moduleName/assignment/$assignmentName_/compare': {
+      id: '/course/$courseName/modules/$moduleName/assignment/$assignmentName_/compare'
+      path: '/modules/$moduleName/assignment/$assignmentName/compare'
+      fullPath: '/course/$courseName/modules/$moduleName/assignment/$assignmentName/compare'
+      preLoaderRoute: typeof CourseCourseNameModulesModuleNameAssignmentAssignmentNameCompareRouteImport
+      parentRoute: typeof CourseCourseNameRoute
+    }
+    '/course/$courseName/modules/$moduleName/quiz/$quizName_/compare': {
+      id: '/course/$courseName/modules/$moduleName/quiz/$quizName_/compare'
+      path: '/modules/$moduleName/quiz/$quizName/compare'
+      fullPath: '/course/$courseName/modules/$moduleName/quiz/$quizName/compare'
+      preLoaderRoute: typeof CourseCourseNameModulesModuleNameQuizQuizNameCompareRouteImport
+      parentRoute: typeof CourseCourseNameRoute
+    }
   }
 }
 
@@ -280,6 +322,8 @@ interface CourseCourseNameRouteChildren {
   CourseCourseNameModulesModuleNameAssignmentAssignmentNameRoute: typeof CourseCourseNameModulesModuleNameAssignmentAssignmentNameRoute
   CourseCourseNameModulesModuleNamePagePageNameRoute: typeof CourseCourseNameModulesModuleNamePagePageNameRoute
   CourseCourseNameModulesModuleNameQuizQuizNameRoute: typeof CourseCourseNameModulesModuleNameQuizQuizNameRoute
+  CourseCourseNameModulesModuleNameAssignmentAssignmentNameCompareRoute: typeof CourseCourseNameModulesModuleNameAssignmentAssignmentNameCompareRoute
+  CourseCourseNameModulesModuleNameQuizQuizNameCompareRoute: typeof CourseCourseNameModulesModuleNameQuizQuizNameCompareRoute
 }
 
 const CourseCourseNameRouteChildren: CourseCourseNameRouteChildren = {
@@ -295,6 +339,10 @@ const CourseCourseNameRouteChildren: CourseCourseNameRouteChildren = {
     CourseCourseNameModulesModuleNamePagePageNameRoute,
   CourseCourseNameModulesModuleNameQuizQuizNameRoute:
     CourseCourseNameModulesModuleNameQuizQuizNameRoute,
+  CourseCourseNameModulesModuleNameAssignmentAssignmentNameCompareRoute:
+    CourseCourseNameModulesModuleNameAssignmentAssignmentNameCompareRoute,
+  CourseCourseNameModulesModuleNameQuizQuizNameCompareRoute:
+    CourseCourseNameModulesModuleNameQuizQuizNameCompareRoute,
 }
 
 const CourseCourseNameRouteWithChildren =

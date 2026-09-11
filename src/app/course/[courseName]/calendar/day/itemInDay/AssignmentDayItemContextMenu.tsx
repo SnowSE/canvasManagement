@@ -21,6 +21,8 @@ import { baseCanvasUrl } from "@/features/canvas/services/canvasServiceUtils";
 import { useCourseContext } from "../../../context/courseContext";
 import Modal, { ModalControl } from "@/components/Modal";
 import { useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
+import { getCompareUrl } from "@/services/urlUtils";
 
 function getDuplicateName(name: string, existingNames: string[]): string {
   const match = name.match(/^(.*)\s+(\d+)$/);
@@ -37,7 +39,9 @@ export const AssignmentDayItemContextMenu: FC<{
   modalControl: ModalControl;
   item: IModuleItem;
   moduleName: string;
-}> = ({ modalControl, item, moduleName }) => {
+  /** How many ways the file and Canvas disagree, shown on Compare with Canvas. */
+  differenceCount?: number;
+}> = ({ modalControl, item, moduleName, differenceCount = 0 }) => {
   const queryClient = useQueryClient();
   const { courseName } = useCourseContext();
   const calendarItems = useCalendarItemsContext();
@@ -222,6 +226,24 @@ export const AssignmentDayItemContextMenu: FC<{
                     >
                       View in Canvas
                     </a>
+                    <Link
+                      to={getCompareUrl(
+                        courseName,
+                        moduleName,
+                        "assignment",
+                        item.name,
+                      )}
+                      onClick={handleClose}
+                      className={` block px-3 ${baseButtonClasses} ${normalButtonClass}`}
+                    >
+                      Compare with Canvas
+                      {differenceCount > 0 && (
+                        <span className="block font-normal text-xs text-rose-300">
+                          {differenceCount} difference
+                          {differenceCount === 1 ? "" : "s"}
+                        </span>
+                      )}
+                    </Link>
                     <button
                       onClick={handleUpdateCanvas}
                       disabled={updateInCanvasMutation.isPending}

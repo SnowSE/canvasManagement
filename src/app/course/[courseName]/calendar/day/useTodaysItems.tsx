@@ -16,7 +16,7 @@ import {
   useRosterGroupSetsQuery,
   useRosterStudentsQuery,
 } from "@/features/canvas/roster/rosterHooks";
-import { getScheduleEntryStatus } from "./getAssignmentSyncStatus";
+import { getScheduleEntryStatus, SyncField } from "./getAssignmentSyncStatus";
 import { AssignmentScheduleEntry } from "@/features/local/assignments/models/localAssignment";
 
 export type TodayItem = {
@@ -25,6 +25,8 @@ export type TodayItem = {
   moduleName: string;
   status: "localOnly" | "incomplete" | "published";
   message: ReactNode;
+  // every way the file and Canvas disagree; empty when in sync or not in Canvas
+  differences: SyncField[];
   // set when this is one batch of an assignment's Schedule rather than its DueAt
   scheduleEntry?: AssignmentScheduleEntry;
 };

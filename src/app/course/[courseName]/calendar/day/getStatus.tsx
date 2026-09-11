@@ -3,11 +3,14 @@ import { CanvasAssignment } from "@/features/canvas/models/assignments/canvasAss
 import { CanvasPage } from "@/features/canvas/models/pages/canvasPageModel";
 import { CanvasQuiz } from "@/features/canvas/models/quizzes/canvasQuizModel";
 import { LocalAssignment } from "@/features/local/assignments/models/localAssignment";
-import { ReactNode } from "react";
 import { LocalCoursePage } from "@/features/local/pages/localCoursePageModels";
 import { LocalQuiz } from "@/features/local/quizzes/models/localQuiz";
 import { LocalCourseSettings } from "@/features/local/course/localCourseSettings";
-import { getSyncStatus, RosterForStatus } from "./getAssignmentSyncStatus";
+import {
+  getSyncStatus,
+  ItemSyncStatus,
+  RosterForStatus,
+} from "./getAssignmentSyncStatus";
 import { CanvasLinkTargets } from "@/services/urlUtils";
 
 export const getStatus = ({
@@ -24,10 +27,7 @@ export const getStatus = ({
   settings: LocalCourseSettings;
   canvasLinkTargets?: CanvasLinkTargets;
   roster?: RosterForStatus;
-}): {
-  status: "localOnly" | "incomplete" | "published";
-  message: ReactNode;
-} => {
+}): ItemSyncStatus => {
   return getSyncStatus({
     item,
     canvasItem,

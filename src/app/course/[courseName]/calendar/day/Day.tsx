@@ -82,7 +82,15 @@ export default function Day({ day, month }: { day: string; month: number }) {
         <DayTitle day={day} dayAsDate={dayAsDate} />
         <div className="grow">
           {todaysItems.map(
-            ({ type, item, moduleName, status, message, scheduleEntry }) => (
+            ({
+              type,
+              item,
+              moduleName,
+              status,
+              message,
+              differences,
+              scheduleEntry,
+            }) => (
               <ItemInDay
                 key={`${type}-${item.name}-${scheduleEntry?.date ?? "due"}`}
                 type={type}
@@ -90,6 +98,7 @@ export default function Day({ day, month }: { day: string; month: number }) {
                 item={item}
                 status={status}
                 message={message}
+                differences={differences}
                 scheduleEntry={scheduleEntry}
               />
             ),

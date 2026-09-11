@@ -8,7 +8,15 @@ import {
   useCreateQuizMutation,
   useUpdateQuizMutation,
 } from "@/features/local/quizzes/quizHooks";
-import { useAddQuizToCanvasMutation } from "@/features/canvas/hooks/canvasQuizHooks";
+import {
+  useAddQuizToCanvasMutation,
+  useCanvasQuizzesQuery,
+  useUpdateQuizInCanvasMutation,
+} from "@/features/canvas/hooks/canvasQuizHooks";
+import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
+import { baseCanvasUrl } from "@/features/canvas/services/canvasServiceUtils";
+import { getCompareUrl } from "@/services/urlUtils";
+import { Link } from "@tanstack/react-router";
 import { useCourseContext } from "../../../context/courseContext";
 import Modal, { ModalControl } from "@/components/Modal";
 
@@ -27,12 +35,22 @@ export const QuizDayItemContextMenu: FC<{
   modalControl: ModalControl;
   item: IModuleItem;
   moduleName: string;
-}> = ({ modalControl, item, moduleName }) => {
+  /** How many ways the file and Canvas disagree, shown on Compare with Canvas. */
+  differenceCount?: number;
+}> = ({ modalControl, item, moduleName, differenceCount = 0 }) => {
   const { courseName } = useCourseContext();
   const calendarItems = useCalendarItemsContext();
   const createQuizMutation = useCreateQuizMutation();
   const updateQuizMutation = useUpdateQuizMutation();
   const addToCanvasMutation = useAddQuizToCanvasMutation();
+  const updateInCanvasMutation = useUpdateQuizInCanvasMutation();
+  const { data: canvasQuizzes } = useCanvasQuizzesQuery();
+  const { data: settings } = useLocalCourseSettingsQuery();
+
+  const quizInCanvas = canvasQuizzes?.find((q) => q.title === item.name);
+  const canvasUrl = quizInCanvas
+    ? `${baseCanvasUrl}/courses/${settings.canvasId}/quizzes/${quizInCanvas.id}`
+    : undefined;
 
   const [renaming, setRenaming] = useState(false);
   const [newName, setNewName] = useState(item.name);
@@ -83,6 +101,15 @@ export const QuizDayItemContextMenu: FC<{
     handleClose();
   };
 
+  const handleUpdateCanvas = () => {
+    if (!quizInCanvas) return;
+    updateInCanvasMutation.mutate({
+      quiz: item as LocalQuiz,
+      canvasQuizId: quizInCanvas.id,
+    });
+    handleClose();
+  };
+
   const baseButtonClasses = " font-bold text-left py-1";
   const normalButtonClass =
     "hover:bg-blue-900   disabled:opacity-50 bg-blue-900/50 text-blue-50 border border-blue-800/70 rounded ";
@@ -117,13 +144,51 @@ export const QuizDayItemContextMenu: FC<{
               </form>
             ) : (
               <>
-                <button
-                  onClick={handleAddToCanvas}
-                  disabled={addToCanvasMutation.isPending}
-                  className={`unstyled ${baseButtonClasses} ${normalButtonClass}`}
-                >
-                  Add to Canvas
-                </button>
+                {!quizInCanvas && (
+                  <button
+                    onClick={handleAddToCanvas}
+                    disabled={addToCanvasMutation.isPending}
+                    className={`unstyled ${baseButtonClasses} ${normalButtonClass}`}
+                  >
+                    Add to Canvas
+                  </button>
+                )}
+                {quizInCanvas && (
+                  <Link
+                    to={getCompareUrl(courseName, moduleName, "quiz", item.name)}
+                    onClick={handleClose}
+                    className={`block px-2 ${baseButtonClasses} ${normalButtonClass}`}
+                  >
+                    Compare with Canvas
+                    {differenceCount > 0 && (
+                      <span className="block font-normal text-xs text-rose-300">
+                        {differenceCount} difference
+                        {differenceCount === 1 ? "" : "s"}
+                      </span>
+                    )}
+                  </Link>
+                )}
+                {quizInCanvas && (
+                  <button
+                    onClick={handleUpdateCanvas}
+                    disabled={updateInCanvasMutation.isPending}
+                    title="Pushes dates, description and quiz settings. Questions in Canvas are left as they are."
+                    className={`unstyled ${baseButtonClasses} ${normalButtonClass}`}
+                  >
+                    Update Canvas
+                  </button>
+                )}
+                {canvasUrl && (
+                  <a
+                    href={canvasUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={handleClose}
+                    className={`block px-2 ${baseButtonClasses} ${normalButtonClass}`}
+                  >
+                    Open in Canvas
+                  </a>
+                )}
                 <button
                   onClick={handleDuplicate}
                   disabled={createQuizMutation.isPending}

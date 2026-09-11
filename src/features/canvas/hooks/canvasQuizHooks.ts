@@ -8,6 +8,7 @@ import { useLocalCourseSettingsQuery } from "@/features/local/course/localCourse
 import { canvasModuleService } from "../services/canvasModuleService";
 import { canvasQuizService } from "../services/canvasQuizService";
 import { useCanvasLinkTargets } from "./useCanvasLinkTargets";
+import toast from "react-hot-toast";
 
 export const canvasQuizKeys = {
   quizzes: (canvasCourseId: number) =>
@@ -70,6 +71,44 @@ export const useAddQuizToCanvasMutation = () => {
       queryClient.invalidateQueries({
         queryKey: canvasQuizKeys.quizzes(settings.canvasId),
       });
+    },
+  });
+};
+
+/** Pushes quiz settings (not questions) to an existing Canvas quiz. */
+export const useUpdateQuizInCanvasMutation = () => {
+  const { data: settings } = useLocalCourseSettingsQuery();
+  const queryClient = useQueryClient();
+  const canvasLinkTargets = useCanvasLinkTargets();
+
+  return useMutation({
+    mutationFn: async ({
+      quiz,
+      canvasQuizId,
+    }: {
+      quiz: LocalQuiz;
+      canvasQuizId: number;
+    }) => {
+      const assignmentGroup = settings.assignmentGroups.find(
+        (g) => g.name === quiz.localAssignmentGroupName
+      );
+      await canvasQuizService.update(
+        settings.canvasId,
+        canvasQuizId,
+        quiz,
+        settings,
+        assignmentGroup?.canvasId,
+        canvasLinkTargets
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: canvasQuizKeys.quizzes(settings.canvasId),
+      });
+    },
+    onError: (error) => {
+      console.error("Failed to update quiz in Canvas:", error);
+      toast.error(error.message);
     },
   });
 };

@@ -5,6 +5,7 @@ import {
   useCanvasQuizzesQuery,
   useAddQuizToCanvasMutation,
   useDeleteQuizFromCanvasMutation,
+  useUpdateQuizInCanvasMutation,
 } from "@/features/canvas/hooks/canvasQuizHooks";
 import { baseCanvasUrl } from "@/features/canvas/services/canvasServiceUtils";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
@@ -12,7 +13,7 @@ import {
   useDeleteQuizMutation,
   useQuizQuery,
 } from "@/features/local/quizzes/quizHooks";
-import { getCourseUrl } from "@/services/urlUtils";
+import { getCompareUrl, getCourseUrl } from "@/services/urlUtils";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useItemNavigation } from "../../../../hooks/useItemNavigation";
 import ItemNavigationButtons from "../../../../components/ItemNavigationButtons";
@@ -35,6 +36,7 @@ export function QuizButtons({
   const { data: quiz } = useQuizQuery(moduleName, quizName);
   const addToCanvas = useAddQuizToCanvasMutation();
   const deleteFromCanvas = useDeleteQuizFromCanvasMutation();
+  const updateInCanvas = useUpdateQuizInCanvasMutation();
   const deleteLocal = useDeleteQuizMutation();
   const modal = useModal();
   const { closeMenu } = useActionsMenu();
@@ -59,7 +61,9 @@ export function QuizButtons({
         </button>
       </div>
       <div className="flex flex-row flex-wrap gap-3 justify-end">
-        {(addToCanvas.isPending || deleteFromCanvas.isPending) && <Spinner />}
+        {(addToCanvas.isPending ||
+          deleteFromCanvas.isPending ||
+          updateInCanvas.isPending) && <Spinner />}
         {quizInCanvas && !quizInCanvas.published && (
           <div className="text-rose-300 my-auto">Not Published</div>
         )}
@@ -80,6 +84,26 @@ export function QuizButtons({
           >
             View in Canvas
           </a>
+        )}
+        {quizInCanvas && (
+          <Link
+            className="btn"
+            to={getCompareUrl(courseName, moduleName, "quiz", quizName)}
+            onClick={closeMenu}
+          >
+            Compare with Canvas
+          </Link>
+        )}
+        {quizInCanvas && (
+          <button
+            disabled={updateInCanvas.isPending}
+            title="Pushes dates, description and quiz settings. Questions in Canvas are left as they are."
+            onClick={() =>
+              updateInCanvas.mutate({ quiz, canvasQuizId: quizInCanvas.id })
+            }
+          >
+            Update in Canvas
+          </button>
         )}
         {quizInCanvas && (
           <button

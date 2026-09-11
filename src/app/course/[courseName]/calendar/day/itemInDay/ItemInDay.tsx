@@ -19,6 +19,8 @@ import { AssignmentScheduleEntry } from "@/features/local/assignments/models/loc
 import { formatHumanReadableDate } from "@/services/utils/dateFormat";
 import { useRosterStudentsQuery } from "@/features/canvas/roster/rosterHooks";
 import { studentDisplayName } from "@/features/local/assignments/models/utils/scheduleUtils";
+import { SyncField } from "../getAssignmentSyncStatus";
+import { SyncDifferencesTooltip } from "./SyncDifferencesTooltip";
 
 export const ItemInDay: FC<{
   type: "assignment" | "page" | "quiz";
@@ -26,11 +28,21 @@ export const ItemInDay: FC<{
   moduleName: string;
   item: IModuleItem;
   message: ReactNode;
+  differences?: SyncField[];
   scheduleEntry?: AssignmentScheduleEntry;
-}> = ({ type, moduleName, status, item, message, scheduleEntry }) => {
+}> = ({
+  type,
+  moduleName,
+  status,
+  item,
+  message,
+  differences = [],
+  scheduleEntry,
+}) => {
   const { courseName } = useCourseContext();
   const { setIsDragging } = useDragStyleContext();
-  const { visible, targetRef, showTooltip, hideTooltip } = useTooltip(500);
+  const { visible, targetRef, showTooltip, hideTooltip, tooltipProps } =
+    useTooltip(500);
   const modalControl = useModal();
   const { data: roster } = useRosterStudentsQuery();
 
@@ -116,6 +128,7 @@ export const ItemInDay: FC<{
             }
             targetRef={targetRef}
             visible={visible}
+            {...tooltipProps}
           />
         ) : status === "published" ? (
           <Tooltip
@@ -126,15 +139,31 @@ export const ItemInDay: FC<{
             }
             targetRef={targetRef}
             visible={visible}
+            {...tooltipProps}
           />
         ) : (
-          <Tooltip message={message} targetRef={targetRef} visible={visible} />
+          <Tooltip
+            message={
+              <SyncDifferencesTooltip
+                type={type}
+                moduleName={moduleName}
+                itemName={item.name}
+                status={status}
+                message={message}
+                differences={differences}
+              />
+            }
+            targetRef={targetRef}
+            visible={visible}
+            {...tooltipProps}
+          />
         )}
         {type === "assignment" && (
           <AssignmentDayItemContextMenu
             modalControl={modalControl}
             item={item}
             moduleName={moduleName}
+            differenceCount={differences.length}
           />
         )}
         {type === "quiz" && (
@@ -142,6 +171,7 @@ export const ItemInDay: FC<{
             modalControl={modalControl}
             item={item}
             moduleName={moduleName}
+            differenceCount={differences.length}
           />
         )}
         {type === "page" && (

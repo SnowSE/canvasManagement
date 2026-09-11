@@ -1,5 +1,6 @@
 import { CanvasQuiz } from "@/features/canvas/models/quizzes/canvasQuizModel";
 import { canvasApi, paginatedRequest } from "./canvasServiceUtils";
+import { axiosClient } from "@/services/axiosUtils";
 import { getDateFromStringOrThrow } from "@/features/local/utils/timeUtils";
 import { canvasAssignmentService } from "./canvasAssignmentService";
 import { CanvasQuizQuestion } from "@/features/canvas/models/quizzes/canvasQuizQuestionModel";
@@ -271,6 +272,40 @@ const createQuizQuestions = async (
   }
 };
 
+/** The quiz-level fields (everything but questions) as the Canvas API wants them. */
+const quizSettingsForCanvas = (
+  localQuiz: LocalQuiz,
+  settings: LocalCourseSettings,
+  canvasAssignmentGroupId?: number,
+  canvasLinkTargets?: CanvasLinkTargets
+) => ({
+  title: localQuiz.name,
+  description: markdownToHTMLSafe({
+    markdownString: localQuiz.description,
+    settings,
+    canvasLinkTargets,
+  }),
+  shuffle_answers: localQuiz.shuffleAnswers,
+  access_code: localQuiz.password,
+  show_correct_answers: localQuiz.showCorrectAnswers,
+  allowed_attempts: localQuiz.allowedAttempts,
+  one_question_at_a_time: localQuiz.oneQuestionAtATime,
+  cant_go_back: false,
+  due_at: localQuiz.dueAt
+    ? getDateFromStringOrThrow(localQuiz.dueAt, "publishing quiz").toISOString()
+    : undefined,
+  lock_at: localQuiz.lockAt
+    ? getDateFromStringOrThrow(localQuiz.lockAt, "publishing quiz").toISOString()
+    : undefined,
+  unlock_at: localQuiz.unlockAt
+    ? getDateFromStringOrThrow(
+        localQuiz.unlockAt,
+        "publishing quiz"
+      ).toISOString()
+    : undefined,
+  assignment_group_id: canvasAssignmentGroupId,
+});
+
 export const canvasQuizService = {
   async getAll(canvasCourseId: number): Promise<CanvasQuiz[]> {
     try {
@@ -327,39 +362,12 @@ export const canvasQuizService = {
     const url = `${canvasApi}/courses/${canvasCourseId}/quizzes`;
 
     const body = {
-      quiz: {
-        title: localQuiz.name,
-        description: markdownToHTMLSafe({
-          markdownString: localQuiz.description,
-          settings,
-          canvasLinkTargets,
-        }),
-        shuffle_answers: localQuiz.shuffleAnswers,
-        access_code: localQuiz.password,
-        show_correct_answers: localQuiz.showCorrectAnswers,
-        allowed_attempts: localQuiz.allowedAttempts,
-        one_question_at_a_time: localQuiz.oneQuestionAtATime,
-        cant_go_back: false,
-        due_at: localQuiz.dueAt
-          ? getDateFromStringOrThrow(
-              localQuiz.dueAt,
-              "creating quiz"
-            ).toISOString()
-          : undefined,
-        lock_at: localQuiz.lockAt
-          ? getDateFromStringOrThrow(
-              localQuiz.lockAt,
-              "creating quiz"
-            ).toISOString()
-          : undefined,
-        unlock_at: localQuiz.unlockAt
-          ? getDateFromStringOrThrow(
-              localQuiz.unlockAt,
-              "creating quiz"
-            ).toISOString()
-          : undefined,
-        assignment_group_id: canvasAssignmentGroupId,
-      },
+      quiz: quizSettingsForCanvas(
+        localQuiz,
+        settings,
+        canvasAssignmentGroupId,
+        canvasLinkTargets
+      ),
     };
 
     const { data: canvasQuiz } = await rateLimitAwarePost<CanvasQuiz>(
@@ -373,6 +381,31 @@ export const canvasQuizService = {
       settings
     );
     return canvasQuiz.id;
+  },
+  /**
+   * Pushes the quiz's settings (title, description, dates, attempts, group)
+   * to Canvas. Questions are left as they are in Canvas; to change those,
+   * delete the quiz from Canvas and add it again.
+   */
+  async update(
+    canvasCourseId: number,
+    canvasQuizId: number,
+    localQuiz: LocalQuiz,
+    settings: LocalCourseSettings,
+    canvasAssignmentGroupId?: number,
+    canvasLinkTargets?: CanvasLinkTargets
+  ) {
+    console.log(`Updating quiz settings: ${localQuiz.name}`);
+    const url = `${canvasApi}/courses/${canvasCourseId}/quizzes/${canvasQuizId}`;
+    const body = {
+      quiz: quizSettingsForCanvas(
+        localQuiz,
+        settings,
+        canvasAssignmentGroupId,
+        canvasLinkTargets
+      ),
+    };
+    await axiosClient.put<CanvasQuiz>(url, body);
   },
   async delete(canvasCourseId: number, canvasQuizId: number) {
     const url = `${canvasApi}/courses/${canvasCourseId}/quizzes/${canvasQuizId}`;
