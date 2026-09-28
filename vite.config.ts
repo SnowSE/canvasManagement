@@ -27,6 +27,10 @@ export default defineConfig(() => ({
       srcDirectory: "src",
     }),
     nitro({
+      // jsdom (behind isomorphic-dompurify) reads files relative to __dirname,
+      // which does not exist once it is bundled into an ES module. Keep it in
+      // node_modules instead so it runs as the CommonJS it was written as.
+      traceDeps: ["jsdom"],
       routeRules: {
         "/socket.io/**": { proxy: "http://localhost:3001/socket.io/**" },
       },
