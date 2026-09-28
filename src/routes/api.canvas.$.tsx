@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { axiosClient } from "@/services/axiosUtils";
+import { axiosClient, describeAxiosError } from "@/services/axiosUtils";
 import { isAxiosError } from "axios";
 
 const appendQueryParams = (url: URL, req: Request) => {
@@ -51,7 +51,10 @@ export const Route = createFileRoute("/api/canvas/$")({
           return Response.json(response.data, { headers });
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
-          console.log("canvas get error", error, error?.message);
+          console.log(
+            "canvas get error",
+            isAxiosError(error) ? describeAxiosError(error) : error,
+          );
           return Response.json(
             { error: error.message || "Canvas GET request failed" },
             { status: error.response?.status || 500 },

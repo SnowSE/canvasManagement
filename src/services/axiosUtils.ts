@@ -38,9 +38,24 @@ axiosClient.interceptors.response.use(
   }
 );
 
+// One-line summary; logging the AxiosError itself dumps the whole socket
+export function describeAxiosError(error: AxiosError) {
+  const method = error.config?.method?.toUpperCase() ?? "";
+  const url = decodeURI(error.config?.url ?? "");
+  const status = error.response
+    ? `${error.response.status} ${error.response.statusText}`
+    : (error.code ?? "no response");
+  const data = error.response?.data;
+  const body =
+    data === undefined
+      ? ""
+      : ` ${typeof data === "string" ? data : JSON.stringify(data)}`.slice(0, 500);
+  return `${method} ${url} -> ${status}: ${error.message}${body}`;
+}
+
 export function getAxiosErrorMessage(error: AxiosError) {
   if (error.response) {
-    console.log("response error", error.response);
+    console.log("response error", describeAxiosError(error));
     const responseErrorText =
       typeof error.response.data === "object"
         ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
