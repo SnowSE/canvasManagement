@@ -2,6 +2,15 @@
 import React from "react";
 import toast, { Toaster, ToastBar } from "react-hot-toast";
 
+// The one way to raise an error toast. Keyed by message, so a repeated error
+// (a burst of failed requests, a boundary re-rendering) updates the existing
+// toast instead of stacking another. Returns a dismiss for callers that know
+// when their error is gone.
+export function showErrorToast(message: string) {
+  toast.error(message, { id: message });
+  return () => toast.dismiss(message);
+}
+
 export const MyToaster = () => {
 
   return (
@@ -30,7 +39,7 @@ export const MyToaster = () => {
         // Errors describe something still broken, so they stay put instead of
         // timing out. They are cleared either by whatever raised them (see
         // SuspenseAndErrorHandling, which dismisses its toast once the error
-        // is gone) or by clicking the toast.
+        // is gone) or by clicking the toast. Raise them via showErrorToast.
         error: {
           duration: Infinity,
         },

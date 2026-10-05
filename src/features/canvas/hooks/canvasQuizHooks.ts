@@ -8,7 +8,7 @@ import { useLocalCourseSettingsQuery } from "@/features/local/course/localCourse
 import { canvasModuleService } from "../services/canvasModuleService";
 import { canvasQuizService } from "../services/canvasQuizService";
 import { useCanvasLinkTargets } from "./useCanvasLinkTargets";
-import toast from "react-hot-toast";
+import { showErrorToast } from "@/app/MyToaster";
 
 export const canvasQuizKeys = {
   quizzes: (canvasCourseId: number) =>
@@ -108,7 +108,7 @@ export const useUpdateQuizInCanvasMutation = () => {
     },
     onError: (error) => {
       console.error("Failed to update quiz in Canvas:", error);
-      toast.error(error.message);
+      showErrorToast(error.message);
     },
   });
 };

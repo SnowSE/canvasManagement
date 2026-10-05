@@ -7,7 +7,7 @@ import {
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import { canvasModuleService } from "../services/canvasModuleService";
 import { canvasAssignmentService } from "../services/canvasAssignmentService";
-import toast from "react-hot-toast";
+import { showErrorToast } from "@/app/MyToaster";
 import { useCanvasLinkTargets } from "./useCanvasLinkTargets";
 import { useAssignmentPublishOptions } from "./useAssignmentPublishOptions";
 
@@ -78,7 +78,7 @@ export const useAddAssignmentToCanvasMutation = () => {
     },
     onError: (error) => {
       console.error("Failed to add assignment to Canvas:", error);
-      toast.error(error.message);
+      showErrorToast(error.message);
     },
   });
 };
@@ -117,7 +117,7 @@ export const useUpdateAssignmentInCanvasMutation = () => {
     },
     onError: (error) => {
       console.error("Failed to update assignment in Canvas:", error);
-      toast.error(error.message);
+      showErrorToast(error.message);
     },
   });
 };

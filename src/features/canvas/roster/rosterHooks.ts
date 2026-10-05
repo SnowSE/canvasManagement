@@ -3,6 +3,7 @@ import { useCourseContext } from "@/app/course/[courseName]/context/courseContex
 import { useTRPC } from "@/services/serverFunctions/trpcClient";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
+import { showErrorToast } from "@/app/MyToaster";
 
 // the server holds the cache, so the client never needs to refetch on its own
 const cachedForever = { staleTime: Infinity, retry: false } as const;
@@ -28,7 +29,7 @@ export const useSyncRosterStudentsMutation = () => {
         );
         toast.success(`${data.students.length} students loaded from Canvas`);
       },
-      onError: (e) => toast.error(e.message),
+      onError: (e) => showErrorToast(e.message),
     })
   );
 };
@@ -58,7 +59,7 @@ export const useSyncRosterGroupSetsMutation = () => {
           } loaded from Canvas`
         );
       },
-      onError: (e) => toast.error(e.message),
+      onError: (e) => showErrorToast(e.message),
     })
   );
 };
