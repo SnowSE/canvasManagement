@@ -423,29 +423,73 @@ export const canvasQuizService = {
     return canvasQuiz.id;
   },
   /**
-   * Pushes the quiz's settings (title, description, dates, attempts, group)
-   * to Canvas. Questions are left as they are in Canvas; to change those,
-   * delete the quiz from Canvas and add it again.
+   * Makes the Canvas quiz match the file: settings, then questions (Canvas's
+   * are deleted and the file's added), then, if the quiz is published, saves
+   * it again -- Canvas only shows students question edits once a published
+   * quiz is saved. Students who already submitted keep the questions they
+   * answered; Canvas does not regrade them.
    */
   async update(
     canvasCourseId: number,
     canvasQuizId: number,
     localQuiz: LocalQuiz,
     settings: LocalCourseSettings,
-    canvasAssignmentGroupId?: number,
-    canvasLinkTargets?: CanvasLinkTargets
+    {
+      canvasAssignmentGroupId,
+      canvasLinkTargets,
+      onStep = () => {},
+    }: {
+      canvasAssignmentGroupId?: number;
+      canvasLinkTargets?: CanvasLinkTargets;
+      onStep?: (step: string) => void;
+    } = {}
   ) {
-    console.log(`Updating quiz settings: ${localQuiz.name}`);
     const url = `${canvasApi}/courses/${canvasCourseId}/quizzes/${canvasQuizId}`;
-    const body = {
+
+    onStep("Updating quiz settings");
+    const { data: canvasQuiz } = await axiosClient.put<CanvasQuiz>(url, {
       quiz: quizSettingsForCanvas(
         localQuiz,
         settings,
         canvasAssignmentGroupId,
         canvasLinkTargets
       ),
+    });
+
+    const oldQuestions = await canvasQuizService.getQuizQuestions(
+      canvasCourseId,
+      canvasQuizId
+    );
+    onStep(`Removing ${oldQuestions.length} questions from Canvas`);
+    await Promise.all(
+      oldQuestions.map((q) => rateLimitAwareDelete(`${url}/questions/${q.id}`))
+    );
+
+    onStep(`Adding ${localQuiz.questions.length} questions from the file`);
+    await createQuizQuestions(canvasCourseId, canvasQuizId, localQuiz, settings);
+
+    const republished = canvasQuiz.published === true;
+    if (republished) {
+      onStep("Saving the published quiz so students see the new questions");
+      await axiosClient.put(url, { quiz: { published: true } });
+    }
+
+    return {
+      questionsRemoved: oldQuestions.length,
+      questionsAdded: localQuiz.questions.length,
+      republished,
     };
-    await axiosClient.put<CanvasQuiz>(url, body);
+  },
+  /** Attempts students have started or finished (Canvas also lists "settings_only" rows for students with extra time). */
+  async countSubmissions(canvasCourseId: number, canvasQuizId: number) {
+    const pages = await paginatedRequest<
+      { quiz_submissions: { workflow_state: string }[] }[]
+    >({
+      url: `${canvasApi}/courses/${canvasCourseId}/quizzes/${canvasQuizId}/submissions`,
+    });
+    return pages
+      .flatMap((page) => page.quiz_submissions)
+      .filter((s) => s.workflow_state !== "settings_only").length;
   },
   async delete(canvasCourseId: number, canvasQuizId: number) {
     const url = `${canvasApi}/courses/${canvasCourseId}/quizzes/${canvasQuizId}`;

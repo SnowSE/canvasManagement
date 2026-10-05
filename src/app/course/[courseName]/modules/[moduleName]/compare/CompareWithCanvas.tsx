@@ -175,7 +175,7 @@ export function CompareQuizWithCanvas({
         canvasQuiz && update.mutate({ quiz, canvasQuizId: canvasQuiz.id })
       }
       updating={update.isPending}
-      updateNote="Update Canvas pushes the file's dates, description and quiz settings. Questions already in Canvas are left as they are."
+      updateNote="Update Canvas pushes the file's settings, replaces the questions in Canvas with the file's, and saves a published quiz again so students see them. If students have started, it warns first: they keep the questions they got and are not regraded."
     />
   );
 }

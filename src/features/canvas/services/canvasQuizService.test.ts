@@ -17,6 +17,7 @@ vi.mock("@/services/axiosUtils", () => ({
   axiosClient: {
     get: vi.fn(),
     post: vi.fn(),
+    put: vi.fn(),
     delete: vi.fn(),
   },
 }));
@@ -469,6 +470,95 @@ describe("canvasQuizService", () => {
           matchDistractors: [],
         })
       ).toBe("Match these");
+    });
+  });
+
+  describe("update", () => {
+    const quiz = {
+      name: "Quiz",
+      description: "",
+      shuffleAnswers: false,
+      showCorrectAnswers: false,
+      oneQuestionAtATime: false,
+      allowedAttempts: 1,
+      questions: [
+        { text: "first", questionType: QuestionType.ESSAY, points: 1, answers: [] },
+        { text: "second", questionType: QuestionType.ESSAY, points: 1, answers: [] },
+      ],
+    } as unknown as LocalQuiz;
+
+    const updateWithCanvasPublished = async (published: boolean) => {
+      const { axiosClient } = await import("@/services/axiosUtils");
+      const { rateLimitAwarePost, rateLimitAwareDelete } = await import(
+        "./canvasWebRequestUtils"
+      );
+      vi.mocked(axiosClient.put).mockResolvedValue({ data: { published } });
+      vi.mocked(rateLimitAwarePost).mockResolvedValue({ data: { id: 9 } } as never);
+      vi.spyOn(canvasQuizService, "getQuizQuestions").mockResolvedValue([
+        { id: 101 },
+        { id: 102 },
+        { id: 103 },
+      ] as CanvasQuizQuestion[]);
+      const steps: string[] = [];
+
+      const summary = await canvasQuizService.update(42, 7, quiz, {} as never, {
+        onStep: (step) => steps.push(step),
+      });
+      return { summary, steps, axiosClient, rateLimitAwarePost, rateLimitAwareDelete };
+    };
+
+    it("replaces the Canvas questions with the file's questions", async () => {
+      const { rateLimitAwarePost, rateLimitAwareDelete } =
+        await updateWithCanvasPublished(false);
+
+      expect(vi.mocked(rateLimitAwareDelete).mock.calls.map(([url]) => url)).toEqual([
+        "https://test.instructure.com/api/v1/courses/42/quizzes/7/questions/101",
+        "https://test.instructure.com/api/v1/courses/42/quizzes/7/questions/102",
+        "https://test.instructure.com/api/v1/courses/42/quizzes/7/questions/103",
+      ]);
+      const created = vi
+        .mocked(rateLimitAwarePost)
+        .mock.calls.filter(([url]) => url.endsWith("/questions"));
+      expect(created).toHaveLength(2);
+    });
+
+    it("saves a published quiz again so students see the new questions", async () => {
+      const { axiosClient, summary } = await updateWithCanvasPublished(true);
+
+      const puts = vi.mocked(axiosClient.put).mock.calls;
+      expect(puts).toHaveLength(2);
+      expect(puts[1][1]).toEqual({ quiz: { published: true } });
+      expect(summary).toEqual({ questionsRemoved: 3, questionsAdded: 2, republished: true });
+    });
+
+    it("leaves an unpublished quiz unpublished", async () => {
+      const { axiosClient, summary } = await updateWithCanvasPublished(false);
+
+      expect(vi.mocked(axiosClient.put).mock.calls).toHaveLength(1);
+      expect(summary.republished).toBe(false);
+    });
+
+    it("reports each step as it goes", async () => {
+      const { steps } = await updateWithCanvasPublished(true);
+
+      expect(steps).toEqual([
+        "Updating quiz settings",
+        "Removing 3 questions from Canvas",
+        "Adding 2 questions from the file",
+        "Saving the published quiz so students see the new questions",
+      ]);
+    });
+  });
+
+  describe("countSubmissions", () => {
+    it("counts real attempts, not students who only have settings like extra time", async () => {
+      const { paginatedRequest } = await import("./canvasServiceUtils");
+      vi.mocked(paginatedRequest).mockResolvedValue([
+        { quiz_submissions: [{ workflow_state: "complete" }, { workflow_state: "settings_only" }] },
+        { quiz_submissions: [{ workflow_state: "untaken" }] },
+      ]);
+
+      expect(await canvasQuizService.countSubmissions(42, 7)).toBe(2);
     });
   });
 });
