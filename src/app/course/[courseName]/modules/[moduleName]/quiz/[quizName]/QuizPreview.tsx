@@ -146,7 +146,36 @@ function QuizQuestionPreview({ question }: { question: LocalQuizQuestion }) {
           ))}
         </div>
       )}
-      {question.questionType !== QuestionType.MATCHING && (
+      {question.questionType === QuestionType.MULTIPLE_DROPDOWNS && (
+        <div>
+          {question.answers.map((answer, i) => (
+            <div
+              key={JSON.stringify(answer)}
+              className={`mx-3 mb-1 bg-dark rounded border flex flex-row ${
+                answer.text ? "border-slate-600" : "px-2"
+              } ${
+                i > 0 &&
+                answer.dropdownGroup !== question.answers[i - 1].dropdownGroup
+                  ? "mt-3"
+                  : ""
+              }`}
+            >
+              {answer.text ? (
+                <>
+                  <div className="text-right my-auto flex-1 pe-3">
+                    {escapeMatchingText(answer.text)}
+                  </div>
+                  <div className=" flex-1">{answer.matchedText}</div>
+                </>
+              ) : (
+                <>DISTRACTOR: {answer.matchedText}</>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      {question.questionType !== QuestionType.MATCHING &&
+        question.questionType !== QuestionType.MULTIPLE_DROPDOWNS && (
         <div>
           {question.answers.map((answer) => (
             <div

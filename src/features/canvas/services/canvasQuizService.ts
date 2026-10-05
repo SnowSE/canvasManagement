@@ -18,10 +18,50 @@ import {
   rateLimitAwarePost,
 } from "./canvasWebRequestUtils";
 
+// the prompts of a multiple dropdowns question, each with the blank_id Canvas
+// uses to find its dropdown in the question text
+const getDropdownPrompts = (question: LocalQuizQuestion) =>
+  question.answers
+    .filter((a) => a.text)
+    .map((prompt, i) => ({ prompt, blankId: `dropdown${i + 1}` }));
+
+// A multiple dropdowns question's text ends with one line per prompt, each
+// followed by the [blank_id] marker Canvas replaces with that dropdown.
+export const getQuestionTextForCanvas = (question: LocalQuizQuestion) => {
+  if (question.questionType !== QuestionType.MULTIPLE_DROPDOWNS)
+    return question.text;
+
+  const promptLines = getDropdownPrompts(question).map(({ prompt, blankId }) => {
+    const text = escapeMatchingText(prompt.text);
+    const separator = /[:?]$/.test(text) ? " " : ": ";
+    return `${text}${separator}[${blankId}]`;
+  });
+  return [question.text.trimEnd(), ...promptLines].join("\n\n");
+};
+
 export const getAnswersForCanvas = (
   question: LocalQuizQuestion,
   settings: LocalCourseSettings
 ) => {
+  if (question.questionType === QuestionType.MULTIPLE_DROPDOWNS) {
+    // each dropdown offers its group's answers once each, in file order;
+    // Canvas shuffles them itself when the quiz shuffles answers
+    return getDropdownPrompts(question).flatMap(({ prompt, blankId }) => {
+      const options = [
+        ...new Set(
+          question.answers
+            .filter((a) => a.dropdownGroup === prompt.dropdownGroup)
+            .map((a) => a.matchedText ?? "")
+        ),
+      ];
+      return options.map((option) => ({
+        blank_id: blankId,
+        answer_text: option,
+        answer_weight: option === prompt.matchedText ? 100 : 0,
+      }));
+    });
+  }
+
   if (question.questionType === QuestionType.MATCHING) {
     const distractors = question.matchDistractors.join("\n");
     return question.answers.map((a) => {
@@ -95,7 +135,7 @@ const createQuestionOnly = async (
   const body = {
     question: {
       question_text: markdownToHTMLSafe({
-        markdownString: question.text,
+        markdownString: getQuestionTextForCanvas(question),
         settings,
       }),
       question_type: getQuestionTypeForCanvas(question),

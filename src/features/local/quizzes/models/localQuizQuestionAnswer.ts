@@ -6,7 +6,13 @@ export const zodLocalQuizQuestionAnswer = z.object({
   matchedText: z
     .string()
     .optional()
-    .describe("Matching pair text for matching questions"),
+    .describe("Matching pair text for matching and multiple dropdowns questions"),
+  dropdownGroup: z
+    .number()
+    .optional()
+    .describe(
+      "Multiple dropdowns questions: which blank-line-separated group this line is in; each prompt's dropdown offers every answer in its group",
+    ),
   numericalAnswerType: z
     .enum(["exact_answer", "range_answer", "precision_answer"])
     .optional(),
