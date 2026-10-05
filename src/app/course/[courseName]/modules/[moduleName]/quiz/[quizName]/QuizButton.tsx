@@ -97,7 +97,7 @@ export function QuizButtons({
         {quizInCanvas && (
           <button
             disabled={updateInCanvas.isPending}
-            title="Pushes dates, description and quiz settings. Questions in Canvas are left as they are."
+            title="Pushes settings, replaces the questions in Canvas with the file's, and saves a published quiz again so students see them. Warns first if students have started."
             onClick={() =>
               updateInCanvas.mutate({ quiz, canvasQuizId: quizInCanvas.id })
             }

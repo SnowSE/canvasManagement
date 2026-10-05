@@ -3,7 +3,7 @@ import { useCourseContext } from "@/app/course/[courseName]/context/courseContex
 import { useTRPC } from "@/services/serverFunctions/trpcClient";
 import { getErrorMessage } from "@/services/utils/queryClient";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import toast from "react-hot-toast";
+import { showErrorToast } from "@/app/MyToaster";
 
 export const useClassroom50StatusQuery = () => {
   const { courseName } = useCourseContext();
@@ -54,7 +54,7 @@ export const useCreateClassroom50ClassroomMutation = () => {
   const queryClient = useQueryClient();
   return useMutation(
     trpc.classroom50.createClassroom.mutationOptions({
-      onError: (error) => toast.error(getErrorMessage(error)),
+      onError: (error) => showErrorToast(getErrorMessage(error)),
       onSuccess: () => {
         queryClient.invalidateQueries({
           queryKey: trpc.classroom50.getStatus.queryKey(courseName),
@@ -80,7 +80,7 @@ export const useSyncClassroom50RosterMutation = () => {
   const queryClient = useQueryClient();
   return useMutation(
     trpc.classroom50.syncRoster.mutationOptions({
-      onError: (error) => toast.error(getErrorMessage(error)),
+      onError: (error) => showErrorToast(getErrorMessage(error)),
       onSuccess: () =>
         queryClient.invalidateQueries({
           queryKey: trpc.classroom50.getStatus.queryKey(courseName),
@@ -95,7 +95,7 @@ export const useCreateClassroom50AssignmentMutation = () => {
   const queryClient = useQueryClient();
   return useMutation(
     trpc.classroom50.createAssignment.mutationOptions({
-      onError: (error) => toast.error(getErrorMessage(error)),
+      onError: (error) => showErrorToast(getErrorMessage(error)),
       onSuccess: () =>
         queryClient.invalidateQueries({
           queryKey: trpc.classroom50.getStatus.queryKey(courseName),

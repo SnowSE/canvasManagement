@@ -78,6 +78,15 @@ this is a matching question
 ^ - distractor
 ^ - other distractor
 ---
+this is a multiple dropdowns question: blank lines split the matching lines
+into groups, and each prompt's dropdown offers every answer in its group
+^ first prompt - its answer
+^ - distractor for the first prompt
+
+^ second prompt - its answer
+^ third prompt - an answer both share
+^ - distractor for the second and third prompts
+---
 Points: 3
 FEEDBACK EXAMPLE
 What is 2+3?

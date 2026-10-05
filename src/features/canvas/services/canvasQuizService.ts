@@ -18,10 +18,50 @@ import {
   rateLimitAwarePost,
 } from "./canvasWebRequestUtils";
 
+// the prompts of a multiple dropdowns question, each with the blank_id Canvas
+// uses to find its dropdown in the question text
+const getDropdownPrompts = (question: LocalQuizQuestion) =>
+  question.answers
+    .filter((a) => a.text)
+    .map((prompt, i) => ({ prompt, blankId: `dropdown${i + 1}` }));
+
+// A multiple dropdowns question's text ends with one line per prompt, each
+// followed by the [blank_id] marker Canvas replaces with that dropdown.
+export const getQuestionTextForCanvas = (question: LocalQuizQuestion) => {
+  if (question.questionType !== QuestionType.MULTIPLE_DROPDOWNS)
+    return question.text;
+
+  const promptLines = getDropdownPrompts(question).map(({ prompt, blankId }) => {
+    const text = escapeMatchingText(prompt.text);
+    const separator = /[:?]$/.test(text) ? " " : ": ";
+    return `${text}${separator}[${blankId}]`;
+  });
+  return [question.text.trimEnd(), ...promptLines].join("\n\n");
+};
+
 export const getAnswersForCanvas = (
   question: LocalQuizQuestion,
   settings: LocalCourseSettings
 ) => {
+  if (question.questionType === QuestionType.MULTIPLE_DROPDOWNS) {
+    // each dropdown offers its group's answers once each, in file order;
+    // Canvas shuffles them itself when the quiz shuffles answers
+    return getDropdownPrompts(question).flatMap(({ prompt, blankId }) => {
+      const options = [
+        ...new Set(
+          question.answers
+            .filter((a) => a.dropdownGroup === prompt.dropdownGroup)
+            .map((a) => a.matchedText ?? "")
+        ),
+      ];
+      return options.map((option) => ({
+        blank_id: blankId,
+        answer_text: option,
+        answer_weight: option === prompt.matchedText ? 100 : 0,
+      }));
+    });
+  }
+
   if (question.questionType === QuestionType.MATCHING) {
     const distractors = question.matchDistractors.join("\n");
     return question.answers.map((a) => {
@@ -95,7 +135,7 @@ const createQuestionOnly = async (
   const body = {
     question: {
       question_text: markdownToHTMLSafe({
-        markdownString: question.text,
+        markdownString: getQuestionTextForCanvas(question),
         settings,
       }),
       question_type: getQuestionTypeForCanvas(question),
@@ -383,29 +423,73 @@ export const canvasQuizService = {
     return canvasQuiz.id;
   },
   /**
-   * Pushes the quiz's settings (title, description, dates, attempts, group)
-   * to Canvas. Questions are left as they are in Canvas; to change those,
-   * delete the quiz from Canvas and add it again.
+   * Makes the Canvas quiz match the file: settings, then questions (Canvas's
+   * are deleted and the file's added), then, if the quiz is published, saves
+   * it again -- Canvas only shows students question edits once a published
+   * quiz is saved. Students who already submitted keep the questions they
+   * answered; Canvas does not regrade them.
    */
   async update(
     canvasCourseId: number,
     canvasQuizId: number,
     localQuiz: LocalQuiz,
     settings: LocalCourseSettings,
-    canvasAssignmentGroupId?: number,
-    canvasLinkTargets?: CanvasLinkTargets
+    {
+      canvasAssignmentGroupId,
+      canvasLinkTargets,
+      onStep = () => {},
+    }: {
+      canvasAssignmentGroupId?: number;
+      canvasLinkTargets?: CanvasLinkTargets;
+      onStep?: (step: string) => void;
+    } = {}
   ) {
-    console.log(`Updating quiz settings: ${localQuiz.name}`);
     const url = `${canvasApi}/courses/${canvasCourseId}/quizzes/${canvasQuizId}`;
-    const body = {
+
+    onStep("Updating quiz settings");
+    const { data: canvasQuiz } = await axiosClient.put<CanvasQuiz>(url, {
       quiz: quizSettingsForCanvas(
         localQuiz,
         settings,
         canvasAssignmentGroupId,
         canvasLinkTargets
       ),
+    });
+
+    const oldQuestions = await canvasQuizService.getQuizQuestions(
+      canvasCourseId,
+      canvasQuizId
+    );
+    onStep(`Removing ${oldQuestions.length} questions from Canvas`);
+    await Promise.all(
+      oldQuestions.map((q) => rateLimitAwareDelete(`${url}/questions/${q.id}`))
+    );
+
+    onStep(`Adding ${localQuiz.questions.length} questions from the file`);
+    await createQuizQuestions(canvasCourseId, canvasQuizId, localQuiz, settings);
+
+    const republished = canvasQuiz.published === true;
+    if (republished) {
+      onStep("Saving the published quiz so students see the new questions");
+      await axiosClient.put(url, { quiz: { published: true } });
+    }
+
+    return {
+      questionsRemoved: oldQuestions.length,
+      questionsAdded: localQuiz.questions.length,
+      republished,
     };
-    await axiosClient.put<CanvasQuiz>(url, body);
+  },
+  /** Attempts students have started or finished (Canvas also lists "settings_only" rows for students with extra time). */
+  async countSubmissions(canvasCourseId: number, canvasQuizId: number) {
+    const pages = await paginatedRequest<
+      { quiz_submissions: { workflow_state: string }[] }[]
+    >({
+      url: `${canvasApi}/courses/${canvasCourseId}/quizzes/${canvasQuizId}/submissions`,
+    });
+    return pages
+      .flatMap((page) => page.quiz_submissions)
+      .filter((s) => s.workflow_state !== "settings_only").length;
   },
   async delete(canvasCourseId: number, canvasQuizId: number) {
     const url = `${canvasApi}/courses/${canvasCourseId}/quizzes/${canvasQuizId}`;

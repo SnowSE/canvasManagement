@@ -85,7 +85,15 @@ export const quizQuestionMarkdownUtils = {
       delimiters,
     );
 
-    const answersText = answerArray.join("\n");
+    // multiple dropdowns groups are separated by a blank line
+    const startsNewDropdownGroup = (i: number) =>
+      question.questionType === QuestionType.MULTIPLE_DROPDOWNS &&
+      i > 0 &&
+      question.answers[i].dropdownGroup !==
+        question.answers[i - 1].dropdownGroup;
+    const answersText = answerArray
+      .map((line, i) => (startsNewDropdownGroup(i) ? `\n${line}` : line))
+      .join("\n");
     const questionTypeIndicator =
       question.questionType === "essay" ||
       question.questionType === "short_answer"

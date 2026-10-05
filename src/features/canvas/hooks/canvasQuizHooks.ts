@@ -9,6 +9,7 @@ import { canvasModuleService } from "../services/canvasModuleService";
 import { canvasQuizService } from "../services/canvasQuizService";
 import { useCanvasLinkTargets } from "./useCanvasLinkTargets";
 import toast from "react-hot-toast";
+import { showErrorToast } from "@/app/MyToaster";
 
 export const canvasQuizKeys = {
   quizzes: (canvasCourseId: number) =>
@@ -75,7 +76,17 @@ export const useAddQuizToCanvasMutation = () => {
   });
 };
 
-/** Pushes quiz settings (not questions) to an existing Canvas quiz. */
+const submissionWarning = (count: number) =>
+  `${count} student${count === 1 ? " has" : "s have"} already started this quiz in Canvas.
+
+Updating replaces its questions. Students who already started keep the questions and answer key they got, and Canvas will not regrade them. If the point total changes, their scores are out of the new total.
+
+Update anyway?`;
+
+/**
+ * Makes an existing Canvas quiz match the file, settings and questions,
+ * showing each step in a toast. Asks first if students have already started.
+ */
 export const useUpdateQuizInCanvasMutation = () => {
   const { data: settings } = useLocalCourseSettingsQuery();
   const queryClient = useQueryClient();
@@ -89,17 +100,37 @@ export const useUpdateQuizInCanvasMutation = () => {
       quiz: LocalQuiz;
       canvasQuizId: number;
     }) => {
-      const assignmentGroup = settings.assignmentGroups.find(
-        (g) => g.name === quiz.localAssignmentGroupName
-      );
-      await canvasQuizService.update(
+      const submissions = await canvasQuizService.countSubmissions(
         settings.canvasId,
-        canvasQuizId,
-        quiz,
-        settings,
-        assignmentGroup?.canvasId,
-        canvasLinkTargets
+        canvasQuizId
       );
+      if (submissions > 0 && !window.confirm(submissionWarning(submissions)))
+        return;
+
+      const progress = toast.loading("Updating quiz in Canvas");
+      try {
+        const assignmentGroup = settings.assignmentGroups.find(
+          (g) => g.name === quiz.localAssignmentGroupName
+        );
+        const summary = await canvasQuizService.update(
+          settings.canvasId,
+          canvasQuizId,
+          quiz,
+          settings,
+          {
+            canvasAssignmentGroupId: assignmentGroup?.canvasId,
+            canvasLinkTargets,
+            onStep: (step) => toast.loading(`${step}…`, { id: progress }),
+          }
+        );
+        toast.success(
+          `Updated "${quiz.name}" in Canvas: settings, ${summary.questionsRemoved} questions removed, ${summary.questionsAdded} added${summary.republished ? ", and saved again for students" : " (quiz is unpublished)"}.`,
+          { id: progress, duration: 8_000 }
+        );
+      } catch (error) {
+        toast.dismiss(progress);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -108,7 +139,7 @@ export const useUpdateQuizInCanvasMutation = () => {
     },
     onError: (error) => {
       console.error("Failed to update quiz in Canvas:", error);
-      toast.error(error.message);
+      showErrorToast(error.message);
     },
   });
 };

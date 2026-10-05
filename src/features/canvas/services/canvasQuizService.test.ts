@@ -1,14 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { canvasQuizService, getAnswersForCanvas } from "./canvasQuizService";
+import {
+  canvasQuizService,
+  getAnswersForCanvas,
+  getQuestionTextForCanvas,
+  getQuestionTypeForCanvas,
+} from "./canvasQuizService";
 import { CanvasQuizQuestion } from "@/features/canvas/models/quizzes/canvasQuizQuestionModel";
 import { LocalQuiz } from "@/features/local/quizzes/models/localQuiz";
-import { QuestionType } from "@/features/local/quizzes/models/localQuizQuestion";
+import {
+  LocalQuizQuestion,
+  QuestionType,
+} from "@/features/local/quizzes/models/localQuizQuestion";
 
 // Mock the dependencies
 vi.mock("@/services/axiosUtils", () => ({
   axiosClient: {
     get: vi.fn(),
     post: vi.fn(),
+    put: vi.fn(),
     delete: vi.fn(),
   },
 }));
@@ -311,5 +320,283 @@ describe("canvasQuizService", () => {
         "reserved word"
       );
     });
+
+    it("sends a multiple dropdowns question with one [blank] per prompt", async () => {
+      const { rateLimitAwarePost } = await import("./canvasWebRequestUtils");
+
+      vi.spyOn(canvasQuizService, "getQuizQuestions").mockResolvedValue([]);
+      vi.mocked(rateLimitAwarePost).mockImplementation(async () => ({
+        data: { id: 1 },
+      }) as never);
+
+      await canvasQuizService.create(
+        42,
+        {
+          name: "Dropdowns Quiz",
+          description: "",
+          dueAt: "2023-12-01T23:59:00Z",
+          shuffleAnswers: true,
+          showCorrectAnswers: true,
+          oneQuestionAtATime: false,
+          allowedAttempts: 1,
+          questions: [planningQuestion],
+        } as LocalQuiz,
+        {} as never
+      );
+
+      const questionRequest = vi
+        .mocked(rateLimitAwarePost)
+        .mock.calls.find(([url]) => url.endsWith("/questions"));
+      const question = (
+        questionRequest?.[1] as { question: Record<string, unknown> }
+      ).question;
+
+      expect(question.question_type).toBe("multiple_dropdowns_question");
+      expect(question.question_text).toBe(
+        "<p>Plan the nested function.\n\nName: [dropdown1]\n\nCombine: [dropdown2]</p>"
+      );
+      expect(question.answers).toEqual(
+        getAnswersForCanvas(planningQuestion, {} as never)
+      );
+      expect(question).not.toHaveProperty("matching_answer_incorrect_matches");
+    });
+  });
+
+  describe("multiple dropdowns", () => {
+    it("is sent to canvas as a multiple_dropdowns_question", () => {
+      expect(getQuestionTypeForCanvas(planningQuestion)).toBe(
+        "multiple_dropdowns_question"
+      );
+    });
+
+    it("gives each prompt its own dropdown of only its group's answers", () => {
+      expect(getAnswersForCanvas(planningQuestion, {} as never)).toEqual([
+        { blank_id: "dropdown1", answer_text: "min_cost_from", answer_weight: 100 },
+        { blank_id: "dropdown1", answer_text: "paint_next", answer_weight: 0 },
+        { blank_id: "dropdown1", answer_text: "total_so_far", answer_weight: 0 },
+        { blank_id: "dropdown2", answer_text: "minimum", answer_weight: 100 },
+        { blank_id: "dropdown2", answer_text: "sum", answer_weight: 0 },
+        { blank_id: "dropdown2", answer_text: "maximum", answer_weight: 0 },
+      ]);
+    });
+
+    // Canvas shuffles dropdown options itself when the quiz has shuffle answers on
+    // (only true/false, matching, and fill-in-multiple-blanks are exempt), so the
+    // file order is kept for when shuffling is off and the order is deliberate.
+    it("lists each dropdown's options in the order they were written", () => {
+      const answers = dropdownAnswersForCanvas(
+        dropdowns([
+          [
+            ["Combine", "zzz correct"],
+            ["", "aaa distractor"],
+            ["", "mmm distractor"],
+          ],
+        ])
+      );
+
+      expect(answers.map((a) => a.answer_text)).toEqual([
+        "zzz correct",
+        "aaa distractor",
+        "mmm distractor",
+      ]);
+    });
+
+    it("lets prompts in one group share options, and lists a shared answer once", () => {
+      const answers = getAnswersForCanvas(
+        dropdowns([
+          [
+            ["Counting paths", "sum"],
+            ["Counting decodings", "sum"],
+            ["Fewest coins", "minimum"],
+            ["", "product"],
+          ],
+        ]),
+        {} as never
+      );
+
+      expect(answers).toEqual([
+        { blank_id: "dropdown1", answer_text: "sum", answer_weight: 100 },
+        { blank_id: "dropdown1", answer_text: "minimum", answer_weight: 0 },
+        { blank_id: "dropdown1", answer_text: "product", answer_weight: 0 },
+        { blank_id: "dropdown2", answer_text: "sum", answer_weight: 100 },
+        { blank_id: "dropdown2", answer_text: "minimum", answer_weight: 0 },
+        { blank_id: "dropdown2", answer_text: "product", answer_weight: 0 },
+        { blank_id: "dropdown3", answer_text: "sum", answer_weight: 0 },
+        { blank_id: "dropdown3", answer_text: "minimum", answer_weight: 100 },
+        { blank_id: "dropdown3", answer_text: "product", answer_weight: 0 },
+      ]);
+    });
+
+    it("never offers another group's answers", () => {
+      const nameOptions = dropdownAnswersForCanvas(planningQuestion)
+        .filter((a) => a.blank_id === "dropdown1")
+        .map((a) => a.answer_text);
+
+      expect(nameOptions).not.toContain("minimum");
+      expect(nameOptions).not.toContain("sum");
+    });
+
+    it("numbers the dropdowns in prompt order across groups", () => {
+      expect(
+        getQuestionTextForCanvas(
+          dropdowns([
+            [
+              ["First", "a"],
+              ["Second", "b"],
+            ],
+            [["Third", "c"]],
+          ])
+        )
+      ).toBe(
+        "Question\n\nFirst: [dropdown1]\n\nSecond: [dropdown2]\n\nThird: [dropdown3]"
+      );
+    });
+
+    it("does not add a colon after a prompt that already ends in punctuation", () => {
+      expect(
+        getQuestionTextForCanvas(
+          dropdowns([[["Name:", "a"]], [["What does it return?", "b"]]])
+        )
+      ).toBe("Question\n\nName: [dropdown1]\n\nWhat does it return? [dropdown2]");
+    });
+
+    it("leaves the text of other question types alone", () => {
+      expect(
+        getQuestionTextForCanvas({
+          text: "Match these",
+          questionType: QuestionType.MATCHING,
+          points: 1,
+          answers: [{ text: "a", matchedText: "b", correct: true }],
+          matchDistractors: [],
+        })
+      ).toBe("Match these");
+    });
+  });
+
+  describe("update", () => {
+    const quiz = {
+      name: "Quiz",
+      description: "",
+      shuffleAnswers: false,
+      showCorrectAnswers: false,
+      oneQuestionAtATime: false,
+      allowedAttempts: 1,
+      questions: [
+        { text: "first", questionType: QuestionType.ESSAY, points: 1, answers: [] },
+        { text: "second", questionType: QuestionType.ESSAY, points: 1, answers: [] },
+      ],
+    } as unknown as LocalQuiz;
+
+    const updateWithCanvasPublished = async (published: boolean) => {
+      const { axiosClient } = await import("@/services/axiosUtils");
+      const { rateLimitAwarePost, rateLimitAwareDelete } = await import(
+        "./canvasWebRequestUtils"
+      );
+      vi.mocked(axiosClient.put).mockResolvedValue({ data: { published } });
+      vi.mocked(rateLimitAwarePost).mockResolvedValue({ data: { id: 9 } } as never);
+      vi.spyOn(canvasQuizService, "getQuizQuestions").mockResolvedValue([
+        { id: 101 },
+        { id: 102 },
+        { id: 103 },
+      ] as CanvasQuizQuestion[]);
+      const steps: string[] = [];
+
+      const summary = await canvasQuizService.update(42, 7, quiz, {} as never, {
+        onStep: (step) => steps.push(step),
+      });
+      return { summary, steps, axiosClient, rateLimitAwarePost, rateLimitAwareDelete };
+    };
+
+    it("replaces the Canvas questions with the file's questions", async () => {
+      const { rateLimitAwarePost, rateLimitAwareDelete } =
+        await updateWithCanvasPublished(false);
+
+      expect(vi.mocked(rateLimitAwareDelete).mock.calls.map(([url]) => url)).toEqual([
+        "https://test.instructure.com/api/v1/courses/42/quizzes/7/questions/101",
+        "https://test.instructure.com/api/v1/courses/42/quizzes/7/questions/102",
+        "https://test.instructure.com/api/v1/courses/42/quizzes/7/questions/103",
+      ]);
+      const created = vi
+        .mocked(rateLimitAwarePost)
+        .mock.calls.filter(([url]) => url.endsWith("/questions"));
+      expect(created).toHaveLength(2);
+    });
+
+    it("saves a published quiz again so students see the new questions", async () => {
+      const { axiosClient, summary } = await updateWithCanvasPublished(true);
+
+      const puts = vi.mocked(axiosClient.put).mock.calls;
+      expect(puts).toHaveLength(2);
+      expect(puts[1][1]).toEqual({ quiz: { published: true } });
+      expect(summary).toEqual({ questionsRemoved: 3, questionsAdded: 2, republished: true });
+    });
+
+    it("leaves an unpublished quiz unpublished", async () => {
+      const { axiosClient, summary } = await updateWithCanvasPublished(false);
+
+      expect(vi.mocked(axiosClient.put).mock.calls).toHaveLength(1);
+      expect(summary.republished).toBe(false);
+    });
+
+    it("reports each step as it goes", async () => {
+      const { steps } = await updateWithCanvasPublished(true);
+
+      expect(steps).toEqual([
+        "Updating quiz settings",
+        "Removing 3 questions from Canvas",
+        "Adding 2 questions from the file",
+        "Saving the published quiz so students see the new questions",
+      ]);
+    });
+  });
+
+  describe("countSubmissions", () => {
+    it("counts real attempts, not students who only have settings like extra time", async () => {
+      const { paginatedRequest } = await import("./canvasServiceUtils");
+      vi.mocked(paginatedRequest).mockResolvedValue([
+        { quiz_submissions: [{ workflow_state: "complete" }, { workflow_state: "settings_only" }] },
+        { quiz_submissions: [{ workflow_state: "untaken" }] },
+      ]);
+
+      expect(await canvasQuizService.countSubmissions(42, 7)).toBe(2);
+    });
   });
 });
+
+const dropdownAnswersForCanvas = (question: LocalQuizQuestion) =>
+  getAnswersForCanvas(question, {} as never) as {
+    blank_id: string;
+    answer_text: string;
+    answer_weight: number;
+  }[];
+
+// groups of [prompt, answer] pairs; an empty prompt marks a distractor
+const dropdowns = (groups: [string, string][][]): LocalQuizQuestion => ({
+  text: "Question",
+  questionType: QuestionType.MULTIPLE_DROPDOWNS,
+  points: 1,
+  matchDistractors: [],
+  answers: groups.flatMap((group, dropdownGroup) =>
+    group.map(([text, matchedText]) => ({
+      correct: text !== "",
+      text,
+      matchedText,
+      dropdownGroup,
+    }))
+  ),
+});
+
+const planningQuestion: LocalQuizQuestion = {
+  text: "Plan the nested function.\n",
+  questionType: QuestionType.MULTIPLE_DROPDOWNS,
+  points: 2,
+  matchDistractors: [],
+  answers: [
+    { correct: true, text: "Name", matchedText: "min_cost_from", dropdownGroup: 0 },
+    { correct: false, text: "", matchedText: "paint_next", dropdownGroup: 0 },
+    { correct: false, text: "", matchedText: "total_so_far", dropdownGroup: 0 },
+    { correct: true, text: "Combine", matchedText: "minimum", dropdownGroup: 1 },
+    { correct: false, text: "", matchedText: "sum", dropdownGroup: 1 },
+    { correct: false, text: "", matchedText: "maximum", dropdownGroup: 1 },
+  ],
+};

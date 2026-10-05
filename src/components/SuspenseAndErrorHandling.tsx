@@ -4,14 +4,12 @@ import { QueryErrorResetBoundary } from "@tanstack/react-query";
 import { FC, ReactNode, Suspense, useEffect } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { Spinner } from "./Spinner";
-import toast from "react-hot-toast";
+import { showErrorToast } from "@/app/MyToaster";
 
 // Rendered in place of the failed subtree. The toast lives in an effect rather
 // than in the render body: an error boundary re-runs its fallback on every
 // re-render of the boundary, so toasting during render fires one toast per
-// keystroke while the content being edited is momentarily invalid. Keying the
-// toast by message means a repeated error updates the existing toast in place
-// instead of stacking a new one.
+// keystroke while the content being edited is momentarily invalid.
 const ErrorFallback: FC<{
   error: unknown;
   showToast: boolean;
@@ -21,11 +19,9 @@ const ErrorFallback: FC<{
 
   useEffect(() => {
     if (!showToast) return;
-    const id = `boundary:${message}`;
-    toast.error(message, { id });
     // error toasts do not time out (see MyToaster), so clear this one when the
     // error goes away rather than leaving it up after the fix
-    return () => toast.dismiss(id);
+    return showErrorToast(message);
   }, [message, showToast]);
 
   return (

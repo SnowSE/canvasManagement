@@ -1,7 +1,7 @@
 import { baseCanvasUrl } from "@/features/canvas/services/canvasServiceUtils";
 import { isServer } from "@tanstack/react-query";
 import axios, { AxiosInstance, AxiosError } from "axios";
-import toast from "react-hot-toast";
+import { showErrorToast } from "@/app/MyToaster";
 
 const canvasBaseUrl = "https://snow.instructure.com/api/v1/";
 
@@ -33,7 +33,7 @@ axiosClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     const errorMessage = getAxiosErrorMessage(error);
-    if (errorMessage) toast.error(errorMessage);
+    if (errorMessage) showErrorToast(errorMessage);
     return Promise.reject(error);
   }
 );

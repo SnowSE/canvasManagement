@@ -122,6 +122,54 @@ const getAnswerStringsWithMultilineSupport = (
   return answerLines;
 };
 
+// A blank (or whitespace-only) line between "^" lines starts a new dropdown
+// group. getAnswerStringsWithMultilineSupport attaches blank lines to the
+// answer before them, so a group ends at any answer carrying one.
+const splitIntoDropdownGroups = (answerLines: string[]): string[][] =>
+  answerLines
+    .reduce(
+      (groups, line) => {
+        groups[groups.length - 1].push(line);
+        const endsGroup = line
+          .split("\n")
+          .slice(1)
+          .some((l) => l.trim() === "");
+        if (endsGroup) groups.push([]);
+        return groups;
+      },
+      [[]] as string[][],
+    )
+    .filter((group) => group.length > 0);
+
+const parseDropdownAnswers = (
+  answerLines: string[],
+  questionIndex: number,
+): LocalQuizQuestionAnswer[] =>
+  splitIntoDropdownGroups(answerLines).flatMap((group, dropdownGroup) => {
+    const parsed = group.map(parseMatchingAnswer);
+    if (!parsed.some((a) => a.text))
+      throw Error(
+        `question ${questionIndex + 1}: dropdown group ${
+          dropdownGroup + 1
+        } has no prompt; every group needs a line like "^ prompt - correct answer"`,
+      );
+    return parsed.map((a) => {
+      if (a.text && !a.matchedText)
+        throw Error(
+          `question ${questionIndex + 1}: dropdown prompt "${a.text.replace(
+            /\s*-$/,
+            "",
+          )}" has no correct answer`,
+        );
+      return {
+        correct: a.text !== "",
+        text: a.text,
+        matchedText: a.matchedText,
+        dropdownGroup,
+      };
+    });
+  });
+
 export const quizQuestionAnswerMarkdownUtils = {
   parseMarkdown(
     input: string,
@@ -143,7 +191,10 @@ export const quizQuestionAnswerMarkdownUtils = {
     }
 
     const isCorrect = input.startsWith("*") || input[1] === "*";
-    if (questionType === QuestionType.MATCHING) {
+    if (
+      questionType === QuestionType.MATCHING ||
+      questionType === QuestionType.MULTIPLE_DROPDOWNS
+    ) {
       return parseMatchingAnswer(input);
     }
 
@@ -196,8 +247,13 @@ export const quizQuestionAnswerMarkdownUtils = {
     );
     if (isMultipleAnswer) return QuestionType.MULTIPLE_ANSWERS;
 
+    // "^" lines in one block are matching; blank-line-separated blocks of them
+    // are multiple dropdowns, one dropdown per prompt
     const isMatching = firstAnswerLine.startsWith("^");
-    if (isMatching) return QuestionType.MATCHING;
+    if (isMatching)
+      return splitIntoDropdownGroups(answerLines).length > 1
+        ? QuestionType.MULTIPLE_DROPDOWNS
+        : QuestionType.MATCHING;
 
     return QuestionType.NONE;
   },
@@ -210,6 +266,7 @@ export const quizQuestionAnswerMarkdownUtils = {
       QuestionType.MULTIPLE_CHOICE,
       QuestionType.MULTIPLE_ANSWERS,
       QuestionType.MATCHING,
+      QuestionType.MULTIPLE_DROPDOWNS,
       QuestionType.SHORT_ANSWER_WITH_ANSWERS,
       QuestionType.NUMERICAL,
     ];
@@ -227,6 +284,12 @@ export const quizQuestionAnswerMarkdownUtils = {
       linesWithoutPoints,
       questionIndex,
     );
+
+    if (questionType === QuestionType.MULTIPLE_DROPDOWNS)
+      return {
+        answers: parseDropdownAnswers(answerLines, questionIndex),
+        distractors: [],
+      };
 
     const allAnswers = answerLines.map((a) =>
       quizQuestionAnswerMarkdownUtils.parseMarkdown(a, questionType),
@@ -260,6 +323,10 @@ export const quizQuestionAnswerMarkdownUtils = {
       return `${questionTypeIndicator}${multilineMarkdownCompatibleText}`;
     } else if (question.questionType === "matching") {
       return `^ ${answer.text} - ${answer.matchedText}`;
+    } else if (question.questionType === "multiple_dropdowns") {
+      return answer.text
+        ? `^ ${answer.text} - ${answer.matchedText}`
+        : `^ - ${answer.matchedText}`;
     } else if (question.questionType === "numerical") {
       if (answer.numericalAnswerType === "range_answer") {
         return `= [${answer.numericAnswerRangeMin}, ${answer.numericAnswerRangeMax}]`;
