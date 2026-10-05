@@ -11,6 +11,20 @@ export function showErrorToast(message: string) {
   return () => toast.dismiss(message);
 }
 
+// For something only the user can finish (e.g. in Canvas): stays up until
+// clicked, with a link to where they need to go.
+export function showActionNeededToast(message: string, href: string, linkText: string) {
+  toast(
+    <span>
+      {message}{" "}
+      <a href={href} target="_blank" rel="noreferrer" className="underline">
+        {linkText}
+      </a>
+    </span>,
+    { id: href, icon: "⚠️", duration: Infinity },
+  );
+}
+
 export const MyToaster = () => {
 
   return (

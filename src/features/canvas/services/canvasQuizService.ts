@@ -424,10 +424,14 @@ export const canvasQuizService = {
   },
   /**
    * Makes the Canvas quiz match the file: settings, then questions (Canvas's
-   * are deleted and the file's added), then, if the quiz is published, saves
-   * it again -- Canvas only shows students question edits once a published
-   * quiz is saved. Students who already submitted keep the questions they
-   * answered; Canvas does not regrade them.
+   * are deleted and the file's added). Students who already submitted keep
+   * the questions they answered; Canvas does not regrade them.
+   *
+   * On a published quiz, students keep getting the old questions until
+   * someone clicks "Save it now" on the quiz page in Canvas. No API call can
+   * do that: Canvas rebuilds what students see only when the published state
+   * changes (unpublish + publish, which also sends students "assignment
+   * created" notifications) or its web form is saved.
    */
   async update(
     canvasCourseId: number,
@@ -468,16 +472,10 @@ export const canvasQuizService = {
     onStep(`Adding ${localQuiz.questions.length} questions from the file`);
     await createQuizQuestions(canvasCourseId, canvasQuizId, localQuiz, settings);
 
-    const republished = canvasQuiz.published === true;
-    if (republished) {
-      onStep("Saving the published quiz so students see the new questions");
-      await axiosClient.put(url, { quiz: { published: true } });
-    }
-
     return {
       questionsRemoved: oldQuestions.length,
       questionsAdded: localQuiz.questions.length,
-      republished,
+      needsSaveInCanvas: canvasQuiz.published === true,
     };
   },
   /** Attempts students have started or finished (Canvas also lists "settings_only" rows for students with extra time). */
