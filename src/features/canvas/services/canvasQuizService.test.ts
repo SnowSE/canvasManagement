@@ -522,20 +522,24 @@ describe("canvasQuizService", () => {
       expect(created).toHaveLength(2);
     });
 
-    it("saves a published quiz again so students see the new questions", async () => {
+    // Canvas only rebuilds what students see when a quiz's published state
+    // changes or its web form is saved; no API call does it (re-sending
+    // published: true is a no-op), so the caller must ask for "Save it now".
+    it("reports that a published quiz needs Save it now in Canvas", async () => {
       const { axiosClient, summary } = await updateWithCanvasPublished(true);
 
-      const puts = vi.mocked(axiosClient.put).mock.calls;
-      expect(puts).toHaveLength(2);
-      expect(puts[1][1]).toEqual({ quiz: { published: true } });
-      expect(summary).toEqual({ questionsRemoved: 3, questionsAdded: 2, republished: true });
+      expect(vi.mocked(axiosClient.put).mock.calls).toHaveLength(1);
+      expect(summary).toEqual({
+        questionsRemoved: 3,
+        questionsAdded: 2,
+        needsSaveInCanvas: true,
+      });
     });
 
-    it("leaves an unpublished quiz unpublished", async () => {
-      const { axiosClient, summary } = await updateWithCanvasPublished(false);
+    it("needs nothing more for an unpublished quiz", async () => {
+      const { summary } = await updateWithCanvasPublished(false);
 
-      expect(vi.mocked(axiosClient.put).mock.calls).toHaveLength(1);
-      expect(summary.republished).toBe(false);
+      expect(summary.needsSaveInCanvas).toBe(false);
     });
 
     it("reports each step as it goes", async () => {
@@ -545,7 +549,6 @@ describe("canvasQuizService", () => {
         "Updating quiz settings",
         "Removing 3 questions from Canvas",
         "Adding 2 questions from the file",
-        "Saving the published quiz so students see the new questions",
       ]);
     });
   });

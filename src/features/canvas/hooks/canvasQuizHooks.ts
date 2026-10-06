@@ -9,7 +9,8 @@ import { canvasModuleService } from "../services/canvasModuleService";
 import { canvasQuizService } from "../services/canvasQuizService";
 import { useCanvasLinkTargets } from "./useCanvasLinkTargets";
 import toast from "react-hot-toast";
-import { showErrorToast } from "@/app/MyToaster";
+import { showActionNeededToast, showErrorToast } from "@/app/MyToaster";
+import { baseCanvasUrl } from "../services/canvasServiceUtils";
 
 export const canvasQuizKeys = {
   quizzes: (canvasCourseId: number) =>
@@ -85,7 +86,9 @@ Update anyway?`;
 
 /**
  * Makes an existing Canvas quiz match the file, settings and questions,
- * showing each step in a toast. Asks first if students have already started.
+ * showing each step in a toast. Asks first if students have already started,
+ * and ends by saying if Canvas still needs "Save it now" (see
+ * canvasQuizService.update for why the app can't do that itself).
  */
 export const useUpdateQuizInCanvasMutation = () => {
   const { data: settings } = useLocalCourseSettingsQuery();
@@ -123,10 +126,20 @@ export const useUpdateQuizInCanvasMutation = () => {
             onStep: (step) => toast.loading(`${step}…`, { id: progress }),
           }
         );
-        toast.success(
-          `Updated "${quiz.name}" in Canvas: settings, ${summary.questionsRemoved} questions removed, ${summary.questionsAdded} added${summary.republished ? ", and saved again for students" : " (quiz is unpublished)"}.`,
-          { id: progress, duration: 8_000 }
-        );
+        const updated = `Updated "${quiz.name}" in Canvas: settings, ${summary.questionsRemoved} questions removed, ${summary.questionsAdded} added.`;
+        if (summary.needsSaveInCanvas) {
+          toast.dismiss(progress);
+          showActionNeededToast(
+            `${updated} Students still get the old questions until you click "Save it now" on the quiz page.`,
+            `${baseCanvasUrl}/courses/${settings.canvasId}/quizzes/${canvasQuizId}`,
+            "Open the quiz in Canvas",
+          );
+        } else {
+          toast.success(`${updated} Students will get them when you publish.`, {
+            id: progress,
+            duration: 8_000,
+          });
+        }
       } catch (error) {
         toast.dismiss(progress);
         throw error;
