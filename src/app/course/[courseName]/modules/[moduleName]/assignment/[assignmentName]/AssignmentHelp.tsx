@@ -155,10 +155,10 @@ GradeIndividually: false
         <Example>{`
 Schedule:
   09/18/2026:
-    - 2986905
-    - 2339770
+    - 100202
+    - 100203
   10/09/2026:
-    - 2414797
+    - 100211
 `}</Example>
         <P>
           Type <C>- </C> under a date to pick from students not yet scheduled.
