@@ -4,16 +4,16 @@
 
 Illustrated guides for instructors using CanvasManager:
 
-- [Getting Started with CanvasManager](docs/getting-started.html): setup,
-  course settings, the calendar, editing assignments, quizzes, pages and
-  lectures, publishing, and Compare with Canvas.
-- [Group Assignments & Student Schedules](docs/group-assignments-and-student-schedules.html):
+- [Getting Started with CanvasManager](https://snowse.github.io/canvasManagement/getting-started.html):
+  setup, course settings, the calendar, editing assignments, quizzes, pages
+  and lectures, publishing, and Compare with Canvas.
+- [Group Assignments & Student Schedules](https://snowse.github.io/canvasManagement/group-assignments-and-student-schedules.html):
   group sets, per-student due dates, the date picker and settings
   autocomplete.
 
-Each handout is one self-contained HTML file with its screenshots built in.
-GitHub shows the HTML source, so use **Download raw file** on the file's page
-and open it in a browser.
+The handouts are served by GitHub Pages from [`docs/`](docs/). Each one is a
+single self-contained HTML file with its screenshots built in, so it can also
+be downloaded and emailed as is.
 
 Changes that users can see update these handouts and the editor help in the
 same commit or PR. See [CLAUDE.md](CLAUDE.md#keep-the-docs-current).
