@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 
-const copyTextToClipboard = async (text: string) => {
+export const copyTextToClipboard = async (text: string) => {
   if (navigator.clipboard) {
     await navigator.clipboard.writeText(text);
     return;

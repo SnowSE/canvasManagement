@@ -15,7 +15,7 @@ import { useAuthoritativeUpdates } from "@/app/course/[courseName]/utils/useAuth
 import EditAssignmentHeader from "./EditAssignmentHeader";
 import { UpdateAssignmentName } from "./UpdateAssignmentName";
 import { Spinner } from "@/components/Spinner";
-import { getAssignmentHelpString } from "./getAssignmentHelpString";
+import { AssignmentHelp } from "./AssignmentHelp";
 import { EditLayout } from "@/components/EditLayout";
 import { useRosterGroupSetsQuery } from "@/features/canvas/roster/rosterHooks";
 import {
@@ -132,30 +132,10 @@ export default function EditAssignment({
       }
       Help={
         showHelp ? (
-          <>
-            <pre>
-              <code>
-                {getAssignmentHelpString(
-                  settings,
-                  groupSetsData?.groupSets.map((g) => g.name) ?? [],
-                )}
-              </code>
-            </pre>
-            <a
-              href="https://www.markdownguide.org/cheat-sheet/"
-              target="_blank"
-              className="text-blue-400 underline"
-            >
-              Markdown Cheat Sheet
-            </a>
-            <a
-              href="https://mermaid.live/edit"
-              target="_blank"
-              className="text-blue-400 underline ps-3"
-            >
-              Mermaid Live Editor
-            </a>
-          </>
+          <AssignmentHelp
+            settings={settings}
+            groupSetNames={groupSetsData?.groupSets.map((g) => g.name) ?? []}
+          />
         ) : undefined
       }
       onCloseHelp={() => setShowHelp(false)}

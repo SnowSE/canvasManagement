@@ -192,3 +192,9 @@ select {
 .dragging .draggingModule {
   @apply shadow-[0_0px_10px_0px] shadow-blue-500/50;
 }
+
+/* search matches in the editor help pane (HelpParts.tsx) */
+::highlight(help-search) {
+  background-color: rgb(250 204 21 / 0.35);
+  color: white;
+}

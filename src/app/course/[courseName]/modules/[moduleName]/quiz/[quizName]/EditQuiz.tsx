@@ -19,96 +19,7 @@ import { getFeedbackDelimitersFromSettings } from "@/features/local/globalSettin
 import type { GlobalSettings } from "@/features/local/globalSettings/globalSettingsModels";
 import { EditLayout } from "@/components/EditLayout";
 import { quizMarkdownUtils } from "@/features/local/quizzes/models/utils/quizMarkdownUtils";
-import { LocalCourseSettings } from "@/features/local/course/localCourseSettings";
-
-const helpString = (settings: LocalCourseSettings) => {
-  const groupNames = settings.assignmentGroups.map((g) => g.name).join("\n- ");
-  return `Assignment Group Names:
-- ${groupNames}
-
-Markdown works in question text and in answers, including encoded blocks --
-{{name:encoding}} paired with an "encoded-name=" fenced block. See the
-assignment help for an example.
-
-QUESTION REFERENCE
----
-Points: 2
-this is a question?
-*a) correct
-b) not correct
----
-points: 1
-question goes here
-[*] correct
-[ ] not correct
-[] not correct
----
-the points default to 1?
-*a) true
-b) false
----
-Markdown is supported
-
-- like
-- this
-- list
-
-[*] true
-[ ] false
----
-This is a one point essay question
-essay
----
-points: 4
-this is a short answer question
-short_answer
----
-points: 4
-the underscore is optional
-short answer
----
-short answer with auto-graded responses
-*a) answer 1
-*b) other valid answer
-short_answer=
----
-this is a matching question
-^ left answer - right dropdown
-^ other thing -  another option
-^ - distractor
-^ - other distractor
----
-this is a multiple dropdowns question: blank lines split the matching lines
-into groups, and each prompt's dropdown offers every answer in its group
-^ first prompt - its answer
-^ - distractor for the first prompt
-
-^ second prompt - its answer
-^ third prompt - an answer both share
-^ - distractor for the second and third prompts
----
-Points: 3
-FEEDBACK EXAMPLE
-What is 2+3?
-+ Correct! Good job
-- Incorrect, try again
-... This is general feedback shown regardless
-*a) 4
-*b) 5
-c) 6
----
-Points: 2
-FEEDBACK EXAMPLE
-Multiline feedback example
-+
-Great work!
-You understand the concept.
--
-Not quite right.
-Review the material and try again.
-*a) correct answer
-b) wrong answer`;
-};
+import { QuizHelp } from "./QuizHelp";
 
 export default function EditQuiz({
   moduleName,
@@ -211,9 +122,7 @@ export default function EditQuiz({
       }
       Help={
         showHelp ? (
-          <pre>
-            <code>{helpString(settings)}</code>
-          </pre>
+          <QuizHelp settings={settings} feedbackDelimiters={feedbackDelimiters} />
         ) : undefined
       }
       onCloseHelp={() => setShowHelp(false)}
