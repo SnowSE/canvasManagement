@@ -382,7 +382,17 @@ const FieldsTable: FC<{ fields: SyncField[] }> = ({ fields }) => {
         <Legend />
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm border-0 [&_td]:border-0 [&_th]:border-0">
+        {/* fixed layout: with auto layout one long rubric label decided the
+            first column's width and pushed File and Canvas off the page. The
+            ! overrides the global table rule meant for markdown tables. */}
+        <table className="!table !w-full table-fixed text-sm border-0 [&_td]:border-0 [&_th]:border-0">
+          <colgroup>
+            <col className="w-1/3 md:w-1/4" />
+            <col />
+            <col className="w-8" />
+            <col />
+            <col className="w-8" />
+          </colgroup>
           <thead>
             <tr className="text-xs uppercase tracking-wider text-slate-400">
               <th className="text-start font-medium">Setting</th>
@@ -403,7 +413,7 @@ const FieldsTable: FC<{ fields: SyncField[] }> = ({ fields }) => {
                     (f.same ? "text-slate-500" : "text-slate-200")
                   }
                 >
-                  <td className="whitespace-nowrap align-top">
+                  <td className="align-top break-words">
                     <span className={f.same ? "" : "font-medium"}>{f.label}</span>
                     {newSection && (
                       <span className="block text-[10px] uppercase tracking-wider text-slate-600">
@@ -436,7 +446,7 @@ const FieldsTable: FC<{ fields: SyncField[] }> = ({ fields }) => {
 const Value: FC<{ text: string; tone?: "file" | "canvas" }> = ({ text, tone }) => (
   <span
     className={
-      "font-mono text-xs px-1.5 py-0.5 rounded " +
+      "font-mono text-xs px-1.5 py-0.5 rounded [overflow-wrap:anywhere] [box-decoration-break:clone] " +
       (tone === "file"
         ? "bg-green-900/40 text-green-300"
         : tone === "canvas"
