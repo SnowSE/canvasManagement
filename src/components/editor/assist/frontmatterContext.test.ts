@@ -13,7 +13,7 @@ AssignmentGroupName: Labs
 GroupSet:
 Schedule:
   09/18/2026:
-    - Mccormick, Bradley
+    - Okafor, Daniel
     - 
   
     
@@ -48,7 +48,7 @@ describe("frontmatter line context", () => {
   it("describes schedule students, dates, and blank spots", () => {
     expect(getLineContext(file, 7)).toEqual({
       kind: "listItem", header: "Schedule", itemStart: 7,
-      text: "Mccormick, Bradley", needsDash: false, scheduleDate: "09/18/2026",
+      text: "Okafor, Daniel", needsDash: false, scheduleDate: "09/18/2026",
     });
     expect(getLineContext(file, 8)).toMatchObject({ kind: "listItem", text: "", needsDash: false });
     expect(getLineContext(file, 9)).toEqual({ kind: "scheduleDateKey", indent: "  ", date: undefined });
@@ -71,7 +71,7 @@ describe("frontmatter line context", () => {
 
   it("lists the scheduled students with their dates", () => {
     expect(scheduleStudentLines(file)).toEqual([
-      { lineIndex: 7, label: "Mccormick, Bradley", date: "09/18/2026", column: 7 },
+      { lineIndex: 7, label: "Okafor, Daniel", date: "09/18/2026", column: 7 },
     ]);
   });
 

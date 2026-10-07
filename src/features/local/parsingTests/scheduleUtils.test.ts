@@ -10,8 +10,8 @@ import {
 } from "../assignments/models/utils/scheduleUtils";
 
 const students = [
-  { id: 1, sortableName: "Ginn, Landon" },
-  { id: 2, sortableName: "Hoyt, Jonathan" },
+  { id: 1, sortableName: "Brennan, Owen" },
+  { id: 2, sortableName: "Dubois, Etienne" },
   { id: 3, sortableName: "Smith, Alex" },
   { id: 4, sortableName: "Smith, Alex" },
 ];
@@ -19,7 +19,7 @@ const students = [
 describe("schedule utils", () => {
   it("adds the canvas id only to duplicate names", () => {
     const labels = studentLabels(students);
-    expect(labels.get(1)).toBe("Ginn, Landon");
+    expect(labels.get(1)).toBe("Brennan, Owen");
     expect(labels.get(3)).toBe("Smith, Alex (3)");
     expect(labels.get(4)).toBe("Smith, Alex (4)");
   });
@@ -27,15 +27,15 @@ describe("schedule utils", () => {
   it("resolves names, flags unknown, ambiguous, and repeated students", () => {
     const { entries, unknown, duplicates } = resolveSchedule(
       [
-        { date: "09/18/2026", students: ["Ginn, Landon", "Smith, Alex (4)", "Nobody, Here"] },
-        { date: "10/09/2026", students: ["ginn, landon", "Smith, Alex"] },
+        { date: "09/18/2026", students: ["Brennan, Owen", "Smith, Alex (4)", "Nobody, Here"] },
+        { date: "10/09/2026", students: ["brennan, owen", "Smith, Alex"] },
       ],
       students
     );
     expect(entries[0].studentIds).toEqual([1, 4]);
     expect(entries[1].studentIds).toEqual([]);
     expect(unknown).toEqual(["Nobody, Here", "Smith, Alex"]);
-    expect(duplicates).toEqual(["ginn, landon"]);
+    expect(duplicates).toEqual(["brennan, owen"]);
   });
 
   it("resolves bare canvas ids, which is what files store", () => {
@@ -46,7 +46,7 @@ describe("schedule utils", () => {
     );
     expect(entries[0].studentIds).toEqual([2, 4]);
     expect(unknown).toEqual(["999"]);
-    expect(studentDisplayName("2", students)).toBe("Hoyt, Jonathan");
+    expect(studentDisplayName("2", students)).toBe("Dubois, Etienne");
     expect(studentDisplayName("4", students)).toBe("Smith, Alex (4)");
     expect(studentDisplayName("999", students)).toBe("999");
     expect(studentDisplayName("2", undefined)).toBe("2");
@@ -54,7 +54,7 @@ describe("schedule utils", () => {
 
   it("lists who has not been scheduled yet", () => {
     const left = unscheduledStudents(
-      [{ date: "09/18/2026", students: ["Hoyt, Jonathan"] }],
+      [{ date: "09/18/2026", students: ["Dubois, Etienne"] }],
       students
     );
     expect(left.map((s) => s.id)).toEqual([1, 3, 4]);
@@ -67,7 +67,7 @@ describe("schedule utils", () => {
         lockAt: "12/13/2026 23:59:00",
         unlockAt: "08/26/2026 08:00:00",
         schedule: [
-          { date: "09/18/2026", students: ["Ginn, Landon", "Hoyt, Jonathan"] },
+          { date: "09/18/2026", students: ["Brennan, Owen", "Dubois, Etienne"] },
           { date: "10/09/2026", students: [] },
         ],
       },

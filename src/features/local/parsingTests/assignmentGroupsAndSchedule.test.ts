@@ -32,13 +32,13 @@ describe("group set and schedule frontmatter", () => {
     const assignment: LocalAssignment = {
       ...base,
       schedule: [
-        { date: "09/18/2026", students: ["Mccormick, Bradley", "Ginn, Landon"] },
-        { date: "10/09/2026", students: ["Machaca, Leila"] },
+        { date: "09/18/2026", students: ["Okafor, Daniel", "Brennan, Owen"] },
+        { date: "10/09/2026", students: ["Nguyen, Thao"] },
       ],
     };
     const markdown = assignmentMarkdownSerializer.toMarkdown(assignment);
     expect(markdown).toContain(
-      "Schedule:\n  09/18/2026:\n    - Mccormick, Bradley\n    - Ginn, Landon\n  10/09/2026:\n    - Machaca, Leila\n"
+      "Schedule:\n  09/18/2026:\n    - Okafor, Daniel\n    - Brennan, Owen\n  10/09/2026:\n    - Nguyen, Thao\n"
     );
     const parsed = assignmentMarkdownParser.parseMarkdown(markdown, base.name);
     expect(parsed).toEqual(assignment);
@@ -62,9 +62,9 @@ DueAt: 12/11/2026 23:59:00
 AssignmentGroupName: Labs
 Schedule:
   9/18/2026:
-    - Mccormick, Bradley
+    - Okafor, Daniel
 
-    - Hoyt, Jonathan (41015)
+    - Dubois, Etienne (100204)
   10/09/2026:
 Classroom50Slug: 
 SubmissionTypes:
@@ -79,7 +79,7 @@ description
 - 10pts: presented`;
     const parsed = assignmentMarkdownParser.parseMarkdown(markdown, base.name);
     expect(parsed.schedule).toEqual([
-      { date: "09/18/2026", students: ["Mccormick, Bradley", "Hoyt, Jonathan (41015)"] },
+      { date: "09/18/2026", students: ["Okafor, Daniel", "Dubois, Etienne (100204)"] },
       { date: "10/09/2026", students: [] },
     ]);
     expect(parsed.submissionTypes).toEqual([AssignmentSubmissionType.ONLINE_TEXT_ENTRY]);
@@ -89,7 +89,7 @@ description
     const markdown = `DueAt: 12/11/2026 23:59:00
 AssignmentGroupName: Labs
 Schedule:
-    - Mccormick, Bradley
+    - Okafor, Daniel
 SubmissionTypes:
 ---
 d`;

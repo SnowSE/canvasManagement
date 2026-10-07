@@ -36,8 +36,8 @@ const parseFileUploadExtensions = (input: string) => {
 
 // Schedule:
 //   09/18/2026:
-//     - Mccormick, Bradley
-//     - Ginn, Landon
+//     - Okafor, Daniel
+//     - Brennan, Owen
 // Dates are keys indented under Schedule, students are list items indented
 // further. The block ends at the first line that is not indented.
 const parseSchedule = (input: string): AssignmentScheduleEntry[] => {
