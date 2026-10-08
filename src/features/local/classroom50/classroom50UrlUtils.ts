@@ -24,7 +24,9 @@ export const getClassroom50AcceptUrl = (
 ): string | undefined => {
   const classPageUrl = getClassroom50ClassPageUrl(settings);
   if (!classPageUrl || !slug) return undefined;
-  return `${classPageUrl}/assignments/${slug}`;
+  // the bare assignment url sends staff to submissions and students to their
+  // own submission page; /accept is the link classroom50 gives students
+  return `${classPageUrl}/assignments/${slug}/accept`;
 };
 
 // commands meant to be copied and run on the faculty machine, not the server

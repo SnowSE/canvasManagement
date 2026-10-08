@@ -42,7 +42,7 @@ describe("classroom50 urls", () => {
       baseUrl: "https://classroom.example.edu/",
     });
     expect(getClassroom50AcceptUrl(settings, "lab-1")).toEqual(
-      "https://classroom.example.edu/my-org/my-class/assignments/lab-1"
+      "https://classroom.example.edu/my-org/my-class/assignments/lab-1/accept"
     );
   });
 
