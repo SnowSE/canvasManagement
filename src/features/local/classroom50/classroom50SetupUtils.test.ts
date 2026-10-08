@@ -113,6 +113,10 @@ describe("extensionListIncludesTeacher", () => {
       )
     ).toBe(true);
   });
+  // the docker image copies the binary in, so gh lists it without a repo
+  it("finds a locally installed extension", () => {
+    expect(extensionListIncludesTeacher("gh teacher\t\t\n")).toBe(true);
+  });
   it("handles no extensions", () => {
     expect(extensionListIncludesTeacher("no installed extensions found")).toBe(
       false
