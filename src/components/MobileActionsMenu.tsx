@@ -10,8 +10,14 @@ import {
 // Lets buttons rendered inside the mobile actions menu close it after a tap
 // (e.g. Toggle Help, whose effect would otherwise be hidden behind the menu).
 // Outside the menu, closeMenu is a no-op.
-const ActionsMenuContext = createContext<{ closeMenu: () => void }>({
+// inMenu lets a control lay itself out flat instead of opening a dropdown
+// inside the dropdown.
+const ActionsMenuContext = createContext<{
+  closeMenu: () => void;
+  inMenu: boolean;
+}>({
   closeMenu: () => {},
+  inMenu: false,
 });
 
 export function useActionsMenu() {
@@ -29,7 +35,10 @@ export function CloseMenuOnClick({ children }: { children: ReactNode }) {
 // as menu items (see the .actions-menu styles in globals.css). Hidden on md+.
 export function MobileActionsMenu({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
-  const menuContext = useMemo(() => ({ closeMenu: () => setOpen(false) }), []);
+  const menuContext = useMemo(
+    () => ({ closeMenu: () => setOpen(false), inMenu: true }),
+    [],
+  );
 
   return (
     <>

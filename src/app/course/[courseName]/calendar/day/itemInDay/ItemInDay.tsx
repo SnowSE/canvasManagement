@@ -58,7 +58,7 @@ export const ItemInDay: FC<{
       <Link
         to={getModuleItemUrl(courseName, moduleName, type, item.name)}
         className={
-          " border rounded-sm px-1 sm:mx-1 break-words mb-1 truncate sm:text-wrap text-nowrap " +
+          " border rounded-sm px-1 sm:mx-1 mb-1 truncate sm:text-wrap text-nowrap " +
           " bg-slate-800 " +
           " block " +
           (scheduleEntry ? " border-dashed " : "") +
@@ -86,19 +86,20 @@ export const ItemInDay: FC<{
         onContextMenu={handleContextMenu}
         ref={targetRef}
       >
-        <div className="flex justify-between">
-          <div className="flex-1">{item.name}</div>
+        {/* floated so a long title wraps under the icon instead of beside it */}
+        <div className="flow-root">
+          <div className="float-right w-6 py-0.5 ps-1">
+            <ItemTypeIcon type={type} />
+          </div>
           {scheduleEntry && (
             <div
-              className="text-xs text-slate-400 self-center px-1"
+              className="float-right text-xs text-slate-400 leading-6 px-1"
               title="students scheduled for this day"
             >
               {scheduleEntry.students.length}
             </div>
           )}
-          <div className="w-7 p-1 shrink-0">
-            <ItemTypeIcon type={type} />
-          </div>
+          {item.name}
         </div>
       </Link>
       <ClientOnly>

@@ -1,7 +1,12 @@
-import { PublishInCanvasButton } from "@/app/course/[courseName]/PublishInCanvasButton";
+import {
+  EditorFooter,
+  FooterAction,
+} from "@/app/course/[courseName]/EditorFooter";
+import { getSyncReport } from "@/app/course/[courseName]/calendar/day/getAssignmentSyncStatus";
+import { TrashIcon } from "@/components/icons/ActionIcons";
+import { useCanvasAssignmentsQuery } from "@/features/canvas/hooks/canvasAssignmentHooks";
 import { useCourseContext } from "@/app/course/[courseName]/context/courseContext";
 import Modal, { useModal } from "@/components/Modal";
-import { Spinner } from "@/components/Spinner";
 import {
   useCanvasQuizzesQuery,
   useAddQuizToCanvasMutation,
@@ -15,10 +20,9 @@ import {
   useQuizQuery,
 } from "@/features/local/quizzes/quizHooks";
 import { getCompareUrl, getCourseUrl } from "@/services/urlUtils";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
+import { useMemo } from "react";
 import { useItemNavigation } from "../../../../hooks/useItemNavigation";
-import ItemNavigationButtons from "../../../../components/ItemNavigationButtons";
-import { useActionsMenu } from "@/components/MobileActionsMenu";
 
 export function QuizButtons({
   moduleName,
@@ -33,6 +37,7 @@ export function QuizButtons({
   const { courseName } = useCourseContext();
   const { data: settings } = useLocalCourseSettingsQuery();
   const { data: canvasQuizzes } = useCanvasQuizzesQuery();
+  const { data: canvasAssignments } = useCanvasAssignmentsQuery();
 
   const { data: quiz } = useQuizQuery(moduleName, quizName);
   const addToCanvas = useAddQuizToCanvasMutation();
@@ -40,7 +45,6 @@ export function QuizButtons({
   const updateInCanvas = useUpdateQuizInCanvasMutation();
   const deleteLocal = useDeleteQuizMutation();
   const modal = useModal();
-  const { closeMenu } = useActionsMenu();
   const { previousUrl, nextUrl } = useItemNavigation(
     "quiz",
     quizName,
@@ -49,118 +53,103 @@ export function QuizButtons({
 
   const quizInCanvas = canvasQuizzes?.find((c) => c.title === quizName);
 
-  return (
-    <div className="p-5 max-md:p-2 flex flex-row flex-wrap gap-3 justify-between">
-      <div>
-        <button
-          onClick={() => {
-            toggleHelp();
-            closeMenu();
-          }}
-        >
-          Toggle Help
-        </button>
-      </div>
-      <div className="flex flex-row flex-wrap gap-3 justify-end">
-        {(addToCanvas.isPending ||
-          deleteFromCanvas.isPending ||
-          updateInCanvas.isPending) && <Spinner />}
-        {!quizInCanvas && (
-          <button
-            disabled={addToCanvas.isPending}
-            onClick={() => addToCanvas.mutate({ quiz, moduleName })}
-          >
-            Add to canvas
-          </button>
-        )}
-        {quizInCanvas && (
-          <a
-            className="btn"
-            target="_blank"
-            href={`${baseCanvasUrl}/courses/${settings.canvasId}/quizzes/${quizInCanvas.id}`}
-            onClick={closeMenu}
-          >
-            View in Canvas
-          </a>
-        )}
-        {quizInCanvas && (
-          <Link
-            className="btn"
-            to={getCompareUrl(courseName, moduleName, "quiz", quizName)}
-            onClick={closeMenu}
-          >
-            Compare with Canvas
-          </Link>
-        )}
-        {quizInCanvas && (
-          <button
-            disabled={updateInCanvas.isPending}
-            title="Pushes settings and replaces the questions in Canvas with the file's. On a published quiz, click Save it now in Canvas afterwards so students get them. Warns first if students have started."
-            onClick={() =>
-              updateInCanvas.mutate({ quiz, canvasQuizId: quizInCanvas.id })
-            }
-          >
-            Update in Canvas
-          </button>
-        )}
-        {quizInCanvas && (
-          <PublishInCanvasButton
-            type="quiz"
-            canvasItemId={quizInCanvas.id}
-            published={quizInCanvas.published === true}
-            name={quizName}
-            moduleName={moduleName}
-            onPublish={closeMenu}
-          />
-        )}
-        {quizInCanvas && (
-          <button
-            className="btn-danger"
-            disabled={deleteFromCanvas.isPending}
-            onClick={() => deleteFromCanvas.mutate(quizInCanvas.id)}
-          >
-            Delete from Canvas
-          </button>
-        )}
-        {!quizInCanvas && (
-          <Modal
-            modalControl={modal}
-            buttonText="Delete Localy"
-            buttonClass="btn-danger"
-            modalWidth="w-1/5"
-          >
-            {({ closeModal }) => (
-              <div>
-                <div className="text-center">
-                  Are you sure you want to delete this quiz locally?
-                </div>
-                <br />
-                <div className="flex justify-around gap-3">
-                  <button
-                    onClick={async () => {
-                      await deleteLocal.mutateAsync({
-                        moduleName,
-                        quizName,
-                        courseName,
-                      });
-                      navigate({ to: getCourseUrl(courseName) });
-                    }}
-                    className="btn-danger"
-                  >
-                    Yes
-                  </button>
-                  <button onClick={closeModal}>No</button>
-                </div>
-              </div>
-            )}
-          </Modal>
-        )}
+  const differences = useMemo(
+    () =>
+      quizInCanvas
+        ? getSyncReport({
+            item: quiz,
+            canvasItem: quizInCanvas,
+            type: "quiz",
+            settings,
+            canvasLinkTargets: {
+              assignments: canvasAssignments,
+              quizzes: canvasQuizzes,
+            },
+          }).differences.filter((d) => d.key !== "published")
+        : [],
+    [canvasAssignments, canvasQuizzes, quiz, quizInCanvas, settings],
+  );
 
-        <Link className="btn" to={getCourseUrl(courseName)}>
-          Go Back
-        </Link>
-        <ItemNavigationButtons previousUrl={previousUrl} nextUrl={nextUrl} />
-      </div>
-    </div>
+  const extraActions: FooterAction[] = quizInCanvas
+    ? [
+        {
+          label: "Delete from Canvas",
+          icon: <TrashIcon />,
+          danger: true,
+          disabled: deleteFromCanvas.isPending,
+          onClick: () => deleteFromCanvas.mutate(quizInCanvas.id),
+        },
+      ]
+    : [
+        {
+          label: "Delete locally",
+          icon: <TrashIcon />,
+          danger: true,
+          onClick: () => modal.openModal(),
+          opensDialog: true,
+        },
+      ];
+
+  return (
+    <EditorFooter
+      type="quiz"
+      name={quizName}
+      moduleName={moduleName}
+      canvasLoading={canvasQuizzes === undefined}
+      canvasItem={
+        quizInCanvas && {
+          id: quizInCanvas.id,
+          published: quizInCanvas.published === true,
+        }
+      }
+      differences={differences}
+      canvasUrl={
+        quizInCanvas &&
+        `${baseCanvasUrl}/courses/${settings.canvasId}/quizzes/${quizInCanvas.id}`
+      }
+      compareUrl={getCompareUrl(courseName, moduleName, "quiz", quizName)}
+      busy={
+        addToCanvas.isPending ||
+        deleteFromCanvas.isPending ||
+        updateInCanvas.isPending
+      }
+      onAdd={() => addToCanvas.mutate({ quiz, moduleName })}
+      onUpdate={() =>
+        quizInCanvas &&
+        updateInCanvas.mutate({ quiz, canvasQuizId: quizInCanvas.id })
+      }
+      updateTitle="Pushes settings and replaces the questions in Canvas with the file's. On a published quiz, click Save it now in Canvas afterwards so students get them. Warns first if students have started."
+      extraActions={extraActions}
+      toggleHelp={toggleHelp}
+      previousUrl={previousUrl}
+      nextUrl={nextUrl}
+    >
+      <Modal modalControl={modal} modalWidth="w-1/5">
+        {({ closeModal }) => (
+          <div>
+            <div className="text-center">
+              Are you sure you want to delete this quiz locally?
+            </div>
+            <br />
+            <div className="flex justify-around gap-3">
+              <button
+                onClick={async () => {
+                  await deleteLocal.mutateAsync({
+                    moduleName,
+                    quizName,
+                    courseName,
+                  });
+                  navigate({ to: getCourseUrl(courseName) });
+                }}
+                className="btn-danger"
+              >
+                Yes
+              </button>
+              <button onClick={closeModal}>No</button>
+            </div>
+          </div>
+        )}
+      </Modal>
+    </EditorFooter>
   );
 }

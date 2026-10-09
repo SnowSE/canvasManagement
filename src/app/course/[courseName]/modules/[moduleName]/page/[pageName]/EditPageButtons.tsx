@@ -1,4 +1,8 @@
-import { PublishInCanvasButton } from "@/app/course/[courseName]/PublishInCanvasButton";
+import {
+  EditorFooter,
+  FooterAction,
+} from "@/app/course/[courseName]/EditorFooter";
+import { TrashIcon } from "@/components/icons/ActionIcons";
 import { useCourseContext } from "@/app/course/[courseName]/context/courseContext";
 import Modal, { useModal } from "@/components/Modal";
 import { Spinner } from "@/components/Spinner";
@@ -15,10 +19,9 @@ import {
   usePageQuery,
 } from "@/features/local/pages/pageHooks";
 import { getCourseUrl } from "@/services/urlUtils";
-import { Link, useNavigate } from "@tanstack/react-router";
-import React, { useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import { useItemNavigation } from "../../../../hooks/useItemNavigation";
-import ItemNavigationButtons from "../../../../components/ItemNavigationButtons";
 
 export default function EditPageButtons({
   moduleName,
@@ -51,97 +54,83 @@ export default function EditPageButtons({
     updatePageInCanvas.isPending ||
     deletePageInCanvas.isPending;
 
-  return (
-    <div className="p-5 max-md:p-2 flex justify-end flex-row flex-wrap gap-x-3 gap-y-1">
-      {requestIsPending && <Spinner />}
-      {!pageInCanvas && (
-        <button
-          onClick={() => createPageInCanvas.mutate({ page, moduleName })}
-          disabled={requestIsPending}
-        >
-          Add to Canvas
-        </button>
-      )}
-      {pageInCanvas && (
-        <a
-          className="btn"
-          target="_blank"
-          href={`${baseCanvasUrl}/courses/${settings.canvasId}/pages/${pageInCanvas.url}`}
-        >
-          View in Canvas
-        </a>
-      )}
-      {pageInCanvas && (
-        <button
-          onClick={() =>
-            updatePageInCanvas.mutate({
-              page,
-              canvasPageId: pageInCanvas.page_id,
-            })
-          }
-          disabled={requestIsPending}
-        >
-          Update in Canvas
-        </button>
-      )}
-      {pageInCanvas && (
-        <PublishInCanvasButton
-          type="page"
-          canvasItemId={pageInCanvas.page_id}
-          published={pageInCanvas.published}
-          name={pageName}
-          moduleName={moduleName}
-        />
-      )}
-      {pageInCanvas && (
-        <button
-          className="btn-danger"
-          onClick={() => deletePageInCanvas.mutate(pageInCanvas.page_id)}
-          disabled={requestIsPending}
-        >
-          Delete from Canvas
-        </button>
-      )}
+  const extraActions: FooterAction[] = pageInCanvas
+    ? [
+        {
+          label: "Delete from Canvas",
+          icon: <TrashIcon />,
+          danger: true,
+          disabled: requestIsPending,
+          onClick: () => deletePageInCanvas.mutate(pageInCanvas.page_id),
+        },
+      ]
+    : [
+        {
+          label: "Delete locally",
+          icon: <TrashIcon />,
+          danger: true,
+          onClick: () => modal.openModal(),
+          opensDialog: true,
+        },
+      ];
 
-      {!pageInCanvas && (
-        <Modal
-          modalControl={modal}
-          buttonText="Delete Localy"
-          buttonClass="btn-danger"
-          modalWidth="w-1/5"
-        >
-          {({ closeModal }) => (
-            <div>
-              <div className="text-center">
-                Are you sure you want to delete this page locally?
-              </div>
-              <br />
-              <div className="flex justify-around gap-3">
-                <button
-                  onClick={async () => {
-                    setLoading(true);
-                    await deletePageLocal.mutateAsync({
-                      moduleName,
-                      pageName,
-                      courseName,
-                    });
-                    navigate({ to: getCourseUrl(courseName) });
-                  }}
-                  className="btn-danger"
-                >
-                  Yes
-                </button>
-                <button onClick={closeModal}>No</button>
-              </div>
-              {loading && <Spinner />}
+  return (
+    <EditorFooter
+      type="page"
+      name={pageName}
+      moduleName={moduleName}
+      canvasLoading={canvasPages === undefined}
+      canvasItem={
+        pageInCanvas && {
+          id: pageInCanvas.page_id,
+          published: pageInCanvas.published,
+        }
+      }
+      canvasUrl={
+        pageInCanvas &&
+        `${baseCanvasUrl}/courses/${settings.canvasId}/pages/${pageInCanvas.url}`
+      }
+      busy={requestIsPending}
+      onAdd={() => createPageInCanvas.mutate({ page, moduleName })}
+      onUpdate={() =>
+        pageInCanvas &&
+        updatePageInCanvas.mutate({
+          page,
+          canvasPageId: pageInCanvas.page_id,
+        })
+      }
+      extraActions={extraActions}
+      previousUrl={previousUrl}
+      nextUrl={nextUrl}
+    >
+      <Modal modalControl={modal} modalWidth="w-1/5">
+        {({ closeModal }) => (
+          <div>
+            <div className="text-center">
+              Are you sure you want to delete this page locally?
             </div>
-          )}
-        </Modal>
-      )}
-      <Link className="btn" to={getCourseUrl(courseName)}>
-        Go Back
-      </Link>
-      <ItemNavigationButtons previousUrl={previousUrl} nextUrl={nextUrl} />
-    </div>
+            <br />
+            <div className="flex justify-around gap-3">
+              <button
+                onClick={async () => {
+                  setLoading(true);
+                  await deletePageLocal.mutateAsync({
+                    moduleName,
+                    pageName,
+                    courseName,
+                  });
+                  navigate({ to: getCourseUrl(courseName) });
+                }}
+                className="btn-danger"
+              >
+                Yes
+              </button>
+              <button onClick={closeModal}>No</button>
+            </div>
+            {loading && <Spinner />}
+          </div>
+        )}
+      </Modal>
+    </EditorFooter>
   );
 }
