@@ -19,6 +19,7 @@ import {
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import { baseCanvasUrl } from "@/features/canvas/services/canvasServiceUtils";
 import { useCourseContext } from "../../../context/courseContext";
+import { PublishInCanvasButton } from "../../../PublishInCanvasButton";
 import Modal, { ModalControl } from "@/components/Modal";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
@@ -215,7 +216,7 @@ export const AssignmentDayItemContextMenu: FC<{
               </form>
             ) : (
               <>
-                {canvasUrl && (
+                {assignmentInCanvas && canvasUrl && (
                   <>
                     <a
                       href={canvasUrl}
@@ -251,6 +252,16 @@ export const AssignmentDayItemContextMenu: FC<{
                     >
                       Update in Canvas
                     </button>
+                    <PublishInCanvasButton
+                      type="assignment"
+                      canvasItemId={assignmentInCanvas.id}
+                      published={assignmentInCanvas.published}
+                      name={item.name}
+                      moduleName={moduleName}
+                      onPublish={handleClose}
+                      className={`unstyled ${baseButtonClasses} ${normalButtonClass}`}
+                      publishedClassName="text-left py-1"
+                    />
                     <button
                       onClick={handleDeleteFromCanvas}
                       disabled={deleteFromCanvasMutation.isPending}

@@ -96,7 +96,7 @@ export const ItemInDay: FC<{
               {scheduleEntry.students.length}
             </div>
           )}
-          <div className="w-7 p-1">
+          <div className="w-7 p-1 shrink-0">
             <ItemTypeIcon type={type} />
           </div>
         </div>

@@ -603,3 +603,35 @@ const planningQuestion: LocalQuizQuestion = {
     { correct: false, text: "", matchedText: "maximum", dropdownGroup: 1 },
   ],
 };
+
+describe("fill in multiple blanks", () => {
+  const question: LocalQuizQuestion = {
+    text: "Roses are [color1], violets are [color2]",
+    questionType: QuestionType.FILL_IN_MULTIPLE_BLANKS,
+    points: 2,
+    matchDistractors: [],
+    answers: [
+      { correct: true, text: "red", blankId: "color1" },
+      { correct: true, text: "crimson", blankId: "color1" },
+      { correct: true, text: "blue", blankId: "color2" },
+    ],
+  };
+
+  it("is sent to canvas as a fill_in_multiple_blanks_question", () => {
+    expect(getQuestionTypeForCanvas(question)).toBe(
+      "fill_in_multiple_blanks_question"
+    );
+  });
+
+  it("keeps the placeholders in the question text for Canvas to find", () => {
+    expect(getQuestionTextForCanvas(question)).toBe(question.text);
+  });
+
+  it("accepts every listed answer for its own blank", () => {
+    expect(getAnswersForCanvas(question, {} as never)).toEqual([
+      { blank_id: "color1", answer_text: "red", answer_weight: 100 },
+      { blank_id: "color1", answer_text: "crimson", answer_weight: 100 },
+      { blank_id: "color2", answer_text: "blue", answer_weight: 100 },
+    ]);
+  });
+});

@@ -156,6 +156,12 @@ export const canvasAssignmentService = {
     return await paginatedRequest<CanvasAssignmentOverride[]>({ url });
   },
 
+  async publish(courseId: number, canvasAssignmentId: number) {
+    console.log(`Publishing assignment ${canvasAssignmentId}`);
+    const url = `${canvasApi}/courses/${courseId}/assignments/${canvasAssignmentId}`;
+    await axiosClient.put(url, { assignment: { published: true } });
+  },
+
   async delete(
     courseId: number,
     assignmentCanvasId: number,

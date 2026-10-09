@@ -1,3 +1,4 @@
+import { PublishInCanvasButton } from "@/app/course/[courseName]/PublishInCanvasButton";
 import { useCourseContext } from "@/app/course/[courseName]/context/courseContext";
 import Modal, { useModal } from "@/components/Modal";
 import { Spinner } from "@/components/Spinner";
@@ -64,9 +65,6 @@ export function QuizButtons({
         {(addToCanvas.isPending ||
           deleteFromCanvas.isPending ||
           updateInCanvas.isPending) && <Spinner />}
-        {quizInCanvas && !quizInCanvas.published && (
-          <div className="text-rose-300 my-auto">Not Published</div>
-        )}
         {!quizInCanvas && (
           <button
             disabled={addToCanvas.isPending}
@@ -104,6 +102,16 @@ export function QuizButtons({
           >
             Update in Canvas
           </button>
+        )}
+        {quizInCanvas && (
+          <PublishInCanvasButton
+            type="quiz"
+            canvasItemId={quizInCanvas.id}
+            published={quizInCanvas.published === true}
+            name={quizName}
+            moduleName={moduleName}
+            onPublish={closeMenu}
+          />
         )}
         {quizInCanvas && (
           <button

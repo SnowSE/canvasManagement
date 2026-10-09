@@ -210,6 +210,23 @@ short_answer=
 `}</Example>
       </HelpSection>
 
+      <HelpSection title="Fill in multiple blanks">
+        <P>
+          Put a placeholder like <C>[ans1]</C> (letters, numbers, <C>-</C> or{" "}
+          <C>_</C>, no spaces) wherever a blank goes in the question. Then list
+          the accepted answers for each blank: <C>[ans1] = answer</C>, with
+          more accepted answers for the same blank on the lines after it
+          starting with <C>=</C>. Canvas splits the points across the blanks.
+        </P>
+        <Example>{`
+Points: 2
+Roses are [color1], violets are [color2].
+[color1] = red
+         = crimson
+[color2] = blue
+`}</Example>
+      </HelpSection>
+
       <HelpSection title="Numerical">
         <P>
           Answer lines starting with <C>=</C> make a numeric answer box. Use a

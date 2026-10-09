@@ -6,6 +6,7 @@ import {
   useAssignmentQuery,
   useUpdateAssignmentMutation,
 } from "@/features/local/assignments/assignmentHooks";
+import { validateFileName } from "@/services/fileNameValidation";
 import { getModuleItemUrl } from "@/services/urlUtils";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
@@ -24,6 +25,8 @@ export function UpdateAssignmentName({
   const updateAssignment = useUpdateAssignmentMutation();
   const [name, setName] = useState(assignment.name);
   const [isLoading, setIsLoading] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const nameError = validateFileName(name);
 
   return (
     <div>
@@ -37,9 +40,14 @@ export function UpdateAssignmentName({
           <form
             onSubmit={async (e) => {
               e.preventDefault();
-              if (name === assignmentName) closeModal();
+              if (name === assignmentName) {
+                closeModal();
+                return;
+              }
+              if (nameError) return;
 
-              setIsLoading(true); // page refresh resets flag
+              setSaveError("");
+              setIsLoading(true);
               try {
                 await updateAssignment.mutateAsync({
                   assignment: assignment,
@@ -60,6 +68,10 @@ export function UpdateAssignmentName({
                   ),
                   replace: true,
                 });
+              } catch (error) {
+                setSaveError(
+                  error instanceof Error ? error.message : String(error),
+                );
               } finally {
                 setIsLoading(false);
               }
@@ -81,7 +93,17 @@ export function UpdateAssignmentName({
               setValue={setName}
               label={"Rename Assignment"}
             />
-            <button className="w-full my-3">Save New Name</button>
+            {(nameError || saveError) && (
+              <div className="text-red-300 bg-red-950/50 border p-1 rounded border-red-900/50 text-sm mt-1">
+                {nameError || saveError}
+              </div>
+            )}
+            <button
+              className="w-full my-3"
+              disabled={!!nameError || isLoading}
+            >
+              Save New Name
+            </button>
             {isLoading && <Spinner />}
           </form>
         )}

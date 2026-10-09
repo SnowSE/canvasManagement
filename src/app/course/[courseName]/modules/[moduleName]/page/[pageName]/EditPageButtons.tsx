@@ -1,3 +1,4 @@
+import { PublishInCanvasButton } from "@/app/course/[courseName]/PublishInCanvasButton";
 import { useCourseContext } from "@/app/course/[courseName]/context/courseContext";
 import Modal, { useModal } from "@/components/Modal";
 import { Spinner } from "@/components/Spinner";
@@ -62,6 +63,15 @@ export default function EditPageButtons({
         </button>
       )}
       {pageInCanvas && (
+        <a
+          className="btn"
+          target="_blank"
+          href={`${baseCanvasUrl}/courses/${settings.canvasId}/pages/${pageInCanvas.url}`}
+        >
+          View in Canvas
+        </a>
+      )}
+      {pageInCanvas && (
         <button
           onClick={() =>
             updatePageInCanvas.mutate({
@@ -75,13 +85,13 @@ export default function EditPageButtons({
         </button>
       )}
       {pageInCanvas && (
-        <a
-          className="btn"
-          target="_blank"
-          href={`${baseCanvasUrl}/courses/${settings.canvasId}/pages/${pageInCanvas.url}`}
-        >
-          View in Canvas
-        </a>
+        <PublishInCanvasButton
+          type="page"
+          canvasItemId={pageInCanvas.page_id}
+          published={pageInCanvas.published}
+          name={pageName}
+          moduleName={moduleName}
+        />
       )}
       {pageInCanvas && (
         <button

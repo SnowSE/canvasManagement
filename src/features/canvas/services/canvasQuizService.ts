@@ -62,6 +62,15 @@ export const getAnswersForCanvas = (
     });
   }
 
+  // every listed answer is accepted for its blank; Canvas finds each blank by
+  // the [blank_id] left in the question text
+  if (question.questionType === QuestionType.FILL_IN_MULTIPLE_BLANKS)
+    return question.answers.map((answer) => ({
+      blank_id: answer.blankId,
+      answer_text: answer.text,
+      answer_weight: 100,
+    }));
+
   if (question.questionType === QuestionType.MATCHING) {
     const distractors = question.matchDistractors.join("\n");
     return question.answers.map((a) => {
@@ -488,6 +497,11 @@ export const canvasQuizService = {
     return pages
       .flatMap((page) => page.quiz_submissions)
       .filter((s) => s.workflow_state !== "settings_only").length;
+  },
+  async publish(canvasCourseId: number, canvasQuizId: number) {
+    console.log(`Publishing quiz ${canvasQuizId}`);
+    const url = `${canvasApi}/courses/${canvasCourseId}/quizzes/${canvasQuizId}`;
+    await axiosClient.put(url, { quiz: { published: true } });
   },
   async delete(canvasCourseId: number, canvasQuizId: number) {
     const url = `${canvasApi}/courses/${canvasCourseId}/quizzes/${canvasQuizId}`;

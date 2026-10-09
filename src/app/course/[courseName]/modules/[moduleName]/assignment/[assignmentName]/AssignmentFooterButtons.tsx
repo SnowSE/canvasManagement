@@ -1,3 +1,4 @@
+import { PublishInCanvasButton } from "@/app/course/[courseName]/PublishInCanvasButton";
 import { useCourseContext } from "@/app/course/[courseName]/context/courseContext";
 import Modal, { useModal } from "@/components/Modal";
 import { Spinner } from "@/components/Spinner";
@@ -82,9 +83,6 @@ export function AssignmentFooterButtons({
       </div>
       <div className="flex flex-row flex-wrap gap-3 justify-end">
         {anythingIsLoading && <Spinner />}
-        {assignmentInCanvas && !assignmentInCanvas?.published && (
-          <div className="text-rose-300 my-auto">Not Published</div>
-        )}
         {settings.classroom50 && (
           <Modal
             modalControl={classroom50Modal}
@@ -155,6 +153,16 @@ export function AssignmentFooterButtons({
           >
             Update in Canvas
           </button>
+        )}
+        {assignmentInCanvas && (
+          <PublishInCanvasButton
+            type="assignment"
+            canvasItemId={assignmentInCanvas.id}
+            published={assignmentInCanvas.published}
+            name={assignmentName}
+            moduleName={moduleName}
+            onPublish={closeMenu}
+          />
         )}
         {assignmentInCanvas && (
           <button

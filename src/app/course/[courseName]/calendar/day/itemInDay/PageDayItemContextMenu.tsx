@@ -18,6 +18,7 @@ import { useLocalCourseSettingsQuery } from "@/features/local/course/localCourse
 import { baseCanvasUrl } from "@/features/canvas/services/canvasServiceUtils";
 import { useCourseContext } from "../../../context/courseContext";
 import { useCalendarItemsContext } from "../../../context/calendarItemsContext";
+import { PublishInCanvasButton } from "../../../PublishInCanvasButton";
 import Modal, { ModalControl } from "@/components/Modal";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -192,7 +193,7 @@ export const PageDayItemContextMenu: FC<{
               </form>
             ) : (
               <>
-                {canvasUrl && (
+                {pageInCanvas && canvasUrl && (
                   <>
                     <a
                       href={canvasUrl}
@@ -203,6 +204,16 @@ export const PageDayItemContextMenu: FC<{
                     >
                       View in Canvas
                     </a>
+                    <PublishInCanvasButton
+                      type="page"
+                      canvasItemId={pageInCanvas.page_id}
+                      published={pageInCanvas.published}
+                      name={item.name}
+                      moduleName={moduleName}
+                      onPublish={handleClose}
+                      className={`unstyled ${baseButtonClasses} ${normalButtonClass}`}
+                      publishedClassName="text-left py-1"
+                    />
                     <button
                       onClick={handleDeleteFromCanvas}
                       disabled={deleteFromCanvasMutation.isPending}

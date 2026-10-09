@@ -18,6 +18,7 @@ import { baseCanvasUrl } from "@/features/canvas/services/canvasServiceUtils";
 import { getCompareUrl } from "@/services/urlUtils";
 import { Link } from "@tanstack/react-router";
 import { useCourseContext } from "../../../context/courseContext";
+import { PublishInCanvasButton } from "../../../PublishInCanvasButton";
 import Modal, { ModalControl } from "@/components/Modal";
 
 function getDuplicateName(name: string, existingNames: string[]): string {
@@ -177,6 +178,18 @@ export const QuizDayItemContextMenu: FC<{
                   >
                     Update Canvas
                   </button>
+                )}
+                {quizInCanvas && (
+                  <PublishInCanvasButton
+                    type="quiz"
+                    canvasItemId={quizInCanvas.id}
+                    published={quizInCanvas.published === true}
+                    name={item.name}
+                    moduleName={moduleName}
+                    onPublish={handleClose}
+                    className={`unstyled ${baseButtonClasses} ${normalButtonClass}`}
+                    publishedClassName="text-left py-1"
+                  />
                 )}
                 {canvasUrl && (
                   <a

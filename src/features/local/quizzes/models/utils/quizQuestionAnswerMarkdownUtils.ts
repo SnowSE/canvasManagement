@@ -170,7 +170,69 @@ const parseDropdownAnswers = (
     });
   });
 
+// Fill in multiple blanks: the question text holds [ans1]-style placeholders
+// and each "[ans1] = Program Code" line lists an accepted answer for one; "="
+// lines right after it add more accepted answers to the same blank.
+const blankAnswerPattern = /^\[([A-Za-z0-9_-]+)\]\s*=(.*)$/;
+const isBlankAnswerLine = (line: string) =>
+  blankAnswerPattern.test(line.trim());
+
+// Lines in code blocks and <!-- --> comments are never answers (the Canvas
+// importer left answer keys in comments in exactly this "[ans1] = " shape).
+const indexOfFirstBlankAnswer = (lines: string[]) => {
+  let inFence = false;
+  let inComment = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!inComment && line.trimStart().startsWith("```")) inFence = !inFence;
+    else if (!inFence && inComment) inComment = !line.includes("-->");
+    else if (!inFence && line.includes("<!--"))
+      inComment = !line.slice(line.lastIndexOf("<!--")).includes("-->");
+    else if (!inFence && isBlankAnswerLine(line)) return i;
+  }
+  return -1;
+};
+
+const parseBlankAnswers = (
+  lines: string[],
+  questionIndex: number,
+): LocalQuizQuestionAnswer[] => {
+  const start = indexOfFirstBlankAnswer(lines);
+  const textBeforeAnswers = lines.slice(0, start).join("\n");
+  let blankId = "";
+  const answers = lines
+    .slice(start)
+    .map((line) => line.trim())
+    .filter((line) => line !== "")
+    .map((line): LocalQuizQuestionAnswer => {
+      const blankMatch = line.match(blankAnswerPattern);
+      if (blankMatch) blankId = blankMatch[1];
+      else if (!line.startsWith("="))
+        throw Error(
+          `question ${questionIndex + 1}: "${line}" is not a blank's answer; after the first [blank] = line, each line is [blank] = answer or = another accepted answer`,
+        );
+      const text = (blankMatch ? blankMatch[2] : line.slice(1)).trim();
+      if (!text)
+        throw Error(
+          `question ${questionIndex + 1}: [${blankId}] has an empty answer`,
+        );
+      return { correct: true, text, blankId };
+    });
+
+  const missing = [...new Set(answers.map((a) => a.blankId))].filter(
+    (id) => !textBeforeAnswers.includes(`[${id}]`),
+  );
+  if (missing.length > 0)
+    throw Error(
+      `question ${questionIndex + 1}: the question text has no ${missing
+        .map((id) => `[${id}]`)
+        .join(", ")} for the answers to go in`,
+    );
+  return answers;
+};
+
 export const quizQuestionAnswerMarkdownUtils = {
+  indexOfFirstBlankAnswer,
   parseMarkdown(
     input: string,
     questionType: QuestionType,
@@ -224,6 +286,8 @@ export const quizQuestionAnswerMarkdownUtils = {
       .toLowerCase()
       .trim();
     if (linesWithoutPoints.length === 0) return QuestionType.NONE;
+    if (indexOfFirstBlankAnswer(linesWithoutPoints) !== -1)
+      return QuestionType.FILL_IN_MULTIPLE_BLANKS;
     if (lastLine === "essay") return QuestionType.ESSAY;
     if (lastLine === "short answer") return QuestionType.SHORT_ANSWER;
     if (lastLine === "short_answer") return QuestionType.SHORT_ANSWER;
@@ -262,6 +326,12 @@ export const quizQuestionAnswerMarkdownUtils = {
     questionIndex: number,
     questionType: QuestionType,
   ): { answers: LocalQuizQuestionAnswer[]; distractors: string[] } => {
+    if (questionType === QuestionType.FILL_IN_MULTIPLE_BLANKS)
+      return {
+        answers: parseBlankAnswers(linesWithoutPoints, questionIndex),
+        distractors: [],
+      };
+
     const typesWithAnswers: QuestionType[] = [
       QuestionType.MULTIPLE_CHOICE,
       QuestionType.MULTIPLE_ANSWERS,
@@ -327,6 +397,12 @@ export const quizQuestionAnswerMarkdownUtils = {
       return answer.text
         ? `^ ${answer.text} - ${answer.matchedText}`
         : `^ - ${answer.matchedText}`;
+    } else if (question.questionType === "fill_in_multiple_blanks") {
+      const label = `[${answer.blankId}] `;
+      // more answers for the same blank line up under the first one's "="
+      return question.answers[index - 1]?.blankId === answer.blankId
+        ? `${" ".repeat(label.length)}= ${answer.text}`
+        : `${label}= ${answer.text}`;
     } else if (question.questionType === "numerical") {
       if (answer.numericalAnswerType === "range_answer") {
         return `= [${answer.numericAnswerRangeMin}, ${answer.numericAnswerRangeMax}]`;

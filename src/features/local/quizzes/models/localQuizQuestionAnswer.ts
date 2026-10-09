@@ -13,6 +13,12 @@ export const zodLocalQuizQuestionAnswer = z.object({
     .describe(
       "Multiple dropdowns questions: which blank-line-separated group this line is in; each prompt's dropdown offers every answer in its group",
     ),
+  blankId: z
+    .string()
+    .optional()
+    .describe(
+      "Fill in multiple blanks questions: the [blankId] placeholder in the question text this accepted answer is for",
+    ),
   numericalAnswerType: z
     .enum(["exact_answer", "range_answer", "precision_answer"])
     .optional(),

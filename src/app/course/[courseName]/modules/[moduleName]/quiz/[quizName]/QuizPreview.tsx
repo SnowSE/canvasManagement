@@ -174,8 +174,31 @@ function QuizQuestionPreview({ question }: { question: LocalQuizQuestion }) {
           ))}
         </div>
       )}
+      {question.questionType === QuestionType.FILL_IN_MULTIPLE_BLANKS && (
+        <div>
+          {[...new Set(question.answers.map((a) => a.blankId))].map(
+            (blankId) => (
+              <div
+                key={blankId}
+                className="mx-3 mb-1 bg-dark rounded border border-slate-600 flex flex-row"
+              >
+                <div className="text-right my-auto flex-1 pe-3 font-mono">
+                  [{blankId}]
+                </div>
+                <div className="flex-1">
+                  {question.answers
+                    .filter((a) => a.blankId === blankId)
+                    .map((a) => a.text)
+                    .join(" · ")}
+                </div>
+              </div>
+            ),
+          )}
+        </div>
+      )}
       {question.questionType !== QuestionType.MATCHING &&
-        question.questionType !== QuestionType.MULTIPLE_DROPDOWNS && (
+        question.questionType !== QuestionType.MULTIPLE_DROPDOWNS &&
+        question.questionType !== QuestionType.FILL_IN_MULTIPLE_BLANKS && (
         <div>
           {question.answers.map((answer) => (
             <div

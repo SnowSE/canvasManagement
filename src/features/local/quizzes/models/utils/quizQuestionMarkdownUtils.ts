@@ -112,12 +112,20 @@ export const quizQuestionMarkdownUtils = {
   ): LocalQuizQuestion {
     const { points, lines } = splitLinesAndPoints(input.trim().split("\n"));
 
-    const linesWithoutAnswers = getLinesBeforeAnswerLines(lines);
-
     const questionType = quizQuestionAnswerMarkdownUtils.getQuestionType(
       lines,
       questionIndex,
     );
+
+    // a fill in the blanks question's text runs up to its first "[blank] ="
+    // line, and can itself hold lines that look like other answer types'
+    const linesWithoutAnswers =
+      questionType === QuestionType.FILL_IN_MULTIPLE_BLANKS
+        ? lines.slice(
+            0,
+            quizQuestionAnswerMarkdownUtils.indexOfFirstBlankAnswer(lines),
+          )
+        : getLinesBeforeAnswerLines(lines);
 
     const linesWithoutAnswersAndTypes = removeQuestionTypeFromDescriptionLines(
       linesWithoutAnswers,

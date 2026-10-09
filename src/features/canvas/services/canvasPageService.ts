@@ -75,6 +75,12 @@ export const canvasPageService = {
     await axiosClient.put(url, body);
   },
 
+  async publish(courseId: number, canvasPageId: number): Promise<void> {
+    console.log(`Publishing page ${canvasPageId}`);
+    const url = `${canvasApi}/courses/${courseId}/pages/${canvasPageId}`;
+    await axiosClient.put(url, { wiki_page: { published: true } });
+  },
+
   async delete(courseId: number, canvasPageId: number): Promise<void> {
     console.log(`Deleting page from canvas ${canvasPageId}`);
     const url = `${canvasApi}/courses/${courseId}/pages/${canvasPageId}`;
