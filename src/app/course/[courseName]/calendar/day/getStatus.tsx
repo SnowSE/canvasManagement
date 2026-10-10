@@ -12,6 +12,7 @@ import {
   RosterForStatus,
 } from "./getAssignmentSyncStatus";
 import { CanvasLinkTargets } from "@/services/urlUtils";
+import { CanvasQuizQuestion } from "@/features/canvas/models/quizzes/canvasQuizQuestionModel";
 
 export const getStatus = ({
   item,
@@ -20,6 +21,7 @@ export const getStatus = ({
   settings,
   canvasLinkTargets,
   roster,
+  canvasQuestions,
 }: {
   item: LocalQuiz | LocalAssignment | LocalCoursePage;
   canvasItem?: CanvasQuiz | CanvasAssignment | CanvasPage;
@@ -27,6 +29,7 @@ export const getStatus = ({
   settings: LocalCourseSettings;
   canvasLinkTargets?: CanvasLinkTargets;
   roster?: RosterForStatus;
+  canvasQuestions?: CanvasQuizQuestion[];
 }): ItemSyncStatus => {
   return getSyncStatus({
     item,
@@ -35,5 +38,6 @@ export const getStatus = ({
     settings,
     canvasLinkTargets,
     roster,
+    canvasQuestions,
   });
 };

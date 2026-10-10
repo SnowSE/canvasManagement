@@ -18,6 +18,7 @@ import {
 } from "@/features/canvas/roster/rosterHooks";
 import { getScheduleEntryStatus, SyncField } from "./getAssignmentSyncStatus";
 import { AssignmentScheduleEntry } from "@/features/local/assignments/models/localAssignment";
+import { useCalendarQuizQuestions } from "../../context/CalendarQuizQuestionsProvider";
 
 export type TodayItem = {
   type: "assignment" | "quiz" | "page";
@@ -47,6 +48,8 @@ export function useTodaysItems(day: string) {
   const { data: rosterStudents } = useRosterStudentsQuery();
   const { data: rosterGroupSets } = useRosterGroupSetsQuery();
   const roster = { students: rosterStudents, groupSets: rosterGroupSets };
+  // filled in the background for this week's and the next three weeks' quizzes
+  const quizQuestions = useCalendarQuizQuestions();
 
   const assignments: TodayItem[] = todaysModules
     ? Object.keys(todaysModules).flatMap((moduleName) =>
@@ -111,6 +114,7 @@ export function useTodaysItems(day: string) {
               canvasItem: canvasQuiz,
               type: "quiz",
               settings,
+              canvasQuestions: quizQuestions[quiz.name],
             }),
           };
         }),

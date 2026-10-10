@@ -25,6 +25,8 @@ import {
 } from "@/features/local/assignments/models/utils/scheduleUtils";
 import { AssignmentScheduleEntry } from "@/features/local/assignments/models/localAssignment";
 import { assignmentPoints } from "@/features/local/assignments/models/utils/assignmentPointsUtils";
+import { CanvasQuizQuestion } from "@/features/canvas/models/quizzes/canvasQuizQuestionModel";
+import { checkQuizQuestions } from "./quizQuestionSync";
 
 /** Roster + group sets from the server cache; undefined while still loading. */
 export interface RosterForStatus {
@@ -39,6 +41,7 @@ export type SyncSection =
   | "groups"
   | "schedule"
   | "rubric"
+  | "questions"
   | "description";
 
 /** One compared setting: what the file says, what Canvas has, and whether they agree. */
@@ -663,6 +666,7 @@ export function getSyncReport({
   settings,
   canvasLinkTargets,
   roster,
+  canvasQuestions,
 }: {
   item: LocalQuiz | LocalAssignment | LocalCoursePage;
   canvasItem: CanvasQuiz | CanvasAssignment | CanvasPage | undefined;
@@ -670,6 +674,8 @@ export function getSyncReport({
   settings: LocalCourseSettings;
   canvasLinkTargets?: CanvasLinkTargets;
   roster?: RosterForStatus;
+  /** A quiz's questions in Canvas; without them only its settings are compared. */
+  canvasQuestions?: CanvasQuizQuestion[];
 }): SyncReport {
   if (!canvasItem)
     return {
@@ -699,6 +705,14 @@ export function getSyncReport({
           roster,
         );
   fields.push(...checked.fields);
+  if (type === "quiz" && canvasQuestions)
+    fields.push(
+      ...checkQuizQuestions(
+        (item as LocalQuiz).questions,
+        canvasQuestions,
+        settings,
+      ),
+    );
   return buildReport(fields, checked.description);
 }
 

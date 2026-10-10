@@ -14,6 +14,7 @@ import {
   useUpdateAssignmentInCanvasMutation,
 } from "@/features/canvas/hooks/canvasAssignmentHooks";
 import {
+  useCanvasQuizQuestionsQuery,
   useCanvasQuizzesQuery,
   useUpdateQuizInCanvasMutation,
 } from "@/features/canvas/hooks/canvasQuizHooks";
@@ -42,6 +43,7 @@ const sectionLabels: Record<SyncSection, string> = {
   groups: "Groups",
   schedule: "Schedule",
   rubric: "Rubric",
+  questions: "Questions",
   description: "Description",
 };
 
@@ -142,6 +144,11 @@ export function CompareQuizWithCanvas({
   }, [refetch]);
 
   const canvasQuiz = canvasQuizzes?.find((q) => q.title === quizName);
+  const {
+    data: canvasQuestions,
+    isFetching: questionsFetching,
+    refetch: refetchQuestions,
+  } = useCanvasQuizQuestionsQuery(canvasQuiz?.id);
   const report = useMemo(
     () =>
       getSyncReport({
@@ -153,8 +160,16 @@ export function CompareQuizWithCanvas({
           assignments: canvasAssignments,
           quizzes: canvasQuizzes,
         },
+        canvasQuestions,
       }),
-    [canvasAssignments, canvasQuiz, canvasQuizzes, quiz, settings],
+    [
+      canvasAssignments,
+      canvasQuestions,
+      canvasQuiz,
+      canvasQuizzes,
+      quiz,
+      settings,
+    ],
   );
 
   return (
@@ -163,14 +178,20 @@ export function CompareQuizWithCanvas({
       moduleName={moduleName}
       itemName={quizName}
       report={report}
-      canvasLoading={canvasQuizzes === undefined}
-      canvasFetching={isFetching}
+      canvasLoading={
+        canvasQuizzes === undefined ||
+        (canvasQuiz !== undefined && canvasQuestions === undefined)
+      }
+      canvasFetching={isFetching || questionsFetching}
       canvasId={canvasQuiz?.id}
       canvasUrl={
         canvasQuiz &&
         `${baseCanvasUrl}/courses/${settings.canvasId}/quizzes/${canvasQuiz.id}`
       }
-      onRefresh={() => refetch()}
+      onRefresh={() => {
+        refetch();
+        if (canvasQuiz) refetchQuestions();
+      }}
       onUpdate={() =>
         canvasQuiz && update.mutate({ quiz, canvasQuizId: canvasQuiz.id })
       }
@@ -377,7 +398,9 @@ const FieldsTable: FC<{ fields: SyncField[] }> = ({ fields }) => {
     <section className="pb-6">
       <div className="flex flex-row flex-wrap justify-between items-baseline gap-3 pb-2">
         <h3 className="text-sm uppercase tracking-wider text-slate-400 font-semibold">
-          Settings
+          {rows.some((f) => f.section === "questions")
+            ? "Settings and questions"
+            : "Settings"}
         </h3>
         <Legend />
       </div>
@@ -422,13 +445,13 @@ const FieldsTable: FC<{ fields: SyncField[] }> = ({ fields }) => {
                     )}
                   </td>
                   <td className="align-top">
-                    <Value text={f.local} tone={f.same ? undefined : "file"} />
+                    <Cell field={f} side="local" />
                   </td>
                   <td className="text-center text-slate-600 align-top w-8">
                     {f.same ? "" : "→"}
                   </td>
                   <td className="align-top">
-                    <Value text={f.canvas} tone={f.same ? undefined : "canvas"} />
+                    <Cell field={f} side="canvas" />
                   </td>
                   <td className="text-end align-top w-8">
                     <Dot className={f.same ? "bg-green-600" : "bg-rose-500"} />
@@ -443,10 +466,31 @@ const FieldsTable: FC<{ fields: SyncField[] }> = ({ fields }) => {
   );
 };
 
+// a matching question is just its text, kept to one line so the table stays
+// short; a differing one shows every line of what differs
+const Cell: FC<{ field: SyncField; side: "local" | "canvas" }> = ({
+  field,
+  side,
+}) => {
+  const value = (
+    <Value
+      text={field[side]}
+      tone={field.same ? undefined : side === "local" ? "file" : "canvas"}
+    />
+  );
+  return field.section === "questions" && field.same ? (
+    <div className="truncate [&>span]:whitespace-nowrap" title={field[side]}>
+      {value}
+    </div>
+  ) : (
+    value
+  );
+};
+
 const Value: FC<{ text: string; tone?: "file" | "canvas" }> = ({ text, tone }) => (
   <span
     className={
-      "font-mono text-xs px-1.5 py-0.5 rounded [overflow-wrap:anywhere] [box-decoration-break:clone] " +
+      "font-mono text-xs px-1.5 py-0.5 rounded whitespace-pre-line [overflow-wrap:anywhere] [box-decoration-break:clone] " +
       (tone === "file"
         ? "bg-green-900/40 text-green-300"
         : tone === "canvas"

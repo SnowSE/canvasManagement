@@ -15,6 +15,9 @@ import { baseCanvasUrl } from "../services/canvasServiceUtils";
 export const canvasQuizKeys = {
   quizzes: (canvasCourseId: number) =>
     ["canvas", canvasCourseId, "quizzes"] as const,
+  // under quizzes, so anything that refreshes the quizzes refreshes these too
+  questions: (canvasCourseId: number, canvasQuizId: number) =>
+    ["canvas", canvasCourseId, "quizzes", canvasQuizId, "questions"] as const,
 };
 
 export const useCanvasQuizzesQuery = () => {
@@ -23,6 +26,18 @@ export const useCanvasQuizzesQuery = () => {
   return useQuery({
     queryKey: canvasQuizKeys.quizzes(settings.canvasId),
     queryFn: async () => canvasQuizService.getAll(settings.canvasId),
+  });
+};
+
+/** A quiz's questions as Canvas has them, in quiz order. */
+export const useCanvasQuizQuestionsQuery = (canvasQuizId: number | undefined) => {
+  const { data: settings } = useLocalCourseSettingsQuery();
+
+  return useQuery({
+    queryKey: canvasQuizKeys.questions(settings.canvasId, canvasQuizId ?? 0),
+    queryFn: async () =>
+      canvasQuizService.getQuizQuestions(settings.canvasId, canvasQuizId!),
+    enabled: canvasQuizId !== undefined,
   });
 };
 

@@ -8,6 +8,7 @@ import { useCanvasAssignmentsQuery } from "@/features/canvas/hooks/canvasAssignm
 import { useCourseContext } from "@/app/course/[courseName]/context/courseContext";
 import Modal, { useModal } from "@/components/Modal";
 import {
+  useCanvasQuizQuestionsQuery,
   useCanvasQuizzesQuery,
   useAddQuizToCanvasMutation,
   useDeleteQuizFromCanvasMutation,
@@ -52,6 +53,9 @@ export function QuizButtons({
   );
 
   const quizInCanvas = canvasQuizzes?.find((c) => c.title === quizName);
+  const { data: canvasQuestions } = useCanvasQuizQuestionsQuery(
+    quizInCanvas?.id,
+  );
 
   const differences = useMemo(
     () =>
@@ -65,9 +69,17 @@ export function QuizButtons({
               assignments: canvasAssignments,
               quizzes: canvasQuizzes,
             },
+            canvasQuestions,
           }).differences.filter((d) => d.key !== "published")
         : [],
-    [canvasAssignments, canvasQuizzes, quiz, quizInCanvas, settings],
+    [
+      canvasAssignments,
+      canvasQuestions,
+      canvasQuizzes,
+      quiz,
+      quizInCanvas,
+      settings,
+    ],
   );
 
   const extraActions: FooterAction[] = quizInCanvas

@@ -5,6 +5,7 @@ import { CalendarMonth } from "./CalendarMonth";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import { useEffect, useMemo, useRef } from "react";
 import CalendarItemsContextProvider from "../context/CalendarItemsContextProvider";
+import CalendarQuizQuestionsProvider from "../context/CalendarQuizQuestionsProvider";
 
 export default function CourseCalendar() {
   const { data: settings } = useLocalCourseSettingsQuery();
@@ -63,9 +64,11 @@ export default function CourseCalendar() {
         ref={divRef}
       >
         <CalendarItemsContextProvider>
-          {months.map((month) => (
-            <CalendarMonth key={month.month + "" + month.year} month={month} />
-          ))}
+          <CalendarQuizQuestionsProvider>
+            {months.map((month) => (
+              <CalendarMonth key={month.month + "" + month.year} month={month} />
+            ))}
+          </CalendarQuizQuestionsProvider>
         </CalendarItemsContextProvider>
       </div>
     </div>
