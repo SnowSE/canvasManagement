@@ -8,6 +8,11 @@ import { useLocalCourseSettingsQuery } from "@/features/local/course/localCourse
 import { canvasModuleService } from "../services/canvasModuleService";
 import { canvasQuizService } from "../services/canvasQuizService";
 import { useCanvasLinkTargets } from "./useCanvasLinkTargets";
+import { useCommitAfterPublish } from "@/features/local/git/gitHooks";
+import {
+  quizMarkdownParts,
+  usePrepareImagesForCanvas,
+} from "./usePrepareImagesForCanvas";
 import toast from "react-hot-toast";
 import { showActionNeededToast, showErrorToast } from "@/app/MyToaster";
 import { baseCanvasUrl } from "../services/canvasServiceUtils";
@@ -47,6 +52,9 @@ export const useAddQuizToCanvasMutation = () => {
   const { data: canvasModules } = useCanvasModulesQuery();
   const addModule = useAddCanvasModuleMutation();
   const canvasLinkTargets = useCanvasLinkTargets();
+  const prepareImages = usePrepareImagesForCanvas();
+
+  const commitAfterPublish = useCommitAfterPublish();
 
   return useMutation({
     mutationFn: async ({
@@ -63,10 +71,11 @@ export const useAddQuizToCanvasMutation = () => {
       const assignmentGroup = settings.assignmentGroups.find(
         (g) => g.name === quiz.localAssignmentGroupName
       );
+      const publishSettings = await prepareImages(quizMarkdownParts(quiz));
       const canvasQuizId = await canvasQuizService.create(
         settings.canvasId,
         quiz,
-        settings,
+        publishSettings,
         assignmentGroup?.canvasId,
         canvasLinkTargets
       );
@@ -84,7 +93,8 @@ export const useAddQuizToCanvasMutation = () => {
         canvasQuizId
       );
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      commitAfterPublish(`quiz "${variables.quiz.name}"`);
       queryClient.invalidateQueries({
         queryKey: canvasQuizKeys.quizzes(settings.canvasId),
       });
@@ -109,6 +119,9 @@ export const useUpdateQuizInCanvasMutation = () => {
   const { data: settings } = useLocalCourseSettingsQuery();
   const queryClient = useQueryClient();
   const canvasLinkTargets = useCanvasLinkTargets();
+  const prepareImages = usePrepareImagesForCanvas();
+
+  const commitAfterPublish = useCommitAfterPublish();
 
   return useMutation({
     mutationFn: async ({
@@ -123,18 +136,19 @@ export const useUpdateQuizInCanvasMutation = () => {
         canvasQuizId
       );
       if (submissions > 0 && !window.confirm(submissionWarning(submissions)))
-        return;
+        return false;
 
       const progress = toast.loading("Updating quiz in Canvas");
       try {
         const assignmentGroup = settings.assignmentGroups.find(
           (g) => g.name === quiz.localAssignmentGroupName
         );
+        const publishSettings = await prepareImages(quizMarkdownParts(quiz));
         const summary = await canvasQuizService.update(
           settings.canvasId,
           canvasQuizId,
           quiz,
-          settings,
+          publishSettings,
           {
             canvasAssignmentGroupId: assignmentGroup?.canvasId,
             canvasLinkTargets,
@@ -159,8 +173,11 @@ export const useUpdateQuizInCanvasMutation = () => {
         toast.dismiss(progress);
         throw error;
       }
+      return true;
     },
-    onSuccess: () => {
+    onSuccess: (updated, variables) => {
+      // false: cancelled at the "students already started" question
+      if (updated) commitAfterPublish(`quiz "${variables.quiz.name}"`);
       queryClient.invalidateQueries({
         queryKey: canvasQuizKeys.quizzes(settings.canvasId),
       });

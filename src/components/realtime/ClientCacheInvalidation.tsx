@@ -94,6 +94,11 @@ const useFilePathInvalidation = () => {
         return;
       }
 
+      // any change in the course folder can change what git has to commit
+      queryClient.invalidateQueries({
+        queryKey: trpc.git.status.queryKey(courseName),
+      });
+
       const splitPath = filePath.split("/");
       const [moduleOrLectures, itemType, itemFile] = splitPath.slice(-3);
 
@@ -123,6 +128,22 @@ const useFilePathInvalidation = () => {
           queryKey: trpc.lectures.getLectures.queryKey(courseName),
         });
         return;
+      }
+
+      if (["assignments", "quizzes", "pages"].includes(itemType)) {
+        // a file that starts or stops parsing moves in or out of these
+        queryClient.invalidateQueries({
+          queryKey: trpc.module.getInvalidItems.queryKey({
+            courseName,
+            moduleName: moduleOrLectures,
+          }),
+        });
+        queryClient.invalidateQueries({
+          queryKey: trpc.module.getInvalidItemsForCourse.queryKey(courseName),
+        });
+        queryClient.invalidateQueries({
+          queryKey: trpc.module.getRawItem.queryKey(),
+        });
       }
 
       if (itemType === "assignments") {
@@ -186,6 +207,10 @@ const useFilePathInvalidation = () => {
       trpc.assignment.getAllAssignments,
       trpc.assignment.getAssignment,
       trpc.lectures.getLectures,
+      trpc.git.status,
+      trpc.module.getInvalidItems,
+      trpc.module.getInvalidItemsForCourse,
+      trpc.module.getRawItem,
       trpc.page.getAllPages,
       trpc.page.getPage,
       trpc.quiz.getAllQuizzes,

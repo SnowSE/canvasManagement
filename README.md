@@ -7,7 +7,8 @@ Illustrated guides for instructors using CanvasManager:
 
 - [Getting Started with CanvasManager](https://snowse.github.io/canvasManagement/getting-started.html):
   setup, course settings, the calendar, editing assignments, quizzes, pages
-  and lectures, publishing, and Compare with Canvas.
+  and lectures, publishing, Compare with Canvas, images, git, and the error
+  list.
 - [Group Assignments & Student Schedules](https://snowse.github.io/canvasManagement/group-assignments-and-student-schedules.html):
   group sets, per-student due dates, the date picker and settings
   autocomplete.
@@ -85,9 +86,9 @@ DOCKER_UID=$(id -u) DOCKER_GID=$(id -g) docker compose up
 ## Enable Image Support
 
 
-You must set the `NEXT_PUBLIC_ENABLE_FILE_SYNC` environment variable to true. Images need to be available in the `/app/public/` directory in the container so that nextjs will serve them as static files. Images can also be set to public URL's on the web.
+You must set the `NEXT_PUBLIC_ENABLE_FILE_SYNC` environment variable to true. Images need to be available in the `/app/public/` directory in the container so that they are served as static files. Images can also be set to public URL's on the web.
 
-When an image is detected by canvas manager, it will upload the image to the canvas course and keep a lookup table of the original path/url of the image to the canvas course URL.
+When you add or update an assignment, quiz or page in Canvas, canvas manager uploads each local image it references to the Canvas course and keeps a lookup table (`assets` in the course's `settings.yml`) from the image's path to its Canvas URL and a hash of the file, so an image is uploaded once and again only when the file changes. A local image that can't be found stops the publish with an error naming it. Images on the web, including Mermaid diagrams, are left as links and never copied into Canvas files.
 
 For Snow College professors, images should be stored in a separate git repo from the `facultyFiles` git repo. Otherwise the `faculty` repository will become cluttered with duplicated large binary images. Set up your volume like this:
 
@@ -101,6 +102,40 @@ You can now embed an image in an assignment by adding something like this line.
 ```md
 ![formulas](/images/facultyFiles/1405/lab-04-simple-math-formulas.png)
 ```
+
+## Git
+
+When the storage folder is (inside) a git repository, the course page shows a
+git button for committing that course's folder, pulling and pushing, and each
+editor's footer menu has a File history page. The image has `git` installed.
+
+- Commits need a name and email. If git has none configured in the container,
+  the app asks for them and saves them with `git config --global`, so give the
+  container a persistent `HOME` (or mount a `.gitconfig`) to keep them.
+- Pull and push use the repository's remote. With `GH_TOKEN` set and no ssh
+  key in the container's `~/.ssh`, GitHub remotes written as
+  `git@github.com:...` are reached over https with that token through `gh`, so
+  the token needs write access to the repo.
+- Pulls merge only when git can do it without a conflict; otherwise the merge
+  is aborted and nothing changes. Nothing in the app rebases, resets or
+  discards work.
+
+## Error list and AI explanations
+
+Errors raised while the app runs are kept in memory and counted by a pill at
+the bottom of the screen, which opens `/errors`. The *Explain with AI* button
+sends the error (and, for a file that doesn't parse, that file and a working
+one from the same folder) to any OpenAI-compatible chat completions endpoint.
+Configure it in `.env`; [`.env.example`](.env.example) has samples for
+OpenAI, OpenRouter and a local Ollama:
+
+```sh
+AI_BASE_URL=https://api.openai.com/v1
+AI_API_KEY=sk-...        # leave out for endpoints that need none
+AI_MODEL=gpt-4o-mini
+```
+
+Without `AI_BASE_URL` and `AI_MODEL` the button is disabled.
 
 ## Update Indicator
 
@@ -128,34 +163,9 @@ Local `pnpm dev` runs have no `GIT_SHA` and skip the check.
 
 # ideas
 
-file uploads
-- working on assignments, needs to be added to pages/quizes
-
 multi-section support for due dates/times
 
-better error handling when files are unparsable
-- currently falling back on orignal file url, need to raise this interaction to the user
-
-tighter integration with git
-- regularly make git commits
-- handle merging?
-- maybe a different storage backend?
-- user motivated restore?
-
-display days settings
-- hide all sundays (horizontal space)
-
-
-mermaid charts:
-- inline display
-- merjaidjs has a way to encode the chart as base64 and pass it to a url to get a png back
-    - <https://github.com/mermaidjs/mermaid-live-editor/issues/41>
-    - aparently not just any base64 encoding works, use their function
-- if the chart gets auto-converted to a png to be displayed, it should work properly on canvas as well
-- could lead to a lot of tmp png's being added while the chart is being changed (each change will trigger an upload to canvas)
-- maybe track a list of unreferenced files and delete them?
-
-remember expanded modules as well as scorll position
+maybe track a list of Canvas files no assignment references any more and offer to delete them
 
 
 ## Features
@@ -163,8 +173,12 @@ remember expanded modules as well as scorll position
     - files can be edited in any text editor on the computer and changes are reflected in real time on the site
 - holiday schedule
 - lectures, 1 per day
-- image embedding / upload support for assignments
+- image upload on publish for assignments, quizzes and pages
 - calendar weeks do not dupliacate, some of the first or last days of the calendar show up on the next month
-- scroll position remembered
+- calendar and module list scroll position, and expanded modules, remembered per course
+- days without class can be hidden on the calendar (narrowed to a strip)
+- git from the course page: commit, pull and push, commit on publish, file history and restore
+- files that don't parse are listed in their module and open as plain text to fix
+- error list for the session, with an AI explanation per error
 - matching questions have distractors
    - `-` in the question can be escaped with `\-`

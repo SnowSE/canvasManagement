@@ -1,12 +1,14 @@
 "use client";
 import React from "react";
 import toast, { Toaster, ToastBar } from "react-hot-toast";
+import { reportBrowserError } from "@/features/local/errorLog/reportBrowserError";
 
 // The one way to raise an error toast. Keyed by message, so a repeated error
 // (a burst of failed requests, a boundary re-rendering) updates the existing
 // toast instead of stacking another. Returns a dismiss for callers that know
-// when their error is gone.
+// when their error is gone. Every error toast also lands in the error log.
 export function showErrorToast(message: string) {
+  reportBrowserError("Shown as an error message", message);
   toast.error(message, { id: message });
   return () => toast.dismiss(message);
 }

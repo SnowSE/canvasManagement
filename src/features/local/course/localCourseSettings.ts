@@ -42,6 +42,8 @@ export interface LocalCourseSettings {
   name: string;
   assignmentGroups: LocalAssignmentGroup[];
   daysOfWeek: DayOfWeek[];
+  // non-class days drawn as a narrow strip on the calendar to save space
+  hiddenDays?: DayOfWeek[];
   canvasId: number;
   startDate: string;
   endDate: string;
@@ -56,6 +58,8 @@ export interface LocalCourseSettings {
   assets: {
     sourceUrl: string;
     canvasUrl: string;
+    // content hash when uploaded, so a changed image is uploaded again
+    hash?: string;
   }[];
   classroom50?: {
     org: string;
@@ -68,6 +72,10 @@ export const zodLocalCourseSettings = z.object({
   name: z.string(),
   assignmentGroups: zodLocalAssignmentGroup.array(),
   daysOfWeek: zodDayOfWeek.array(),
+  hiddenDays: zodDayOfWeek
+    .array()
+    .optional()
+    .describe("Days without class narrowed to a strip on the calendar"),
   canvasId: z.number().describe("Canvas LMS course ID"),
   startDate: z.string(),
   endDate: z.string(),
@@ -93,6 +101,10 @@ export const zodLocalCourseSettings = z.object({
     .object({
       sourceUrl: z.string(),
       canvasUrl: z.string().describe("Canvas URL of the asset"),
+      hash: z
+        .string()
+        .optional()
+        .describe("Content hash of the file when it was uploaded"),
     })
     .array()
     .describe("Asset URL mappings between source and Canvas"),

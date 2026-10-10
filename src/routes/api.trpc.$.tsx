@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { trpcAppRouter } from "@/services/serverFunctions/appRouter";
 import { createTrpcContext } from "@/services/serverFunctions/context";
+import { logError } from "@/features/local/errorLog/errorLogStore";
 
 const handler = async (request: Request) => {
   return fetchRequestHandler({
@@ -13,6 +14,8 @@ const handler = async (request: Request) => {
       console.error(
         `[tRPC ${error.code}] ${path ?? "unknown"} | input: ${JSON.stringify(input)} | ${error.message}`,
       );
+      if (!path?.startsWith("errorLog."))
+        logError({ source: `Server request ${path ?? ""}`, message: error.message });
     },
   });
 };

@@ -3,6 +3,7 @@ import { useLocalCourseSettingsQuery } from "@/features/local/course/localCourse
 import { getDateFromStringOrThrow } from "@/features/local/utils/timeUtils";
 import { getWeekNumber } from "./calendarMonthUtils";
 import Day from "./day/Day";
+import { calendarColumnStyle, calendarGridClass } from "./calendarColumns";
 
 export function CalendarWeek({
   week,
@@ -26,7 +27,10 @@ export function CalendarWeek({
       <div className="my-auto text-gray-400 w-6 text-center flex-none sm:block hidden">
         {weekNumber.toString().padStart(2, "0")}
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-7 grow">
+      <div
+        className={"grid grid-cols-1 grow " + calendarGridClass}
+        style={calendarColumnStyle(settings)}
+      >
         {week.map((day, dayIndex) => (
           <Day key={dayIndex} day={day} month={monthNumber} />
         ))}

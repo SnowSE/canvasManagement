@@ -7,6 +7,11 @@ import { getDateFromStringOrThrow } from "@/features/local/utils/timeUtils";
 import UpChevron from "@/components/icons/UpChevron";
 import DownChevron from "@/components/icons/DownChevron";
 import { DayOfWeek } from "@/features/local/course/localCourseSettings";
+import {
+  calendarColumnStyle,
+  calendarGridClass,
+  hiddenWeekdays,
+} from "./calendarColumns";
 
 export const CalendarMonth = ({ month }: { month: CalendarMonthModel }) => {
   const { data: settings } = useLocalCourseSettingsQuery();
@@ -25,6 +30,7 @@ export const CalendarMonth = ({ month }: { month: CalendarMonthModel }) => {
     { month: "long" }
   );
   const weekDaysList: DayOfWeek[] = Object.values(DayOfWeek);
+  const hidden = hiddenWeekdays(settings);
   return (
     <>
       <Expandable
@@ -48,13 +54,22 @@ export const CalendarMonth = ({ month }: { month: CalendarMonthModel }) => {
           </div>
         )}
       >
-        <div className="hidden md:grid grid-cols-7 text-center fw-bold ms-3">
-          {weekDaysList.map((day) => (
-            <div key={day} className={""}>
-              <span className="hidden xl:inline">{day}</span>
-              <span className="xl:hidden inline">{day.slice(0, 3)}</span>
-            </div>
-          ))}
+        <div
+          className={"hidden md:grid grid-cols-7 text-center fw-bold ms-3 " + calendarGridClass}
+          style={calendarColumnStyle(settings)}
+        >
+          {weekDaysList.map((day) =>
+            hidden.includes(day) ? (
+              <div key={day} className="text-slate-600" title={`${day} (hidden)`}>
+                {day.slice(0, 1)}
+              </div>
+            ) : (
+              <div key={day} className={""}>
+                <span className="hidden xl:inline">{day}</span>
+                <span className="xl:hidden inline">{day.slice(0, 3)}</span>
+              </div>
+            ),
+          )}
         </div>
 
         {month.daysByWeek.map((week, weekIndex) => (

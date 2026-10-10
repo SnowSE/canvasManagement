@@ -8,6 +8,8 @@ import { useLocalCourseSettingsQuery } from "@/features/local/course/localCourse
 import { canvasModuleService } from "../services/canvasModuleService";
 import { canvasPageService } from "../services/canvasPageService";
 import { useCanvasLinkTargets } from "./useCanvasLinkTargets";
+import { useCommitAfterPublish } from "@/features/local/git/gitHooks";
+import { usePrepareImagesForCanvas } from "./usePrepareImagesForCanvas";
 
 export const canvasPageKeys = {
   pagesInCourse: (courseCanvasId: number) => [
@@ -31,6 +33,9 @@ export const useCreateCanvasPageMutation = () => {
   const { data: canvasModules } = useCanvasModulesQuery();
   const addModule = useAddCanvasModuleMutation();
   const canvasLinkTargets = useCanvasLinkTargets();
+  const prepareImages = usePrepareImagesForCanvas();
+
+  const commitAfterPublish = useCommitAfterPublish();
 
   return useMutation({
     mutationFn: async ({
@@ -44,10 +49,11 @@ export const useCreateCanvasPageMutation = () => {
         console.log("cannot add page until modules loaded");
         return;
       }
+      const publishSettings = await prepareImages([page.text]);
       const canvasPage = await canvasPageService.create(
         settings.canvasId,
         page,
-        settings,
+        publishSettings,
         canvasLinkTargets
       );
 
@@ -64,7 +70,8 @@ export const useCreateCanvasPageMutation = () => {
       );
       return canvasPage;
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      commitAfterPublish(`page "${variables.page.name}"`);
       queryClient.invalidateQueries({
         queryKey: canvasPageKeys.pagesInCourse(settings.canvasId),
       });
@@ -76,6 +83,9 @@ export const useUpdateCanvasPageMutation = () => {
   const { data: settings } = useLocalCourseSettingsQuery();
   const queryClient = useQueryClient();
   const canvasLinkTargets = useCanvasLinkTargets();
+  const prepareImages = usePrepareImagesForCanvas();
+  const commitAfterPublish = useCommitAfterPublish();
+
   return useMutation({
     mutationFn: async ({
       page,
@@ -88,10 +98,11 @@ export const useUpdateCanvasPageMutation = () => {
         settings.canvasId,
         canvasPageId,
         page,
-        settings,
+        await prepareImages([page.text]),
         canvasLinkTargets
       ),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      commitAfterPublish(`page "${variables.page.name}"`);
       queryClient.invalidateQueries({
         queryKey: canvasPageKeys.pagesInCourse(settings.canvasId),
       });

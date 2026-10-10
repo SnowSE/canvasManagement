@@ -29,6 +29,7 @@ import { useReorderCanvasModuleItemsMutation } from "@/features/canvas/hooks/can
 import { useCanvasModulesQuery } from "@/features/canvas/hooks/canvasModuleHooks";
 import { Spinner } from "@/components/Spinner";
 import { ItemTypeIcon } from "../ItemTypeIcon";
+import { useInvalidItemsQuery } from "@/features/local/modules/rawItemHooks";
 
 export default function ExpandableModule({
   moduleName,
@@ -56,6 +57,7 @@ export default function ExpandableModule({
   const modal = useModal();
   const reorderMutation = useReorderCanvasModuleItemsMutation();
   const { data: canvasModules } = useCanvasModulesQuery();
+  const { data: invalidItems } = useInvalidItemsQuery(moduleName);
 
   const moduleItems: {
     type: "assignment" | "quiz" | "page";
@@ -136,6 +138,7 @@ export default function ExpandableModule({
       <div className="draggingModule ">
         <div className=" p-3 ">
           <Expandable
+            storageKey={`moduleExpanded-${courseName}-${moduleName}`}
             ExpandableElement={({ setIsExpanded, isExpanded }) => (
               <div
                 className="font-bold flex flex-row justify-between cursor-pointer "
@@ -144,6 +147,14 @@ export default function ExpandableModule({
               >
                 <div className="flex-1">{moduleName}</div>
                 <div className=" flex flex-row justify-end">
+                  {invalidItems && invalidItems.length > 0 && (
+                    <span
+                      className="me-2 rounded-full bg-rose-900 px-2 text-sm text-rose-100"
+                      title={`${invalidItems.length} file${invalidItems.length === 1 ? "" : "s"} in this module can't be read`}
+                    >
+                      ⚠ {invalidItems.length}
+                    </span>
+                  )}
                   <ClientOnly>
                     <ModuleCanvasStatus moduleName={moduleName} />
                   </ClientOnly>
@@ -200,6 +211,39 @@ export default function ExpandableModule({
                 )}
               </Modal>
               <div className="flex flex-col">
+                {invalidItems && invalidItems.length > 0 && (
+                  <div>
+                    <div className="text-rose-400 text-sm mt-1 ps-1">
+                      Can&rsquo;t be read, click to fix
+                    </div>
+                    {invalidItems.map((invalid) => (
+                      <div
+                        key={invalid.type + invalid.name}
+                        className="flex items-start ps-3"
+                        title={invalid.error}
+                      >
+                        <div className="w-6 p-1 flex-none">
+                          <ItemTypeIcon type={invalid.type.toLowerCase()} />
+                        </div>
+                        <Link
+                          to={getModuleItemUrl(
+                            courseName,
+                            moduleName,
+                            invalid.type === "Assignment"
+                              ? "assignment"
+                              : invalid.type === "Quiz"
+                                ? "quiz"
+                                : "page",
+                            invalid.name,
+                          )}
+                          className="ps-1 text-rose-300 underline decoration-wavy decoration-rose-600 hover:text-rose-100"
+                        >
+                          {invalid.name}
+                        </Link>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 {groupedItems.map(({ weekLabel, items }) => (
                   <div key={weekLabel}>
                     <div className="text-slate-500 text-sm mt-1 ps-1">

@@ -14,6 +14,8 @@ import {
 import { createServerSideHelpers } from "@trpc/react-query/server";
 import { MyToaster } from "@/app/MyToaster";
 import { ClientCacheInvalidation } from "@/components/realtime/ClientCacheInvalidation";
+import ClientOnly from "@/components/ClientOnly";
+import { ErrorLogPill } from "@/app/errors/ErrorLogPill";
 import { SuspenseAndErrorHandling } from "@/components/SuspenseAndErrorHandling";
 import TrpcProvider from "@/services/serverFunctions/TrpcProvider";
 import { getQueryClient } from "@/app/providersQueryClientUtils";
@@ -171,6 +173,9 @@ function RootComponent() {
                 <HydrationBoundary state={dehydratedState}>
                   <ClientCacheInvalidation />
                   <Outlet />
+                  <ClientOnly>
+                    <ErrorLogPill />
+                  </ClientOnly>
                 </HydrationBoundary>
               </TrpcProvider>
             </QueryClientProvider>

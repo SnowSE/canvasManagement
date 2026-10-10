@@ -11,6 +11,14 @@ export const zodGlobalSettings = z.object({
     .record(z.string(), z.string())
     .optional()
     .describe("Custom feedback delimiters keyed by identifier"),
+  git: z
+    .object({
+      commitOnPublish: z
+        .boolean()
+        .optional()
+        .describe("Commit a course's changes after publishing an item to Canvas"),
+    })
+    .optional(),
 });
 
 export type GlobalSettings = z.infer<typeof zodGlobalSettings>;

@@ -27,6 +27,8 @@ import {
 } from "@/components/MobileActionsMenu";
 import { getCourseSettingsUrl } from "@/services/urlUtils";
 import { useCourseContext } from "./context/courseContext";
+import ClientOnly from "@/components/ClientOnly";
+import { GitStatusButton } from "./git/GitStatusButton";
 
 export function CourseNavigation({
   onShowModules,
@@ -97,6 +99,9 @@ export function CourseNavigation({
       <div className="max-md:hidden flex flex-row items-center gap-3">
         {viewInCanvasLink}
         {reloadControl}
+        <ClientOnly>
+          <GitStatusButton />
+        </ClientOnly>
         {settings?.startDate && (
           <div className="my-auto text-slate-500">
             {getSemesterName(settings.startDate)}
@@ -111,6 +116,9 @@ export function CourseNavigation({
         )}
         <CloseMenuOnClick>{viewInCanvasLink}</CloseMenuOnClick>
         {reloadControl}
+        <ClientOnly>
+          <GitStatusButton />
+        </ClientOnly>
         <CloseMenuOnClick>
           <Link className="btn" to={getCourseSettingsUrl(courseName)}>
             Course Settings

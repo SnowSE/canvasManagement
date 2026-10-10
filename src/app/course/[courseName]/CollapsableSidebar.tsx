@@ -5,6 +5,8 @@ import CourseSettingsLink from "./CourseSettingsLink";
 import ModuleList from "./modules/ModuleList";
 import LeftChevron from "@/components/icons/LeftChevron";
 import RightChevron from "@/components/icons/RightChevron";
+import { usePersistedScroll } from "@/components/usePersistedScroll";
+import { useCourseContext } from "./context/courseContext";
 
 const collapseThreshold = 1400;
 const mobileThreshold = 640;
@@ -19,6 +21,9 @@ export default function CollapsableSidebar({
   const [windowCollapseRecommended, setWindowCollapseRecommended] =
     useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const { courseName } = useCourseContext();
+  // after the remembered modules have re-expanded (and their open animation)
+  const scroll = usePersistedScroll(`moduleListScroll-${courseName}`, 500);
   const [userCollapsed, setUserCollapsed] = useState<
     "unset" | "collapsed" | "uncollapsed"
   >("unset");
@@ -89,6 +94,8 @@ export default function CollapsableSidebar({
       </div>
       <div
         className={`${widthClass} flex-1 sm:p-3 overflow-y-auto transition-all ${visibilityClass}`}
+        ref={scroll.ref}
+        onScroll={scroll.onScroll}
       >
         <ModuleList />
       </div>

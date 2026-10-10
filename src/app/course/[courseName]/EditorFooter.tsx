@@ -11,6 +11,7 @@ import {
   CompareIcon,
   ExternalLinkIcon,
   HelpIcon,
+  HistoryIcon,
   NextIcon,
   PreviousIcon,
   PublishIcon,
@@ -21,7 +22,8 @@ import {
   PublishableItemType,
   usePublishInCanvasMutation,
 } from "@/features/canvas/hooks/canvasPublishHooks";
-import { getCourseUrl } from "@/services/urlUtils";
+import { getCourseUrl, getModuleItemUrl } from "@/services/urlUtils";
+import { useGitStatusQuery } from "@/features/local/git/gitHooks";
 import { useCourseContext } from "./context/courseContext";
 import { SyncField } from "./calendar/day/getAssignmentSyncStatus";
 
@@ -91,6 +93,7 @@ export function EditorFooter({
   const { courseName } = useCourseContext();
   const { inMenu } = useActionsMenu();
   const publish = usePublishInCanvasMutation();
+  const { data: git } = useGitStatusQuery();
 
   const view: FooterAction | undefined = canvasUrl
     ? {
@@ -201,8 +204,17 @@ export function EditorFooter({
       : [view];
   }
 
+  const history: FooterAction | undefined = git?.status.available
+    ? {
+        label: "File history",
+        icon: <HistoryIcon />,
+        to: getModuleItemUrl(courseName, moduleName, type, name) + "/history",
+      }
+    : undefined;
+
   const menuActions = [
     ...more.filter((a): a is FooterAction => !!a),
+    ...(history ? [history] : []),
     ...extraActions,
   ];
   const calendar: FooterAction = {

@@ -98,7 +98,9 @@ export function ImagesHelp() {
       <P>
         Images on the web can be linked directly. Files in a folder mounted
         under <C>/app/public/images</C> are uploaded to the Canvas course when
-        you publish, and the link is pointed at the uploaded copy.
+        you add or update the item in Canvas, and the link is pointed at the
+        uploaded copy. A changed file is uploaded again; a missing one stops
+        the publish with a message naming it.
       </P>
       <Example>{`
 ![formulas](/images/facultyFiles/1405/lab-04-formulas.png)

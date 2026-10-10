@@ -144,6 +144,17 @@ the install is not churning `node_modules` underneath a running vite.
   boot. The quiz errors are malformed content files in `~/faculty`, not code.
 - **`networkidle` alone is too early.** TanStack Start streams the shell first;
   the driver waits an extra 2.5s so panels are present in the screenshot.
+- **Test git features against a scratch repo, never `~/faculty`.** The course
+  page's git button fetches, commits, merges and pushes the storage repo, and
+  `~/faculty` is a real shared repo. Copy a course into a scratch folder,
+  `git init` + commit it, clone a `--bare` copy as its remote and clone that as
+  storage, then run the same `docker run` as `run.sh` but mount the clone at
+  `/app/storage`, a scratch `globalSettings.yml` over `/app/globalSettings.yml`,
+  a scratch `HOME`, and the scratch folder at its own host path (so the bare
+  remote's path resolves inside the container). Leave out `GH_TOKEN`.
+- **The error pill shows up in screenshots** whenever the session has logged an
+  error. Clear it first with
+  `curl -X POST localhost:3000/api/trpc/errorLog.clear -H 'content-type: application/json' -d '{}'`.
 - **The dev server's `pnpm install` runs on every start** (it is baked into the
   `dev` script), so boot re-verifies the lockfile before vite starts.
 

@@ -3,7 +3,8 @@ import { getDateFromStringOrThrow } from "@/features/local/utils/timeUtils";
 import { getMonthsBetweenDates } from "./calendarMonthUtils";
 import { CalendarMonth } from "./CalendarMonth";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo } from "react";
+import { usePersistedScroll } from "@/components/usePersistedScroll";
 import CalendarItemsContextProvider from "../context/CalendarItemsContextProvider";
 import CalendarQuizQuestionsProvider from "../context/CalendarQuizQuestionsProvider";
 
@@ -23,20 +24,7 @@ export default function CourseCalendar() {
     () => getMonthsBetweenDates(startDateTime, endDateTime),
     [endDateTime, startDateTime]
   );
-  const divRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    const storageKey = `courseScroll-${settings.name}`;
-    const scrollValue = localStorage.getItem(storageKey);
-
-    const yValue = scrollValue ? parseInt(scrollValue) : 0;
-
-    divRef.current?.scroll({
-      top: yValue,
-      left: 0,
-      // behavior: "smooth"
-    });
-  }, [settings.name]);
+  const scroll = usePersistedScroll(`courseScroll-${settings.name}`);
 
   return (
     <div
@@ -54,14 +42,8 @@ export default function CourseCalendar() {
     >
       <div
         className="h-full overflow-y-scroll sm:pe-1"
-        onScroll={(e) => {
-          const storageKey = `courseScroll-${settings.name}`;
-          localStorage.setItem(
-            storageKey,
-            e.currentTarget.scrollTop.toString()
-          );
-        }}
-        ref={divRef}
+        onScroll={scroll.onScroll}
+        ref={scroll.ref}
       >
         <CalendarItemsContextProvider>
           <CalendarQuizQuestionsProvider>

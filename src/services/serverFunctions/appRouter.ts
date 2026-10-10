@@ -13,6 +13,8 @@ import { courseRouter } from "@/features/local/course/courseRouter";
 import { classroom50Router } from "@/features/local/classroom50/classroom50Router";
 import { versionRouter } from "@/features/local/version/versionRouter";
 import { rosterRouter } from "@/features/canvas/roster/rosterRouter";
+import { errorLogRouter } from "@/features/local/errorLog/errorLogRouter";
+import { gitRouter } from "@/features/local/git/gitRouter";
 
 export const trpcAppRouter = router({
   course: courseRouter,
@@ -28,6 +30,8 @@ export const trpcAppRouter = router({
   classroom50: classroom50Router,
   version: versionRouter,
   roster: rosterRouter,
+  errorLog: errorLogRouter,
+  git: gitRouter,
 });
 
 export const createCaller = createCallerFactory(trpcAppRouter);

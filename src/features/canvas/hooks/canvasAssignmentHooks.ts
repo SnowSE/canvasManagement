@@ -9,7 +9,9 @@ import { canvasModuleService } from "../services/canvasModuleService";
 import { canvasAssignmentService } from "../services/canvasAssignmentService";
 import { showErrorToast } from "@/app/MyToaster";
 import { useCanvasLinkTargets } from "./useCanvasLinkTargets";
+import { useCommitAfterPublish } from "@/features/local/git/gitHooks";
 import { useAssignmentPublishOptions } from "./useAssignmentPublishOptions";
+import { usePrepareImagesForCanvas } from "./usePrepareImagesForCanvas";
 
 export const canvasAssignmentKeys = {
   assignments: (canvasCourseId: number) =>
@@ -32,6 +34,9 @@ export const useAddAssignmentToCanvasMutation = () => {
   const queryClient = useQueryClient();
   const canvasLinkTargets = useCanvasLinkTargets();
   const getPublishOptions = useAssignmentPublishOptions();
+  const prepareImages = usePrepareImagesForCanvas();
+
+  const commitAfterPublish = useCommitAfterPublish();
 
   return useMutation({
     mutationFn: async ({
@@ -50,10 +55,11 @@ export const useAddAssignmentToCanvasMutation = () => {
         (g) => g.name === assignment.localAssignmentGroupName,
       );
 
+      const publishSettings = await prepareImages([assignment.description]);
       const canvasAssignmentId = await canvasAssignmentService.create(
         settings.canvasId,
         assignment,
-        settings,
+        publishSettings,
         assignmentGroup?.canvasId,
         canvasLinkTargets,
         getPublishOptions(assignment),
@@ -71,7 +77,8 @@ export const useAddAssignmentToCanvasMutation = () => {
         canvasAssignmentId,
       );
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      commitAfterPublish(`assignment "${variables.assignment.name}"`);
       queryClient.invalidateQueries({
         queryKey: canvasAssignmentKeys.assignments(settings.canvasId),
       });
@@ -88,6 +95,9 @@ export const useUpdateAssignmentInCanvasMutation = () => {
   const queryClient = useQueryClient();
   const canvasLinkTargets = useCanvasLinkTargets();
   const getPublishOptions = useAssignmentPublishOptions();
+  const prepareImages = usePrepareImagesForCanvas();
+
+  const commitAfterPublish = useCommitAfterPublish();
 
   return useMutation({
     mutationFn: async ({
@@ -100,17 +110,19 @@ export const useUpdateAssignmentInCanvasMutation = () => {
       const assignmentGroup = settings.assignmentGroups.find(
         (g) => g.name === assignment.localAssignmentGroupName,
       );
+      const publishSettings = await prepareImages([assignment.description]);
       await canvasAssignmentService.update(
         settings.canvasId,
         canvasAssignmentId,
         assignment,
-        settings,
+        publishSettings,
         assignmentGroup?.canvasId,
         canvasLinkTargets,
         getPublishOptions(assignment),
       );
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      commitAfterPublish(`assignment "${variables.assignment.name}"`);
       queryClient.invalidateQueries({
         queryKey: canvasAssignmentKeys.assignments(settings.canvasId),
       });

@@ -1,5 +1,8 @@
-import { ReactNode } from "react";
+import { ReactNode, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+
+// gap kept between the tooltip and the edge of the window
+const edgeMargin = 8;
 
 export const Tooltip: React.FC<{
   message: ReactNode;
@@ -10,12 +13,34 @@ export const Tooltip: React.FC<{
   onMouseLeave?: () => void;
 }> = ({ message, targetRef, visible, onMouseEnter, onMouseLeave }) => {
   const rect = targetRef.current?.getBoundingClientRect();
+  const tooltipRef = useRef<HTMLDivElement | null>(null);
+  // centered under the target, then nudged back on screen once its width is known
+  const [shift, setShift] = useState(0);
+
+  useLayoutEffect(() => {
+    if (!visible || !tooltipRef.current || !rect) return;
+    const width = tooltipRef.current.offsetWidth;
+    const center = rect.left + rect.width / 2;
+    const left = center - width / 2;
+    const right = center + width / 2;
+    const maxRight = window.innerWidth - edgeMargin;
+    setShift(
+      left < edgeMargin
+        ? edgeMargin - left
+        : right > maxRight
+          ? maxRight - right
+          : 0,
+    );
+    // rect is read fresh each render; re-measure when shown or the content changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, message]);
 
   return createPortal(
     <div
+      ref={tooltipRef}
       style={{
         top: (rect?.bottom ?? 0) + window.scrollY + 10,
-        left: (rect?.left ?? 0) + window.scrollX + (rect?.width ?? 0) / 2,
+        left: (rect?.left ?? 0) + window.scrollX + (rect?.width ?? 0) / 2 + shift,
       }}
       className={
         " absolute -translate-x-1/2 z-20 " +

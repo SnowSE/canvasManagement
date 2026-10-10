@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { UnparsableItemFallback } from "@/app/course/[courseName]/modules/[moduleName]/unparsable/UnparsableItemFallback";
 import EditAssignment from "@/app/course/[courseName]/modules/[moduleName]/assignment/[assignmentName]/EditAssignment";
 
 export const Route = createFileRoute(
@@ -12,9 +13,15 @@ function AssignmentPage() {
   const decodedAssignmentName = decodeURIComponent(assignmentName);
   const decodedModuleName = decodeURIComponent(moduleName);
   return (
-    <EditAssignment
-      assignmentName={decodedAssignmentName}
+    <UnparsableItemFallback
       moduleName={decodedModuleName}
-    />
+      type="Assignment"
+      name={decodedAssignmentName}
+    >
+      <EditAssignment
+        assignmentName={decodedAssignmentName}
+        moduleName={decodedModuleName}
+      />
+    </UnparsableItemFallback>
   );
 }

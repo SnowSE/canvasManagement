@@ -9,6 +9,12 @@ import { ItemInDay } from "./itemInDay/ItemInDay";
 import { useTodaysItems } from "./useTodaysItems";
 import { DayTitle } from "./DayTitle";
 import { getDayOfWeek } from "@/features/local/course/localCourseSettings";
+import { isHiddenDay } from "../calendarColumns";
+import { HiddenDayStrip } from "./HiddenDayStrip";
+import {
+  UnparsableItemInDay,
+  useUnparsableItemsOnDay,
+} from "./UnparsableItemInDay";
 
 export default function Day({ day, month }: { day: string; month: number }) {
   const dayAsDate = getDateFromStringOrThrow(
@@ -23,6 +29,7 @@ export default function Day({ day, month }: { day: string; month: number }) {
   const { itemDropOnDay } = useDraggingContext();
 
   const { todaysItems } = useTodaysItems(day);
+  const unparsableItems = useUnparsableItemsOnDay(day);
 
   // a week that straddles two months is drawn in both, but each month only
   // fills in its own days — the neighbouring month's cells stay blank so the
@@ -70,7 +77,7 @@ export default function Day({ day, month }: { day: string; month: number }) {
     ? " border  border-blue-700 shadow-[0_0px_10px_0px] shadow-blue-500/50 "
     : " border border-slate-700 ";
 
-  return (
+  const fullDay = (
     <div
       className={
         " rounded-lg sm:m-1 m-0.5 min-h-10 " + meetingClasses + todayClasses
@@ -103,6 +110,12 @@ export default function Day({ day, month }: { day: string; month: number }) {
               />
             ),
           )}
+          {unparsableItems.map((item) => (
+            <UnparsableItemInDay
+              key={`unparsable-${item.type}-${item.moduleName}-${item.name}`}
+              item={item}
+            />
+          ))}
         </div>
         <div>
           {holidayNameToday.map((n) => (
@@ -113,5 +126,24 @@ export default function Day({ day, month }: { day: string; month: number }) {
         </div>
       </div>
     </div>
+  );
+
+  if (!isHiddenDay(settings, dayAsDate)) return fullDay;
+
+  // a hidden day is a strip on wide screens; stacked on a phone there is no
+  // width to save, so it is left out unless something is due on it
+  return (
+    <>
+      {todaysItems.length + unparsableItems.length > 0 && (
+        <div className="md:hidden">{fullDay}</div>
+      )}
+      <HiddenDayStrip
+        day={day}
+        dayAsDate={dayAsDate}
+        items={todaysItems}
+        unparsableItems={unparsableItems}
+        className={todayClasses}
+      />
+    </>
   );
 }

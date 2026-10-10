@@ -14,14 +14,12 @@ import { AssignmentFooterButtons } from "./AssignmentFooterButtons";
 import { useAuthoritativeUpdates } from "@/app/course/[courseName]/utils/useAuthoritativeUpdates";
 import EditAssignmentHeader from "./EditAssignmentHeader";
 import { UpdateAssignmentName } from "./UpdateAssignmentName";
-import { Spinner } from "@/components/Spinner";
 import { AssignmentHelp } from "./AssignmentHelp";
 import { EditLayout } from "@/components/EditLayout";
 import { useRosterGroupSetsQuery } from "@/features/canvas/roster/rosterHooks";
 import {
   useAssignmentQuery,
   useUpdateAssignmentMutation,
-  useUpdateImageSettingsForAssignment,
 } from "@/features/local/assignments/assignmentHooks";
 
 export default function EditAssignment({
@@ -40,8 +38,6 @@ export default function EditAssignment({
     isFetching: assignmentIsFetching,
   } = useAssignmentQuery(moduleName, assignmentName);
   const updateAssignment = useUpdateAssignmentMutation();
-  const { isPending: imageUpdateIsPending } =
-    useUpdateImageSettingsForAssignment({ moduleName, assignmentName });
 
   const {
     clientIsAuthoritative,
@@ -147,12 +143,6 @@ export default function EditAssignment({
           <div className="px-3 h-full ">
             <ClientOnly>
               <SuspenseAndErrorHandling showToast={false}>
-                {imageUpdateIsPending && (
-                  <div className="flex justify-center">
-                    <Spinner /> images being uploaded to canvas
-                  </div>
-                )}
-
                 <AssignmentPreview assignment={assignment} />
               </SuspenseAndErrorHandling>
             </ClientOnly>

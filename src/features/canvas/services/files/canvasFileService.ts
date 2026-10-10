@@ -1,28 +1,9 @@
 import fs from "fs/promises";
 import path from "path";
-import axios from "axios";
 import { canvasApi } from "../canvasServiceUtils";
 import { axiosClient } from "@/services/axiosUtils";
 import FormData from "form-data";
 import { rateLimitAwarePost } from "../canvasWebRequestUtils";
-
-export const downloadUrlToTempDirectory = async (
-  sourceUrl: string
-): Promise<{ fileName: string; success: boolean }> => {
-  try {
-    const fileName =
-      path.basename(new URL(sourceUrl).pathname) || `tempfile-${Date.now()}`;
-    const tempFilePath = path.join("/tmp", fileName);
-    const response = await axios.get(sourceUrl, {
-      responseType: "arraybuffer",
-    });
-    await fs.writeFile(tempFilePath, response.data);
-    return { fileName: tempFilePath, success: true };
-  } catch (error) {
-    console.log("Error downloading or saving the file:", sourceUrl, error);
-    return { fileName: sourceUrl, success: false };
-  }
-};
 
 const getFileSize = async (pathToFile: string): Promise<number> => {
   try {

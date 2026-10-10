@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { UnparsableItemFallback } from "@/app/course/[courseName]/modules/[moduleName]/unparsable/UnparsableItemFallback";
 import EditQuiz from "@/app/course/[courseName]/modules/[moduleName]/quiz/[quizName]/EditQuiz";
 
 export const Route = createFileRoute(
@@ -11,5 +12,13 @@ function QuizPage() {
   const { moduleName, quizName } = Route.useParams();
   const decodedQuizName = decodeURIComponent(quizName);
   const decodedModuleName = decodeURIComponent(moduleName);
-  return <EditQuiz quizName={decodedQuizName} moduleName={decodedModuleName} />;
+  return (
+    <UnparsableItemFallback
+      moduleName={decodedModuleName}
+      type="Quiz"
+      name={decodedQuizName}
+    >
+      <EditQuiz quizName={decodedQuizName} moduleName={decodedModuleName} />
+    </UnparsableItemFallback>
+  );
 }

@@ -1,39 +1,17 @@
 import publicProcedure from "@/services/serverFunctions/publicProcedure";
 import { router } from "@/services/serverFunctions/trpcSetup";
 import { z } from "zod";
-import { downloadUrlToTempDirectory, uploadToCanvasPart1, uploadToCanvasPart2 } from "./files/canvasFileService";
-const fileStorageLocation = process.env.FILE_STORAGE_LOCATION ?? "/app/public";
+import { ensureImagesUploaded } from "./files/canvasImageSync";
 
 export const canvasFileRouter = router({
-  getCanvasFileUrl: publicProcedure
+  ensureImagesUploaded: publicProcedure
     .input(
       z.object({
-        sourceUrl: z.string(),
-        canvasCourseId: z.number(),
-      })
+        courseName: z.string(),
+        sources: z.string().array().describe("image src values from the rendered html"),
+      }),
     )
-    .mutation(async ({ input: { sourceUrl, canvasCourseId } }) => {
-      const { fileName: localFile, success } = sourceUrl.startsWith("/")
-        ? { fileName: fileStorageLocation + sourceUrl, success: true }
-        : await downloadUrlToTempDirectory(sourceUrl);
-
-      if (!success) {
-        console.log("could not download file, returning sourceUrl", sourceUrl);
-        // make a toast or some other way of notifying the user
-        return sourceUrl;
-      }
-      console.log("local temp file", localFile);
-      const { upload_url, upload_params } = await uploadToCanvasPart1(
-        localFile,
-        canvasCourseId
-      );
-      console.log("part 1 done", upload_url, upload_params);
-      const canvasUrl = await uploadToCanvasPart2({
-        pathToUpload: localFile,
-        upload_url,
-        upload_params,
-      });
-      console.log("canvas url done", canvasUrl);
-      return canvasUrl;
-    }),
+    .mutation(async ({ input: { courseName, sources } }) =>
+      ensureImagesUploaded(courseName, sources),
+    ),
 });

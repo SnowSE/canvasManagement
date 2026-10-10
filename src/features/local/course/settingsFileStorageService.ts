@@ -11,6 +11,7 @@ import {
   localCourseYamlUtils,
 } from "@/features/local/course/localCourseSettings";
 import { GlobalSettingsCourse } from "../globalSettings/globalSettingsModels";
+import { isLocalImageSource } from "@/services/imageSources";
 
 const getCourseSettings = async (
   course: GlobalSettingsCourse
@@ -50,8 +51,10 @@ const populateDefaultValues = (settingsFromFile: LocalCourseSettings) => {
     holidays: Array.isArray(settingsFromFile.holidays)
       ? settingsFromFile.holidays
       : [],
+    // web images used to be re-uploaded to Canvas as well, unused; drop those
+    // entries so the next save cleans them out of settings.yml
     assets: Array.isArray(settingsFromFile.assets)
-      ? settingsFromFile.assets
+      ? settingsFromFile.assets.filter((a) => isLocalImageSource(a.sourceUrl))
       : [],
   };
   return settings;
@@ -59,6 +62,13 @@ const populateDefaultValues = (settingsFromFile: LocalCourseSettings) => {
 
 export const settingsFileStorageService = {
   getCourseSettings,
+  async getCourseSettingsByName(courseName: string) {
+    const course = (await getGlobalSettings()).courses.find(
+      (c) => c.name === courseName
+    );
+    if (!course) throw new Error(`Could not find course ${courseName}`);
+    return await getCourseSettings(course);
+  },
   async getAllCoursesSettings() {
     const globalSettings = await getGlobalSettings();
 
