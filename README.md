@@ -1,4 +1,5 @@
-# canvasManagement
+# Canvas Management
+> Who wants to click around in Canvas when they can just edit markdown files? ;-)
 
 ## Handouts
 
