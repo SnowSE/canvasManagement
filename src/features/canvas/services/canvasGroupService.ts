@@ -8,7 +8,15 @@ import {
 export const canvasGroupService = {
   async getGroupCategories(courseId: number): Promise<CanvasGroupCategory[]> {
     const url = `${canvasApi}/courses/${courseId}/group_categories`;
-    return await paginatedRequest<CanvasGroupCategory[]>({ url });
+    try {
+      return await paginatedRequest<CanvasGroupCategory[]>({ url });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      // a course whose term has ended is read-only, and Canvas refuses to
+      // list its group sets; there are none to assign there anyway
+      if (error?.response?.status === 403) return [];
+      throw error;
+    }
   },
 
   async getGroupsInCategory(groupCategoryId: number): Promise<CanvasGroup[]> {
