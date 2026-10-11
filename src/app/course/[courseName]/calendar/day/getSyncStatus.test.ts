@@ -437,3 +437,36 @@ describe("getSyncStatus - rubric comparison", () => {
     expect(result.status).toBe("published");
   });
 });
+
+describe("getSyncStatus - page", () => {
+  const page = { name: "Belts", text: "hello world", dueAt: "08/21/2023 23:59:00" };
+  const canvasPage = {
+    page_id: 1,
+    url: "belts",
+    title: "Belts",
+    published: true,
+    front_page: false,
+    body: "<p>hello world</p>",
+  };
+
+  it("returns published when the content matches", () => {
+    const result = getSyncStatus({
+      item: page,
+      canvasItem: canvasPage,
+      type: "page",
+      settings: baseSettings,
+    });
+    expect(result.status).toBe("published");
+  });
+
+  it("returns incomplete when the content differs", () => {
+    const result = getSyncStatus({
+      item: { ...page, text: "hello there" },
+      canvasItem: canvasPage,
+      type: "page",
+      settings: baseSettings,
+    });
+    expect(result.status).toBe("incomplete");
+    expect(result.message).toContain("different");
+  });
+});

@@ -79,7 +79,7 @@ export type ItemSyncStatus = {
 export interface SyncReport extends ItemSyncStatus {
   /** Every compared field, matching or not, in display order. */
   fields: SyncField[];
-  /** Rendered file markdown vs the Canvas description; assignments and quizzes only. */
+  /** Rendered file markdown vs the Canvas description or page body. */
   description?: SyncDescription;
 }
 
@@ -684,7 +684,20 @@ export function getSyncReport({
 
   const fields: SyncField[] = [];
 
-  if (type === "page") return buildReport(fields, canvasItem.published);
+  if (type === "page") {
+    const page = item as LocalCoursePage;
+    const description = checkDescription(
+      () =>
+        markdownToHTMLSafe({
+          markdownString: page.text,
+          settings,
+          canvasLinkTargets,
+        }),
+      (canvasItem as CanvasPage).body,
+    );
+    fields.push(description.field);
+    return buildReport(fields, canvasItem.published, description.description);
+  }
 
   const checked =
     type === "quiz"

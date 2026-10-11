@@ -10,7 +10,8 @@ import { CanvasLinkTargets } from "@/services/urlUtils";
 export const canvasPageService = {
   async getAll(courseId: number): Promise<CanvasPage[]> {
     try {
-      const url = `${canvasApi}/courses/${courseId}/pages`;
+      // body lets the sync status compare page content
+      const url = `${canvasApi}/courses/${courseId}/pages?include[]=body`;
       const pages = await paginatedRequest<CanvasPage[]>({
         url,
       });
