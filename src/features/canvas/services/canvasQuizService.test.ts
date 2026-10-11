@@ -487,7 +487,10 @@ describe("canvasQuizService", () => {
       ],
     } as unknown as LocalQuiz;
 
-    const updateWithCanvasPublished = async (published: boolean) => {
+    const updateWithCanvasPublished = async (
+      published: boolean,
+      questionsMatch = false,
+    ) => {
       const { axiosClient } = await import("@/services/axiosUtils");
       const { rateLimitAwarePost, rateLimitAwareDelete } = await import(
         "./canvasWebRequestUtils"
@@ -503,6 +506,7 @@ describe("canvasQuizService", () => {
 
       const summary = await canvasQuizService.update(42, 7, quiz, {} as never, {
         onStep: (step) => steps.push(step),
+        questionsMatch: () => questionsMatch,
       });
       return { summary, steps, axiosClient, rateLimitAwarePost, rateLimitAwareDelete };
     };
@@ -530,10 +534,30 @@ describe("canvasQuizService", () => {
 
       expect(vi.mocked(axiosClient.put).mock.calls).toHaveLength(1);
       expect(summary).toEqual({
+        questionsReplaced: true,
         questionsRemoved: 3,
         questionsAdded: 2,
         needsSaveInCanvas: true,
       });
+    });
+
+    it("leaves the questions alone when they already match the file", async () => {
+      const { summary, steps, rateLimitAwarePost, rateLimitAwareDelete } =
+        await updateWithCanvasPublished(true, true);
+
+      expect(rateLimitAwareDelete).not.toHaveBeenCalled();
+      expect(rateLimitAwarePost).not.toHaveBeenCalled();
+      // so a published quiz doesn't need Save it now after a settings change
+      expect(summary).toEqual({
+        questionsReplaced: false,
+        questionsRemoved: 0,
+        questionsAdded: 0,
+        needsSaveInCanvas: false,
+      });
+      expect(steps).toEqual([
+        "Updating quiz settings",
+        "Questions already match the file",
+      ]);
     });
 
     it("needs nothing more for an unpublished quiz", async () => {

@@ -451,10 +451,13 @@ export const canvasQuizService = {
       canvasAssignmentGroupId,
       canvasLinkTargets,
       onStep = () => {},
+      questionsMatch = () => false,
     }: {
       canvasAssignmentGroupId?: number;
       canvasLinkTargets?: CanvasLinkTargets;
       onStep?: (step: string) => void;
+      /** True when Canvas's questions already match the file. */
+      questionsMatch?: (canvasQuestions: CanvasQuizQuestion[]) => boolean;
     } = {}
   ) {
     const url = `${canvasApi}/courses/${canvasCourseId}/quizzes/${canvasQuizId}`;
@@ -473,6 +476,17 @@ export const canvasQuizService = {
       canvasCourseId,
       canvasQuizId
     );
+    if (questionsMatch(oldQuestions)) {
+      // replacing them anyway would leave a published quiz needing Save it now
+      onStep("Questions already match the file");
+      return {
+        questionsReplaced: false,
+        questionsRemoved: 0,
+        questionsAdded: 0,
+        needsSaveInCanvas: false,
+      };
+    }
+
     onStep(`Removing ${oldQuestions.length} questions from Canvas`);
     await Promise.all(
       oldQuestions.map((q) => rateLimitAwareDelete(`${url}/questions/${q.id}`))
@@ -482,6 +496,7 @@ export const canvasQuizService = {
     await createQuizQuestions(canvasCourseId, canvasQuizId, localQuiz, settings);
 
     return {
+      questionsReplaced: true,
       questionsRemoved: oldQuestions.length,
       questionsAdded: localQuiz.questions.length,
       needsSaveInCanvas: canvasQuiz.published === true,
