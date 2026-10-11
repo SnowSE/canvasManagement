@@ -24,6 +24,8 @@ export const canvasQuizKeys = {
   // under quizzes, so anything that refreshes the quizzes refreshes these too
   questions: (canvasCourseId: number, canvasQuizId: number) =>
     ["canvas", canvasCourseId, "quizzes", canvasQuizId, "questions"] as const,
+  versionsTaken: (canvasCourseId: number, canvasQuizId: number) =>
+    ["canvas", canvasCourseId, "quizzes", canvasQuizId, "versionsTaken"] as const,
 };
 
 export const useCanvasQuizzesQuery = () => {
@@ -46,6 +48,29 @@ export const useCanvasQuizQuestionsQuery = (canvasQuizId: number | undefined) =>
     enabled: canvasQuizId !== undefined,
   });
 };
+
+/** Each quiz version students took, newest first; empty if nobody started. */
+export const useCanvasQuizVersionsTakenQuery = (
+  canvasQuizId: number | undefined,
+) => {
+  const { data: settings } = useLocalCourseSettingsQuery();
+
+  return useQuery({
+    queryKey: canvasQuizKeys.versionsTaken(settings.canvasId, canvasQuizId ?? 0),
+    queryFn: () =>
+      canvasQuizService.getVersionsTaken(settings.canvasId, canvasQuizId!),
+    enabled: canvasQuizId !== undefined,
+  });
+};
+
+/** The questions one attempt got; an attempt never changes, so it is never refetched. */
+export const useCanvasAttemptQuestionsQuery = (attemptId: number | undefined) =>
+  useQuery({
+    queryKey: ["canvas", "quizAttemptQuestions", attemptId],
+    queryFn: () => canvasQuizService.getAttemptQuestions(attemptId!),
+    enabled: attemptId !== undefined,
+    staleTime: Infinity,
+  });
 
 export const useAddQuizToCanvasMutation = () => {
   const { data: settings } = useLocalCourseSettingsQuery();

@@ -503,15 +503,60 @@ export const canvasQuizService = {
     };
   },
   /** Attempts students have started or finished (Canvas also lists "settings_only" rows for students with extra time). */
-  async countSubmissions(canvasCourseId: number, canvasQuizId: number) {
+  async listAttempts(canvasCourseId: number, canvasQuizId: number) {
     const pages = await paginatedRequest<
-      { quiz_submissions: { workflow_state: string }[] }[]
+      {
+        quiz_submissions: {
+          id: number;
+          quiz_version: number;
+          workflow_state: string;
+        }[];
+      }[]
     >({
       url: `${canvasApi}/courses/${canvasCourseId}/quizzes/${canvasQuizId}/submissions`,
     });
     return pages
       .flatMap((page) => page.quiz_submissions)
-      .filter((s) => s.workflow_state !== "settings_only").length;
+      .filter((s) => s.workflow_state !== "settings_only");
+  },
+  async countSubmissions(canvasCourseId: number, canvasQuizId: number) {
+    return (await canvasQuizService.listAttempts(canvasCourseId, canvasQuizId))
+      .length;
+  },
+  /**
+   * Each quiz version students took, newest first, with one attempt to read
+   * its questions from (every attempt on a version gets the same questions,
+   * in its own answer shuffle).
+   */
+  async getVersionsTaken(canvasCourseId: number, canvasQuizId: number) {
+    const attempts = await canvasQuizService.listAttempts(
+      canvasCourseId,
+      canvasQuizId
+    );
+    const versions = new Map<
+      number,
+      { version: number; attempts: number; attemptId: number }
+    >();
+    for (const a of attempts) {
+      const v = versions.get(a.quiz_version);
+      if (v) v.attempts++;
+      else
+        versions.set(a.quiz_version, {
+          version: a.quiz_version,
+          attempts: 1,
+          attemptId: a.id,
+        });
+    }
+    return [...versions.values()].sort((x, y) => y.version - x.version);
+  },
+  /** The questions one attempt got, which can differ from Canvas's current ones until "Save it now". */
+  async getAttemptQuestions(attemptId: number) {
+    const { data } = await axiosClient.get<{
+      quiz_submission_questions: CanvasQuizQuestion[];
+    }>(`${canvasApi}/quiz_submissions/${attemptId}/questions`);
+    return data.quiz_submission_questions.sort(
+      (x, y) => (x.position ?? 0) - (y.position ?? 0)
+    );
   },
   async publish(canvasCourseId: number, canvasQuizId: number) {
     console.log(`Publishing quiz ${canvasQuizId}`);

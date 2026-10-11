@@ -149,6 +149,29 @@ essay`),
     expect(field.local).toContain("points: 2");
   });
 
+  it("can ignore answer order, since each student attempt shuffles its answers", () => {
+    const shuffled = {
+      ...canvasMultipleChoice,
+      answers: [...canvasMultipleChoice.answers!].reverse(),
+    };
+    const [inOrder] = checkQuizQuestions(
+      questionsOf(multipleChoice),
+      [shuffled],
+      settings,
+    );
+    expect(inOrder.same).toBe(false);
+
+    const [ignoringOrder] = checkQuizQuestions(
+      questionsOf(multipleChoice),
+      [shuffled],
+      settings,
+      { ignoreAnswerOrder: true },
+    );
+    expect(ignoringOrder.same).toBe(true);
+    // shown lined up with the file's order
+    expect(ignoringOrder.canvas).toBe(ignoringOrder.local);
+  });
+
   it("reports changed feedback", () => {
     const [field] = checkQuizQuestions(
       questionsOf(multipleChoice),

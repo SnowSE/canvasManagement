@@ -577,6 +577,47 @@ describe("canvasQuizService", () => {
     });
   });
 
+  describe("getVersionsTaken", () => {
+    it("groups real attempts by quiz version, newest first, with one attempt to read", async () => {
+      const { paginatedRequest } = await import("./canvasServiceUtils");
+      vi.mocked(paginatedRequest).mockResolvedValue([
+        {
+          quiz_submissions: [
+            { id: 1, quiz_version: 2, workflow_state: "complete" },
+            { id: 2, quiz_version: 3, workflow_state: "untaken" },
+            { id: 3, quiz_version: 2, workflow_state: "complete" },
+            { id: 4, quiz_version: 4, workflow_state: "settings_only" },
+          ],
+        },
+      ]);
+
+      expect(await canvasQuizService.getVersionsTaken(42, 7)).toEqual([
+        { version: 3, attempts: 1, attemptId: 2 },
+        { version: 2, attempts: 2, attemptId: 1 },
+      ]);
+    });
+  });
+
+  describe("getAttemptQuestions", () => {
+    it("returns the attempt's questions in quiz order", async () => {
+      const { axiosClient } = await import("@/services/axiosUtils");
+      vi.mocked(axiosClient.get).mockResolvedValue({
+        data: {
+          quiz_submission_questions: [
+            { id: 11, position: 2 },
+            { id: 10, position: 1 },
+          ],
+        },
+      });
+
+      const questions = await canvasQuizService.getAttemptQuestions(5);
+      expect(vi.mocked(axiosClient.get).mock.calls[0][0]).toBe(
+        "https://test.instructure.com/api/v1/quiz_submissions/5/questions",
+      );
+      expect(questions.map((q) => q.id)).toEqual([10, 11]);
+    });
+  });
+
   describe("countSubmissions", () => {
     it("counts real attempts, not students who only have settings like extra time", async () => {
       const { paginatedRequest } = await import("./canvasServiceUtils");
