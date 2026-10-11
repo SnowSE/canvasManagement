@@ -16,11 +16,11 @@ export function getModuleItemUrl(
     encodeURIComponent(itemName)
   );
 }
-/** The file-vs-Canvas compare page for an assignment or quiz. */
+/** The file-vs-Canvas compare page for an assignment, quiz, or page. */
 export function getCompareUrl(
   courseName: string,
   moduleName: string,
-  type: "assignment" | "quiz",
+  type: "assignment" | "page" | "quiz",
   itemName: string
 ) {
   return getModuleItemUrl(courseName, moduleName, type, itemName) + "/compare";

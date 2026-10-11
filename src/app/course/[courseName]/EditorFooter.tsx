@@ -73,7 +73,7 @@ export function EditorFooter({
   moduleName: string;
   canvasLoading: boolean;
   canvasItem?: { id: number; published: boolean };
-  /** Field-by-field differences, not counting Published. Undefined for types that are not compared (pages). */
+  /** Field-by-field differences, not counting Published. Undefined when the item is not compared. */
   differences?: SyncField[];
   canvasUrl?: string;
   compareUrl?: string;
@@ -197,7 +197,7 @@ export function EditorFooter({
         {differences ? "In sync · Published" : "Published"}
       </span>
     );
-    // pages aren't compared, so Update stays the next step for them
+    // without a comparison, Update stays the next step
     primary = differences ? view : update;
     more = differences
       ? [compare, { ...update, label: "Update in Canvas anyway" }]

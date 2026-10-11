@@ -9,6 +9,11 @@ import { useCourseContext } from "@/app/course/[courseName]/context/courseContex
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import { useAssignmentQuery } from "@/features/local/assignments/assignmentHooks";
 import { useQuizQuery } from "@/features/local/quizzes/quizHooks";
+import { usePageQuery } from "@/features/local/pages/pageHooks";
+import {
+  useCanvasPagesQuery,
+  useUpdateCanvasPageMutation,
+} from "@/features/canvas/hooks/canvasPageHooks";
 import {
   useCanvasAssignmentsQuery,
   useUpdateAssignmentInCanvasMutation,
@@ -202,12 +207,70 @@ export function CompareQuizWithCanvas({
   );
 }
 
+export function ComparePageWithCanvas({
+  moduleName,
+  pageName,
+}: {
+  moduleName: string;
+  pageName: string;
+}) {
+  const { data: settings } = useLocalCourseSettingsQuery();
+  const { data: page } = usePageQuery(moduleName, pageName);
+  const { data: canvasPages, isFetching, refetch } = useCanvasPagesQuery();
+  const { data: canvasAssignments } = useCanvasAssignmentsQuery();
+  const { data: canvasQuizzes } = useCanvasQuizzesQuery();
+  const update = useUpdateCanvasPageMutation();
+
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
+
+  const canvasPage = canvasPages?.find((p) => p.title === pageName);
+  const report = useMemo(
+    () =>
+      getSyncReport({
+        item: page,
+        canvasItem: canvasPage,
+        type: "page",
+        settings,
+        canvasLinkTargets: {
+          assignments: canvasAssignments,
+          quizzes: canvasQuizzes,
+        },
+      }),
+    [canvasAssignments, canvasPage, canvasQuizzes, page, settings],
+  );
+
+  return (
+    <CompareLayout
+      type="page"
+      moduleName={moduleName}
+      itemName={pageName}
+      report={report}
+      canvasLoading={canvasPages === undefined}
+      canvasFetching={isFetching}
+      canvasId={canvasPage?.page_id}
+      canvasUrl={
+        canvasPage &&
+        `${baseCanvasUrl}/courses/${settings.canvasId}/pages/${canvasPage.url}`
+      }
+      onRefresh={() => refetch()}
+      onUpdate={() =>
+        canvasPage &&
+        update.mutate({ page, canvasPageId: canvasPage.page_id })
+      }
+      updating={update.isPending}
+      updateNote="Update in Canvas replaces the page's content with the file's."
+    />
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /* Shared page                                                          */
 /* ------------------------------------------------------------------ */
 
 const CompareLayout: FC<{
-  type: "assignment" | "quiz";
+  type: "assignment" | "page" | "quiz";
   moduleName: string;
   itemName: string;
   report: SyncReport;
