@@ -16,6 +16,7 @@ import {
 import toast from "react-hot-toast";
 import { showActionNeededToast, showErrorToast } from "@/app/MyToaster";
 import { baseCanvasUrl } from "../services/canvasServiceUtils";
+import { pointTotalChangeError } from "@/app/course/[courseName]/calendar/day/quizQuestionSync";
 
 export const canvasQuizKeys = {
   quizzes: (canvasCourseId: number) =>
@@ -130,7 +131,7 @@ export const useAddQuizToCanvasMutation = () => {
 const submissionWarning = (count: number) =>
   `${count} student${count === 1 ? " has" : "s have"} already started this quiz in Canvas.
 
-Updating replaces its questions. Students who already started keep the questions and answer key they got, and Canvas will not regrade them. If the point total changes, their scores are out of the new total.
+Updating replaces its questions. Students who already started keep the questions and answer key they got, and Canvas will not regrade them.
 
 Update anyway?`;
 
@@ -156,12 +157,19 @@ export const useUpdateQuizInCanvasMutation = () => {
       quiz: LocalQuiz;
       canvasQuizId: number;
     }) => {
-      const submissions = await canvasQuizService.countSubmissions(
+      const versions = await canvasQuizService.getVersionsTaken(
         settings.canvasId,
         canvasQuizId
       );
-      if (submissions > 0 && !window.confirm(submissionWarning(submissions)))
-        return false;
+      if (versions.length > 0) {
+        const studentsGot = await canvasQuizService.getAttemptQuestions(
+          versions[0].attemptId
+        );
+        const pointsError = pointTotalChangeError(quiz.questions, studentsGot);
+        if (pointsError) throw new Error(pointsError);
+        const submissions = versions.reduce((sum, v) => sum + v.attempts, 0);
+        if (!window.confirm(submissionWarning(submissions))) return false;
+      }
 
       const progress = toast.loading("Updating quiz in Canvas");
       try {

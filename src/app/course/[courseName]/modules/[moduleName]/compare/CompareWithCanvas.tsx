@@ -215,7 +215,7 @@ export function CompareQuizWithCanvas({
         canvasQuiz && update.mutate({ quiz, canvasQuizId: canvasQuiz.id })
       }
       updating={update.isPending}
-      updateNote="Update Canvas pushes the file's settings and replaces the questions in Canvas with the file's. On a published quiz, students keep getting the old questions until you click Save it now on the quiz page in Canvas (the API can't do that). If students have started, it warns first: they keep the questions they got and are not regraded."
+      updateNote="Update Canvas pushes the file's settings and replaces the questions in Canvas with the file's. On a published quiz, students keep getting the old questions until you click Save it now on the quiz page in Canvas (the API can't do that). If students have started, it warns first: they keep the questions they got and are not regraded. It refuses to change the point total they were scored out of."
     >
       {versions?.map((v, i) => (
         <VersionSection

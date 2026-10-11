@@ -594,17 +594,6 @@ describe("canvasQuizService", () => {
     });
   });
 
-  describe("countSubmissions", () => {
-    it("counts real attempts, not students who only have settings like extra time", async () => {
-      const { paginatedRequest } = await import("./canvasServiceUtils");
-      vi.mocked(paginatedRequest).mockResolvedValue([
-        { quiz_submissions: [{ workflow_state: "complete" }, { workflow_state: "settings_only" }] },
-        { quiz_submissions: [{ workflow_state: "untaken" }] },
-      ]);
-
-      expect(await canvasQuizService.countSubmissions(42, 7)).toBe(2);
-    });
-  });
 });
 
 const dropdownAnswersForCanvas = (question: LocalQuizQuestion) =>
