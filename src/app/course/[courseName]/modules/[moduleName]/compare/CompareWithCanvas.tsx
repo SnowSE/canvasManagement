@@ -131,7 +131,11 @@ export function CompareAssignmentWithCanvas({
       onRefresh={() => refetch()}
       onUpdate={() =>
         canvasAssignment &&
-        update.mutate({ assignment, canvasAssignmentId: canvasAssignment.id })
+        update.mutate({
+          assignment,
+          canvasAssignmentId: canvasAssignment.id,
+          moduleName,
+        })
       }
       updating={update.isPending}
       updateNote="Update Canvas pushes the file's dates, group settings, rubric and description. Submissions and grades are untouched."
@@ -219,7 +223,8 @@ export function CompareQuizWithCanvas({
         }
       }}
       onUpdate={() =>
-        canvasQuiz && update.mutate({ quiz, canvasQuizId: canvasQuiz.id })
+        canvasQuiz &&
+        update.mutate({ quiz, canvasQuizId: canvasQuiz.id, moduleName })
       }
       updating={update.isPending}
       updateNote="Update Canvas pushes the file's settings and, if any question differs, replaces the questions in Canvas with the file's. When it replaces them on a published quiz, students keep getting the old questions until you click Save it now on the quiz page in Canvas (the API can't do that). If students have started, it warns first: they keep the questions they got and are not regraded. It refuses to change the point total they were scored out of."
@@ -293,7 +298,7 @@ export function ComparePageWithCanvas({
       onRefresh={() => refetch()}
       onUpdate={() =>
         canvasPage &&
-        update.mutate({ page, canvasPageId: canvasPage.page_id })
+        update.mutate({ page, canvasPage, moduleName })
       }
       updating={update.isPending}
       updateNote="Update in Canvas replaces the page's content with the file's."

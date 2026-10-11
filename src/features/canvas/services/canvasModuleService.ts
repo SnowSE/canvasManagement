@@ -55,6 +55,49 @@ export const canvasModuleService = {
     await rateLimitAwarePost<CanvasModuleItem>(url, body);
   },
 
+  /**
+   * Puts an item in a module: leaves it if it's already there, moves it from
+   * another module, or adds it when it's in none.
+   */
+  async placeInModule(
+    canvasCourseId: number,
+    canvasModuleId: number,
+    item: {
+      type: "Assignment" | "Quiz" | "Page";
+      id: number;
+      title: string;
+      pageUrl?: string;
+    }
+  ): Promise<"already" | "moved" | "added"> {
+    const { data } = await axiosClient.get<{
+      items: { current?: { id: number; module_id: number } }[];
+    }>(`${canvasApi}/courses/${canvasCourseId}/module_item_sequence`, {
+      params: { asset_type: item.type, asset_id: item.id },
+    });
+    const placements = data.items.flatMap((i) => (i.current ? [i.current] : []));
+    if (placements.some((p) => p.module_id === canvasModuleId)) return "already";
+
+    if (placements.length > 0) {
+      const [from] = placements;
+      await axiosClient.put(
+        `${canvasApi}/courses/${canvasCourseId}/modules/${from.module_id}/items/${from.id}`,
+        { module_item: { module_id: canvasModuleId } }
+      );
+      return "moved";
+    }
+
+    await rateLimitAwarePost(
+      `${canvasApi}/courses/${canvasCourseId}/modules/${canvasModuleId}/items`,
+      {
+        module_item:
+          item.type === "Page"
+            ? { title: item.title, type: "Page", page_url: item.pageUrl }
+            : { title: item.title, type: item.type, content_id: item.id },
+      }
+    );
+    return "added";
+  },
+
   async getCourseModules(canvasCourseId: number) {
     const url = `${canvasApi}/courses/${canvasCourseId}/modules`;
     const response = await paginatedRequest<CanvasModule[]>({ url });

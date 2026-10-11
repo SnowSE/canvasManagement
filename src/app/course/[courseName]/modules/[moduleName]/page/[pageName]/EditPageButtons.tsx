@@ -121,7 +121,8 @@ export default function EditPageButtons({
         pageInCanvas &&
         updatePageInCanvas.mutate({
           page,
-          canvasPageId: pageInCanvas.page_id,
+          canvasPage: pageInCanvas,
+          moduleName,
         })
       }
       extraActions={extraActions}

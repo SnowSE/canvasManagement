@@ -12,6 +12,7 @@ import { useCanvasLinkTargets } from "./useCanvasLinkTargets";
 import { useCommitAfterPublish } from "@/features/local/git/gitHooks";
 import { useAssignmentPublishOptions } from "./useAssignmentPublishOptions";
 import { usePrepareImagesForCanvas } from "./usePrepareImagesForCanvas";
+import { usePlaceInCanvasModule } from "./canvasModuleHooks";
 
 export const canvasAssignmentKeys = {
   assignments: (canvasCourseId: number) =>
@@ -96,6 +97,7 @@ export const useUpdateAssignmentInCanvasMutation = () => {
   const canvasLinkTargets = useCanvasLinkTargets();
   const getPublishOptions = useAssignmentPublishOptions();
   const prepareImages = usePrepareImagesForCanvas();
+  const placeInModule = usePlaceInCanvasModule();
 
   const commitAfterPublish = useCommitAfterPublish();
 
@@ -103,9 +105,11 @@ export const useUpdateAssignmentInCanvasMutation = () => {
     mutationFn: async ({
       assignment,
       canvasAssignmentId,
+      moduleName,
     }: {
       assignment: LocalAssignment;
       canvasAssignmentId: number;
+      moduleName: string;
     }) => {
       const assignmentGroup = settings.assignmentGroups.find(
         (g) => g.name === assignment.localAssignmentGroupName,
@@ -120,6 +124,11 @@ export const useUpdateAssignmentInCanvasMutation = () => {
         canvasLinkTargets,
         getPublishOptions(assignment),
       );
+      await placeInModule(moduleName, {
+        type: "Assignment",
+        id: canvasAssignmentId,
+        title: assignment.name,
+      });
     },
     onSuccess: (_data, variables) => {
       commitAfterPublish(`assignment "${variables.assignment.name}"`);

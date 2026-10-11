@@ -2,6 +2,7 @@ import { useLocalCourseSettingsQuery } from "@/features/local/course/localCourse
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { canvasModuleService } from "../services/canvasModuleService";
 import { IModuleItem } from "@/features/local/modules/IModuleItem";
+import toast from "react-hot-toast";
 
 export const canvasCourseModuleKeys = {
   modules: (canvasId: number) => ["canvas", canvasId, "module list"] as const,
@@ -28,6 +29,43 @@ export const useAddCanvasModuleMutation = () => {
       });
     },
   });
+};
+
+/**
+ * For Update in Canvas: puts an item in the Canvas module named after its
+ * folder, so moving a file to another module moves it in Canvas too.
+ */
+export const usePlaceInCanvasModule = () => {
+  const { data: settings } = useLocalCourseSettingsQuery();
+  const queryClient = useQueryClient();
+  const addModule = useAddCanvasModuleMutation();
+  return async (
+    moduleName: string,
+    item: Parameters<typeof canvasModuleService.placeInModule>[2]
+  ) => {
+    // loaded, not just cached, so a missing module isn't created twice
+    const modules = await queryClient.ensureQueryData({
+      queryKey: canvasCourseModuleKeys.modules(settings.canvasId),
+      queryFn: () => canvasModuleService.getCourseModules(settings.canvasId),
+    });
+    const moduleId =
+      modules.find((m) => m.name === moduleName)?.id ??
+      (await addModule.mutateAsync(moduleName));
+    const placed = await canvasModuleService.placeInModule(
+      settings.canvasId,
+      moduleId,
+      item
+    );
+    if (placed !== "already") {
+      toast.success(
+        `${placed === "moved" ? "Moved" : "Added"} "${item.title}" to the "${moduleName}" module in Canvas.`
+      );
+      queryClient.invalidateQueries({
+        queryKey: canvasCourseModuleKeys.modules(settings.canvasId),
+      });
+    }
+    return placed;
+  };
 };
 
 export const useReorderCanvasModuleItemsMutation = () => {

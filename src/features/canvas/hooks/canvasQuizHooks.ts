@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   useAddCanvasModuleMutation,
   useCanvasModulesQuery,
+  usePlaceInCanvasModule,
 } from "./canvasModuleHooks";
 import { LocalQuiz } from "@/features/local/quizzes/models/localQuiz";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
@@ -149,6 +150,7 @@ export const useUpdateQuizInCanvasMutation = () => {
   const queryClient = useQueryClient();
   const canvasLinkTargets = useCanvasLinkTargets();
   const prepareImages = usePrepareImagesForCanvas();
+  const placeInModule = usePlaceInCanvasModule();
 
   const commitAfterPublish = useCommitAfterPublish();
 
@@ -156,9 +158,11 @@ export const useUpdateQuizInCanvasMutation = () => {
     mutationFn: async ({
       quiz,
       canvasQuizId,
+      moduleName,
     }: {
       quiz: LocalQuiz;
       canvasQuizId: number;
+      moduleName: string;
     }) => {
       const versions = await canvasQuizService.getVersionsTaken(
         settings.canvasId,
@@ -197,6 +201,11 @@ export const useUpdateQuizInCanvasMutation = () => {
               ).every((q) => q.same),
           }
         );
+        await placeInModule(moduleName, {
+          type: "Quiz",
+          id: canvasQuizId,
+          title: quiz.name,
+        });
         const updated = summary.questionsReplaced
           ? `Updated "${quiz.name}" in Canvas: settings, ${summary.questionsRemoved} questions removed, ${summary.questionsAdded} added.`
           : `Updated "${quiz.name}" in Canvas: settings. Its questions already matched the file, so they were left alone.`;

@@ -159,6 +159,7 @@ export function AssignmentFooterButtons({
         updateAssignment.mutate({
           canvasAssignmentId: assignmentInCanvas.id,
           assignment,
+          moduleName,
         })
       }
       onViewInCanvas={() => {

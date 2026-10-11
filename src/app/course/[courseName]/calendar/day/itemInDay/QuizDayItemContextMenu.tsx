@@ -107,6 +107,7 @@ export const QuizDayItemContextMenu: FC<{
     updateInCanvasMutation.mutate({
       quiz: item as LocalQuiz,
       canvasQuizId: quizInCanvas.id,
+      moduleName,
     });
     handleClose();
   };

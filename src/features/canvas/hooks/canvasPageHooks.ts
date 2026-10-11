@@ -10,6 +10,7 @@ import { canvasPageService } from "../services/canvasPageService";
 import { useCanvasLinkTargets } from "./useCanvasLinkTargets";
 import { useCommitAfterPublish } from "@/features/local/git/gitHooks";
 import { usePrepareImagesForCanvas } from "./usePrepareImagesForCanvas";
+import { usePlaceInCanvasModule } from "./canvasModuleHooks";
 
 export const canvasPageKeys = {
   pagesInCourse: (courseCanvasId: number) => [
@@ -85,22 +86,32 @@ export const useUpdateCanvasPageMutation = () => {
   const canvasLinkTargets = useCanvasLinkTargets();
   const prepareImages = usePrepareImagesForCanvas();
   const commitAfterPublish = useCommitAfterPublish();
+  const placeInModule = usePlaceInCanvasModule();
 
   return useMutation({
     mutationFn: async ({
       page,
-      canvasPageId,
+      canvasPage,
+      moduleName,
     }: {
       page: LocalCoursePage;
-      canvasPageId: number;
-    }) =>
-      canvasPageService.update(
+      canvasPage: { page_id: number; url: string };
+      moduleName: string;
+    }) => {
+      await canvasPageService.update(
         settings.canvasId,
-        canvasPageId,
+        canvasPage.page_id,
         page,
         await prepareImages([page.text]),
         canvasLinkTargets
-      ),
+      );
+      await placeInModule(moduleName, {
+        type: "Page",
+        id: canvasPage.page_id,
+        title: page.name,
+        pageUrl: canvasPage.url,
+      });
+    },
     onSuccess: (_data, variables) => {
       commitAfterPublish(`page "${variables.page.name}"`);
       queryClient.invalidateQueries({
