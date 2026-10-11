@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { getSyncStatus } from "./getAssignmentSyncStatus";
+import { getSyncReport, getSyncStatus } from "./getAssignmentSyncStatus";
+import { LocalQuiz } from "@/features/local/quizzes/models/localQuiz";
+import { CanvasQuiz } from "@/features/canvas/models/quizzes/canvasQuizModel";
 import { LocalAssignment } from "@/features/local/assignments/models/localAssignment";
 import { CanvasAssignment } from "@/features/canvas/models/assignments/canvasAssignment";
 import { CanvasRubricCriteria } from "@/features/canvas/models/assignments/canvasRubricCriteria";
@@ -468,5 +470,67 @@ describe("getSyncStatus - page", () => {
     });
     expect(result.status).toBe("incomplete");
     expect(result.message).toContain("different");
+  });
+});
+
+describe("getSyncReport - quiz options", () => {
+  const quiz: LocalQuiz = {
+    name: "Quiz",
+    description: "",
+    password: "demo",
+    dueAt: "08/21/2023 23:59:00",
+    shuffleAnswers: true,
+    showCorrectAnswers: true,
+    oneQuestionAtATime: false,
+    allowedAttempts: 1,
+    questions: [],
+  };
+  const canvasQuiz = {
+    id: 1,
+    title: "Quiz",
+    description: "",
+    due_at: "08/21/2023 23:59:00",
+    access_code: "demo",
+    shuffle_answers: true,
+    show_correct_answers: true,
+    one_question_at_a_time: false,
+    allowed_attempts: 1,
+  } as CanvasQuiz;
+  const report = (canvas: Partial<CanvasQuiz>, local: Partial<LocalQuiz> = {}) =>
+    getSyncReport({
+      item: { ...quiz, ...local },
+      canvasItem: { ...canvasQuiz, ...canvas },
+      type: "quiz",
+      settings: baseSettings,
+    });
+
+  it("matches when every option agrees", () => {
+    expect(report({}).fields.filter((f) => !f.same)).toEqual([]);
+  });
+
+  it("reports each option that differs", () => {
+    const fields = report({
+      access_code: "old",
+      shuffle_answers: false,
+      show_correct_answers: false,
+      one_question_at_a_time: true,
+      allowed_attempts: -1,
+    }).fields.filter((f) => !f.same);
+    expect(fields.map((f) => f.label)).toEqual([
+      "Password",
+      "Shuffle answers",
+      "Show correct answers",
+      "One question at a time",
+      "Allowed attempts",
+    ]);
+  });
+
+  it("treats no password and an empty one as the same", () => {
+    expect(
+      report({ access_code: undefined }, { password: undefined }).fields.filter((f) => !f.same),
+    ).toEqual([]);
+    expect(
+      report({ access_code: "" }, { password: undefined }).fields.filter((f) => !f.same),
+    ).toEqual([]);
   });
 });

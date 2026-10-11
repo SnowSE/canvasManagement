@@ -41,6 +41,7 @@ export type SyncSection =
   | "schedule"
   | "rubric"
   | "questions"
+  | "options"
   | "description";
 
 /** One compared setting: what the file says, what Canvas has, and whether they agree. */
@@ -620,6 +621,7 @@ function checkQuiz(
     settings,
   );
   if (group) fields.push(group);
+  fields.push(...checkQuizOptions(quiz, canvasQuiz));
   const description = checkDescription(
     () =>
       markdownToHTMLSafe({
@@ -631,6 +633,30 @@ function checkQuiz(
   );
   fields.push(description.field);
   return { fields, description: description.description };
+}
+
+/** The quiz settings Update in Canvas sends besides dates, group and description. */
+function checkQuizOptions(quiz: LocalQuiz, canvasQuiz: CanvasQuiz): SyncField[] {
+  const yesNo = (value?: boolean) => (value ? "yes" : "no");
+  const attempts = (value: number) => (value === -1 ? "unlimited" : String(value));
+  const options: [key: string, label: string, local: string, canvas: string][] = [
+    ["password", "Password", quiz.password || UNSET, canvasQuiz.access_code || UNSET],
+    ["shuffleAnswers", "Shuffle answers", yesNo(quiz.shuffleAnswers), yesNo(canvasQuiz.shuffle_answers)],
+    ["showCorrectAnswers", "Show correct answers", yesNo(quiz.showCorrectAnswers), yesNo(canvasQuiz.show_correct_answers)],
+    ["oneQuestionAtATime", "One question at a time", yesNo(quiz.oneQuestionAtATime), yesNo(canvasQuiz.one_question_at_a_time)],
+    ["allowedAttempts", "Allowed attempts", attempts(quiz.allowedAttempts), attempts(canvasQuiz.allowed_attempts)],
+  ];
+  return options.map(([key, label, local, canvas]) =>
+    field({
+      key,
+      label,
+      section: "options",
+      local,
+      canvas,
+      same: local === canvas,
+      message: `${label.toLowerCase()} different: ${local} vs ${canvas}`,
+    }),
+  );
 }
 
 function buildReport(

@@ -53,6 +53,7 @@ const sectionLabels: Record<SyncSection, string> = {
   schedule: "Schedule",
   rubric: "Rubric",
   questions: "Questions",
+  options: "Quiz options",
   description: "Description",
 };
 
