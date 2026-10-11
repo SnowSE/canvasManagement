@@ -168,8 +168,8 @@ function compareQuestion(
     },
     {
       name: "text",
-      local: excerpt(plainText(localHtml), 200),
-      canvas: excerpt(plainText(canvasQuestion.question_text), 200),
+      local: plainText(localHtml),
+      canvas: plainText(canvasQuestion.question_text),
       same:
         removeHtmlDetails(localHtml) ===
         removeHtmlDetails(canvasQuestion.question_text ?? ""),
@@ -231,17 +231,37 @@ export function checkQuizQuestions(
     const aspects = compareQuestion(question, canvasQuestion, settings);
     const different = aspects.filter((a) => !a.same);
     const label = `Question ${number} · ${typeLabel(getQuestionTypeForCanvas(question))}`;
-    if (different.length === 0) {
-      const text = aspects.find((a) => a.name === "text")!.local;
-      return { ...base, label, local: text, canvas: text, same: true, message: "" };
-    }
     return {
       ...base,
       label,
-      local: different.map((a) => `${a.name}: ${a.local}`).join("\n"),
-      canvas: different.map((a) => `${a.name}: ${a.canvas}`).join("\n"),
-      same: false,
-      message: `question ${number} ${different.map((a) => a.name).join(", ")} different`,
+      local: wholeQuestion(aspects, "local"),
+      canvas: wholeQuestion(aspects, "canvas"),
+      same: different.length === 0,
+      message:
+        different.length === 0
+          ? ""
+          : `question ${number} ${different.map((a) => a.name).join(", ")} different`,
     };
   });
+}
+
+/**
+ * The whole question, one side of it: type and points, text, answers and
+ * feedback, with "≠ " before the lines of each part that differs.
+ */
+function wholeQuestion(aspects: Aspect[], side: "local" | "canvas") {
+  const part = (name: string) => aspects.find((a) => a.name === name)!;
+  const lines = (aspect: Aspect, value = aspect[side]) =>
+    value === UNSET
+      ? []
+      : value.split("\n").map((line) => (aspect.same ? line : `≠ ${line}`));
+  const type = part("type");
+  const points = part("points");
+  const header = `type: ${type[side]} · points: ${points[side]}`;
+  return [
+    type.same && points.same ? header : `≠ ${header}`,
+    ...lines(part("text")),
+    ...lines(part("answers")),
+    ...lines(part("feedback")),
+  ].join("\n");
 }

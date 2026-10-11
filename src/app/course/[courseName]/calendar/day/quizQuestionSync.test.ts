@@ -81,6 +81,35 @@ describe("checkQuizQuestions", () => {
     expect(field.label).toBe("Question 1 · multiple choice");
   });
 
+  it("shows a matching question's answers, not just its text", () => {
+    const [field] = checkQuizQuestions(
+      questionsOf(multipleChoice),
+      [canvasMultipleChoice],
+      settings,
+    );
+    expect(field.local.split("\n")).toEqual([
+      "type: multiple choice · points: 1",
+      "Staged rollout exists to:",
+      "✓ Bound the blast radius",
+      "Save bandwidth",
+      "+ Right.",
+    ]);
+    expect(field.canvas).toBe(field.local);
+  });
+
+  it("shows the whole question when one part differs, marking that part", () => {
+    const [field] = checkQuizQuestions(
+      questionsOf(multipleChoice),
+      [{ ...canvasMultipleChoice, correct_comments: "Yes." }],
+      settings,
+    );
+    expect(field.local).toContain("Staged rollout exists to:");
+    expect(field.local).toContain("✓ Bound the blast radius");
+    expect(field.local).toContain("≠ + Right.");
+    expect(field.canvas).toContain("≠ + Yes.");
+    expect(field.canvas).not.toContain("≠ Staged");
+  });
+
   it("reports a different correct answer", () => {
     const [field] = checkQuizQuestions(
       questionsOf(multipleChoice),
