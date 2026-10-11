@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { promises as fs } from "fs";
 import { fileStorageService } from "../fileStorageService";
+import { basePath } from "../fileSystemUtils";
 import {
   LocalCourseSettings,
   DayOfWeek,
@@ -12,16 +13,11 @@ import {
 
 describe("FileStorageTests", () => {
   beforeEach(async () => {
-    const storageDirectory =
-      process.env.STORAGE_DIRECTORY ?? "/tmp/canvasManagerTests";
     process.env.GLOBAL_SETTINGS = `courses:
       - path: test empty course
         name: test empty course`;
-    // only clean this file's course folder, other test files share the storage root
-    try {
-      await fs.rm(`${storageDirectory}/test empty course`, { recursive: true });
-    } catch {}
-    await fs.mkdir(storageDirectory, { recursive: true });
+    await fs.rm(basePath, { recursive: true, force: true });
+    await fs.mkdir(basePath, { recursive: true });
   });
 
   it("course settings can be saved and loaded", async () => {
