@@ -307,6 +307,7 @@ Next week you&#x27;ll implement primary-backup replication...
 <ul>
 <li>A settings table with the file&rsquo;s value and Canvas&rsquo;s side by side: published state, dates, assignment group, group set, points and each rubric row.</li>
 <li>For a <b>quiz</b>, a row for every question, compared on type, points, text, answers (correct ones marked &#10003;) and feedback. Every question shows in full on both sides, answers included, and &#8800; marks the lines of each part that differs. The quiz editor&rsquo;s footer counts these differences too. The calendar checks questions for this week&rsquo;s quizzes and the next three weeks&rsquo;, fetching them in the background one quiz at a time (this week first) so Canvas doesn&rsquo;t throttle you; a quiz outside those four weeks gets its red border from settings and description only.</li>
+<li>For a quiz students have started, a <b>What students got</b> section for each quiz version they took, comparing the file with the questions from one of its attempts (ignoring each attempt&rsquo;s own answer shuffle). Canvas&rsquo;s current questions can differ from these until <em>Save it now</em>, and this is the only way to see what students actually got.</li>
 <li>The description <em>side by side</em>, as <em>changes only</em> (a word-level diff), or as the normalized <em>HTML</em> when you need to see why two descriptions that look the same count as different.</li>
 <li>An <b>Update Canvas</b> button at the bottom that pushes the file, with a note saying exactly what it will change. The top of the page says when it last read Canvas, and <em>refresh</em> reads it again.</li>
 </ul>
@@ -360,6 +361,7 @@ Next week you&#x27;ll implement primary-backup replication...
 <h2 id="changes">Recent changes</h2>
 <div class="tw"><table>
 <tr><th>When</th><th>What changed</th></tr>
+<tr><td style="white-space:nowrap">Oct 2026</td><td><a href="#compare">Compare with Canvas</a> shows what students got on each quiz version they took, next to the file.</td></tr>
 <tr><td style="white-space:nowrap">Oct 2026</td><td><a href="#compare">Compare with Canvas</a> shows every quiz question in full, answers included, marking the parts that differ, and says when it last read Canvas.</td></tr>
 <tr><td style="white-space:nowrap">Oct 2026</td><td><a href="#git">Git from the course page</a>: commit a course&rsquo;s changes with a message written for you, pull and push (merging when there is no conflict), optionally commit after each publish, and see or restore any earlier version of a file.</td></tr>
 <tr><td style="white-space:nowrap">Oct 2026</td><td><a href="#errors">Error list</a>: a pill counts this session&rsquo;s errors and opens a list of them, each with an <em>Explain with AI</em> button that uses any OpenAI-compatible endpoint you configure.</td></tr>

@@ -115,6 +115,12 @@ function canvasAnswerLines(question: CanvasQuizQuestion): string[] {
   }
 }
 
+/** `lines` lined up with `order`; lines not in it go last. */
+const inOrderOf = (order: string[], lines: string[]) =>
+  [...lines].sort(
+    (a, b) => (order.indexOf(a) >>> 0) - (order.indexOf(b) >>> 0),
+  );
+
 interface Aspect {
   name: string;
   local: string;
@@ -126,6 +132,7 @@ function compareQuestion(
   question: LocalQuizQuestion,
   canvasQuestion: CanvasQuizQuestion,
   settings: LocalCourseSettings,
+  ignoreAnswerOrder: boolean,
 ): Aspect[] {
   const localHtml = markdownToHTMLSafe({
     markdownString: getQuestionTextForCanvas(question),
@@ -133,7 +140,9 @@ function compareQuestion(
   });
   const localType = getQuestionTypeForCanvas(question);
   const localAnswers = localAnswerLines(question, settings);
-  const canvasAnswers = canvasAnswerLines(canvasQuestion);
+  const canvasAnswers = ignoreAnswerOrder
+    ? inOrderOf(localAnswers, canvasAnswerLines(canvasQuestion))
+    : canvasAnswerLines(canvasQuestion);
   const feedback = (correct?: string, incorrect?: string, neutral?: string) =>
     [
       correct && `+ ${plainText(correct)}`,
@@ -198,6 +207,8 @@ export function checkQuizQuestions(
   questions: LocalQuizQuestion[],
   canvasQuestions: CanvasQuizQuestion[],
   settings: LocalCourseSettings,
+  /** For a student's attempt, which stores its own shuffle of the answers. */
+  { ignoreAnswerOrder = false } = {},
 ): SyncField[] {
   const count = Math.max(questions.length, canvasQuestions.length);
   return Array.from({ length: count }, (_, i): SyncField => {
@@ -228,7 +239,12 @@ export function checkQuizQuestions(
         message: `question ${number} is only in canvas`,
       };
 
-    const aspects = compareQuestion(question, canvasQuestion, settings);
+    const aspects = compareQuestion(
+      question,
+      canvasQuestion,
+      settings,
+      ignoreAnswerOrder,
+    );
     const different = aspects.filter((a) => !a.same);
     const label = `Question ${number} · ${typeLabel(getQuestionTypeForCanvas(question))}`;
     return {
