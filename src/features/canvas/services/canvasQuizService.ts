@@ -519,10 +519,6 @@ export const canvasQuizService = {
       .flatMap((page) => page.quiz_submissions)
       .filter((s) => s.workflow_state !== "settings_only");
   },
-  async countSubmissions(canvasCourseId: number, canvasQuizId: number) {
-    return (await canvasQuizService.listAttempts(canvasCourseId, canvasQuizId))
-      .length;
-  },
   /**
    * Each quiz version students took, newest first, with one attempt to read
    * its questions from (every attempt on a version gets the same questions,

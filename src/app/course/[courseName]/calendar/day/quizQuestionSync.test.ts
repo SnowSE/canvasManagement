@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { checkQuizQuestions } from "./quizQuestionSync";
+import { checkQuizQuestions, pointTotalChangeError } from "./quizQuestionSync";
 import { CanvasQuizQuestion } from "@/features/canvas/models/quizzes/canvasQuizQuestionModel";
 import {
   DayOfWeek,
@@ -326,5 +326,23 @@ describe("checkQuizQuestions - lining questions up", () => {
     expect(fields[0].message).toBe("question 1 position different");
     expect(fields[0].canvas).toContain("position: 5");
     expect(fields.slice(1).every((f) => f.same)).toBe(true);
+  });
+});
+
+describe("pointTotalChangeError", () => {
+  it("allows an update that keeps the total students were scored out of", () => {
+    expect(
+      pointTotalChangeError(questionsOf(multipleChoice), [canvasMultipleChoice]),
+    ).toBeUndefined();
+  });
+
+  it("refuses one that changes it, giving both totals", () => {
+    expect(
+      pointTotalChangeError(questionsOf(multipleChoice), [
+        { ...canvasMultipleChoice, points_possible: 3 },
+      ]),
+    ).toBe(
+      "Students who started were scored out of 3 points, and the file's questions total 1. Changing the total needs a regrade in Canvas, so the quiz was not updated.",
+    );
   });
 });

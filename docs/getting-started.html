@@ -294,7 +294,7 @@ Next week you&#x27;ll implement primary-backup replication...
 <li><b>3 differences from Canvas</b> (in amber): <b>Update in Canvas</b> pushes the current file over the existing Canvas item. Submissions and grades are untouched. Click the amber text to open <a href="#compare">Compare with Canvas</a>.</li>
 <li><b>In sync &middot; students can&rsquo;t see it yet</b>: <b>Publish in Canvas</b> makes it visible to students. If the item&rsquo;s module is still unpublished in Canvas, the app says so and links to the modules page; it does not publish the module for you.</li>
 <li><b>In sync &middot; Published</b>: nothing to do; <b>View in Canvas</b> opens it.</li>
-<li>For a <b>quiz</b>, Update in Canvas also replaces the questions with the file&rsquo;s when any of them differ. If students have already started, it asks first: their attempts keep the questions they got and are not regraded.</li>
+<li>For a <b>quiz</b>, Update in Canvas also replaces the questions with the file&rsquo;s when any of them differ. If students have already started, it asks first: their attempts keep the questions they got and are not regraded. It refuses a change to the quiz&rsquo;s point total, since their scores are out of the total they were given.</li>
 <li>Not being published yet is not counted as a difference from the file, since publishing is your call. An unpublished item still has a red border on the calendar, but its footer and the compare page say <em>in sync</em> when it matches, and the compare page notes <em>not published</em> next to its Canvas id.</li>
 <li>You can add or update several items in a row, or a quiz with many questions, without waiting. Every request to Canvas goes through one queue that sends a few at a time, slows down when Canvas reports its rate limit running low, and when Canvas says <em>too many requests</em> waits and tries again instead of failing.</li>
 <li>A page is compared on its content, so its footer works the same way: <b>In sync</b>, or the number of differences with <b>Update in Canvas</b> as its button.</li>
@@ -364,6 +364,7 @@ Next week you&#x27;ll implement primary-backup replication...
 <h2 id="changes">Recent changes</h2>
 <div class="tw"><table>
 <tr><th>When</th><th>What changed</th></tr>
+<tr><td style="white-space:nowrap">Oct 2026</td><td><a href="#publishing">Update in Canvas</a> refuses to change a quiz&rsquo;s point total once students have started, since their scores are out of the total they were given.</td></tr>
 <tr><td style="white-space:nowrap">Oct 2026</td><td><a href="#compare">Compare with Canvas</a> shows what students got on each quiz version they took, next to the file.</td></tr>
 <tr><td style="white-space:nowrap">Oct 2026</td><td><a href="#compare">Compare with Canvas</a> shows every quiz question in full, answers included, marking the parts that differ, and says when it last read Canvas.</td></tr>
 <tr><td style="white-space:nowrap">Oct 2026</td><td><a href="#publishing">Update in Canvas</a> leaves a quiz&rsquo;s questions alone when they already match the file, so a settings-only change to a published quiz no longer needs <em>Save it now</em>.</td></tr>

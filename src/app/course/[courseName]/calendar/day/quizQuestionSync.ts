@@ -441,3 +441,21 @@ function wholeQuestion(aspects: Aspect[], side: "local" | "canvas") {
     ...lines(part("feedback")),
   ].join("\n");
 }
+
+/**
+ * Why updating would be wrong for students who already started, or
+ * undefined: their scores are out of the total they were given, so changing
+ * it needs a regrade, which the API can't do.
+ */
+export function pointTotalChangeError(
+  questions: LocalQuizQuestion[],
+  studentsGot: CanvasQuizQuestion[],
+): string | undefined {
+  const fileTotal = questions.reduce((sum, q) => sum + q.points, 0);
+  const studentsTotal = studentsGot.reduce(
+    (sum, q) => sum + (q.points_possible ?? 0),
+    0,
+  );
+  if (fileTotal === studentsTotal) return undefined;
+  return `Students who started were scored out of ${studentsTotal} points, and the file's questions total ${fileTotal}. Changing the total needs a regrade in Canvas, so the quiz was not updated.`;
+}
