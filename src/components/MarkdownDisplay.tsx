@@ -3,7 +3,11 @@ import { useLocalCourseSettingsQuery } from "@/features/local/course/localCourse
 import { SuspenseAndErrorHandling } from "./SuspenseAndErrorHandling";
 import { markdownToHTMLSafe } from "@/services/htmlMarkdownUtils";
 import { LocalCourseSettings } from "@/features/local/course/localCourseSettings";
-import { resolveRelativeMdHrefsInHtml } from "@/services/urlUtils";
+import {
+  resolveCanvasPageHrefsInHtml,
+  resolveRelativeMdHrefsInHtml,
+} from "@/services/urlUtils";
+import { useCoursePagesQuery } from "@/features/local/modules/localCourseModuleHooks";
 
 export default function MarkdownDisplay({
   markdown,
@@ -54,12 +58,20 @@ function DangerousInnerMarkdown({
   convertImages?: boolean;
   resolveMdLinks?: boolean;
 }) {
-  const html = markdownToHTMLSafe({
-    markdownString: markdown,
-    convertImages,
-    settings,
-    replaceText,
-  });
+  const pages = useCoursePagesQuery().map(({ moduleName, page }) => ({
+    moduleName,
+    name: page.name,
+  }));
+  const html = resolveCanvasPageHrefsInHtml(
+    markdownToHTMLSafe({
+      markdownString: markdown,
+      convertImages,
+      settings,
+      replaceText,
+    }),
+    settings.name,
+    pages
+  );
   return (
     <div
       className={"markdownPreview " + className}
