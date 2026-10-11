@@ -13,9 +13,12 @@ export default defineConfig({
     environment: "jsdom",
     pool: "forks",
     execArgv: ["--max-old-space-size=4096"],
-    exclude: ["**/.pnpm-store/**", "**/node_modules/**", "**/dist/**"],
-    env: {
-      STORAGE_DIRECTORY: "/tmp/canvasManagerTests",
-    },
+    exclude: [
+      "**/.pnpm-store/**",
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/.claude/worktrees/**",
+    ],
+    setupFiles: ["./vitest.setup.ts"],
   },
 });

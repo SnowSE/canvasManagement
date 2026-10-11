@@ -7,16 +7,11 @@ import { createModuleFile } from "@/features/local/modules/moduleRouter";
 
 describe("FileStorageTests", () => {
   beforeEach(async () => {
-    const storageDirectory =
-      process.env.STORAGE_DIRECTORY ?? "/tmp/canvasManagerTests";
     process.env.GLOBAL_SETTINGS = `courses:
       - path: testCourse
         name: testCourse`;
-    // only clean this file's course folder, other test files share the storage root
-    try {
-      await fs.rm(`${storageDirectory}/testCourse`, { recursive: true });
-    } catch {}
-    await fs.mkdir(storageDirectory, { recursive: true });
+    await fs.rm(basePath, { recursive: true, force: true });
+    await fs.mkdir(basePath, { recursive: true });
   });
 
   it("invalid quizzes do not get loaded", async () => {
