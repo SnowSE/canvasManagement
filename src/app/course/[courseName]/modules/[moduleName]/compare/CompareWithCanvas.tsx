@@ -68,6 +68,7 @@ export function CompareAssignmentWithCanvas({
     data: canvasAssignments,
     isFetching,
     refetch,
+    dataUpdatedAt,
   } = useCanvasAssignmentsQuery();
   const { data: canvasQuizzes } = useCanvasQuizzesQuery();
   const { data: rosterStudents } = useRosterStudentsQuery();
@@ -114,6 +115,7 @@ export function CompareAssignmentWithCanvas({
       report={report}
       canvasLoading={canvasAssignments === undefined}
       canvasFetching={isFetching}
+      loadedAt={dataUpdatedAt}
       canvasId={canvasAssignment?.id}
       canvasPublished={canvasAssignment?.published}
       canvasUrl={
@@ -140,7 +142,12 @@ export function CompareQuizWithCanvas({
 }) {
   const { data: settings } = useLocalCourseSettingsQuery();
   const { data: quiz } = useQuizQuery(moduleName, quizName);
-  const { data: canvasQuizzes, isFetching, refetch } = useCanvasQuizzesQuery();
+  const {
+    data: canvasQuizzes,
+    isFetching,
+    refetch,
+    dataUpdatedAt,
+  } = useCanvasQuizzesQuery();
   const { data: canvasAssignments } = useCanvasAssignmentsQuery();
   const update = useUpdateQuizInCanvasMutation();
 
@@ -153,6 +160,7 @@ export function CompareQuizWithCanvas({
     data: canvasQuestions,
     isFetching: questionsFetching,
     refetch: refetchQuestions,
+    dataUpdatedAt: questionsUpdatedAt,
   } = useCanvasQuizQuestionsQuery(canvasQuiz?.id);
   const report = useMemo(
     () =>
@@ -188,6 +196,7 @@ export function CompareQuizWithCanvas({
         (canvasQuiz !== undefined && canvasQuestions === undefined)
       }
       canvasFetching={isFetching || questionsFetching}
+      loadedAt={Math.min(dataUpdatedAt, questionsUpdatedAt || dataUpdatedAt)}
       canvasId={canvasQuiz?.id}
       canvasPublished={canvasQuiz?.published}
       canvasUrl={
@@ -216,7 +225,12 @@ export function ComparePageWithCanvas({
 }) {
   const { data: settings } = useLocalCourseSettingsQuery();
   const { data: page } = usePageQuery(moduleName, pageName);
-  const { data: canvasPages, isFetching, refetch } = useCanvasPagesQuery();
+  const {
+    data: canvasPages,
+    isFetching,
+    refetch,
+    dataUpdatedAt,
+  } = useCanvasPagesQuery();
   const { data: canvasAssignments } = useCanvasAssignmentsQuery();
   const { data: canvasQuizzes } = useCanvasQuizzesQuery();
   const update = useUpdateCanvasPageMutation();
@@ -249,6 +263,7 @@ export function ComparePageWithCanvas({
       report={report}
       canvasLoading={canvasPages === undefined}
       canvasFetching={isFetching}
+      loadedAt={dataUpdatedAt}
       canvasId={canvasPage?.page_id}
       canvasUrl={
         canvasPage &&
@@ -276,6 +291,8 @@ const CompareLayout: FC<{
   report: SyncReport;
   canvasLoading: boolean;
   canvasFetching: boolean;
+  /** When the Canvas copy shown was read (ms since epoch). */
+  loadedAt: number;
   canvasId?: number;
   canvasPublished?: boolean;
   canvasUrl?: string;
@@ -290,6 +307,7 @@ const CompareLayout: FC<{
   report,
   canvasLoading,
   canvasFetching,
+  loadedAt,
   canvasId,
   canvasPublished,
   canvasUrl,
@@ -332,6 +350,9 @@ const CompareLayout: FC<{
                 </span>
               ) : (
                 <span>not in Canvas yet</span>
+              )}
+              {loadedAt > 0 && (
+                <span>read from Canvas at {new Date(loadedAt).toLocaleTimeString()}</span>
               )}
               <button
                 className="unstyled text-blue-300 hover:underline disabled:opacity-50"
@@ -533,26 +554,16 @@ const FieldsTable: FC<{ fields: SyncField[] }> = ({ fields }) => {
   );
 };
 
-// a matching question is just its text, kept to one line so the table stays
-// short; a differing one shows every line of what differs
+// every question shows in full, answers included; "≠ " marks what differs
 const Cell: FC<{ field: SyncField; side: "local" | "canvas" }> = ({
   field,
   side,
-}) => {
-  const value = (
-    <Value
-      text={field[side]}
-      tone={field.same ? undefined : side === "local" ? "file" : "canvas"}
-    />
-  );
-  return field.section === "questions" && field.same ? (
-    <div className="truncate [&>span]:whitespace-nowrap" title={field[side]}>
-      {value}
-    </div>
-  ) : (
-    value
-  );
-};
+}) => (
+  <Value
+    text={field[side]}
+    tone={field.same ? undefined : side === "local" ? "file" : "canvas"}
+  />
+);
 
 const Value: FC<{ text: string; tone?: "file" | "canvas" }> = ({ text, tone }) => (
   <span
