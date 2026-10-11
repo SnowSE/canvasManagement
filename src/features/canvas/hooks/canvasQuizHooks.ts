@@ -16,6 +16,7 @@ import {
 import toast from "react-hot-toast";
 import { showActionNeededToast, showErrorToast } from "@/app/MyToaster";
 import { baseCanvasUrl } from "../services/canvasServiceUtils";
+import { checkQuizQuestions } from "@/app/course/[courseName]/calendar/day/quizQuestionSync";
 
 export const canvasQuizKeys = {
   quizzes: (canvasCourseId: number) =>
@@ -153,9 +154,17 @@ export const useUpdateQuizInCanvasMutation = () => {
             canvasAssignmentGroupId: assignmentGroup?.canvasId,
             canvasLinkTargets,
             onStep: (step) => toast.loading(`${step}…`, { id: progress }),
+            questionsMatch: (canvasQuestions) =>
+              checkQuizQuestions(
+                quiz.questions,
+                canvasQuestions,
+                publishSettings,
+              ).every((q) => q.same),
           }
         );
-        const updated = `Updated "${quiz.name}" in Canvas: settings, ${summary.questionsRemoved} questions removed, ${summary.questionsAdded} added.`;
+        const updated = summary.questionsReplaced
+          ? `Updated "${quiz.name}" in Canvas: settings, ${summary.questionsRemoved} questions removed, ${summary.questionsAdded} added.`
+          : `Updated "${quiz.name}" in Canvas: settings. Its questions already matched the file, so they were left alone.`;
         if (summary.needsSaveInCanvas) {
           toast.dismiss(progress);
           showActionNeededToast(
@@ -164,10 +173,12 @@ export const useUpdateQuizInCanvasMutation = () => {
             "Open the quiz in Canvas",
           );
         } else {
-          toast.success(`${updated} Students will get them when you publish.`, {
-            id: progress,
-            duration: 8_000,
-          });
+          toast.success(
+            summary.questionsReplaced
+              ? `${updated} Students will get them when you publish.`
+              : updated,
+            { id: progress, duration: 8_000 },
+          );
         }
       } catch (error) {
         toast.dismiss(progress);

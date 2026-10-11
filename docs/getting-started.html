@@ -293,7 +293,7 @@ Next week you&#x27;ll implement primary-backup replication...
 <li><b>3 differences from Canvas</b> (in amber): <b>Update in Canvas</b> pushes the current file over the existing Canvas item. Submissions and grades are untouched. Click the amber text to open <a href="#compare">Compare with Canvas</a>.</li>
 <li><b>In sync &middot; students can&rsquo;t see it yet</b>: <b>Publish in Canvas</b> makes it visible to students. If the item&rsquo;s module is still unpublished in Canvas, the app says so and links to the modules page; it does not publish the module for you.</li>
 <li><b>In sync &middot; Published</b>: nothing to do; <b>View in Canvas</b> opens it.</li>
-<li>For a <b>quiz</b>, Update in Canvas also replaces the questions with the file&rsquo;s. If students have already started, it asks first: their attempts keep the questions they got and are not regraded.</li>
+<li>For a <b>quiz</b>, Update in Canvas also replaces the questions with the file&rsquo;s when any of them differ. If students have already started, it asks first: their attempts keep the questions they got and are not regraded.</li>
 <li>Pages are not compared field by field, so a page&rsquo;s footer says <b>Published</b> or <b>students can&rsquo;t see it yet</b> and keeps <b>Update in Canvas</b> as its button.</li>
 </ul>
 <p>Everything else is behind the arrow on the right edge of that button: View in Canvas, Compare with Canvas, Update in Canvas anyway, <a href="#git">File history</a>, Classroom 50, and, at the bottom in red, <b>Delete from Canvas</b> (removes it there and leaves your file alone) or <b>Delete locally</b> for an item that is only on disk. At the left are the help button, previous and next item, and <b>Back to calendar</b>. On a phone all of these are in the &#9776; menu.</p>
@@ -360,6 +360,7 @@ Next week you&#x27;ll implement primary-backup replication...
 <h2 id="changes">Recent changes</h2>
 <div class="tw"><table>
 <tr><th>When</th><th>What changed</th></tr>
+<tr><td style="white-space:nowrap">Oct 2026</td><td><a href="#publishing">Update in Canvas</a> leaves a quiz&rsquo;s questions alone when they already match the file, so a settings-only change to a published quiz no longer needs <em>Save it now</em>.</td></tr>
 <tr><td style="white-space:nowrap">Oct 2026</td><td><a href="#git">Git from the course page</a>: commit a course&rsquo;s changes with a message written for you, pull and push (merging when there is no conflict), optionally commit after each publish, and see or restore any earlier version of a file.</td></tr>
 <tr><td style="white-space:nowrap">Oct 2026</td><td><a href="#errors">Error list</a>: a pill counts this session&rsquo;s errors and opens a list of them, each with an <em>Explain with AI</em> button that uses any OpenAI-compatible endpoint you configure.</td></tr>
 <tr><td style="white-space:nowrap">Oct 2026</td><td>A file that doesn&rsquo;t parse is listed in red in its module, shown on the calendar on its date when that line still reads, and <a href="#editing">opens as plain text to fix</a>, instead of disappearing.</td></tr>
