@@ -21,6 +21,8 @@ import { useCalendarItemsContext } from "../../../context/calendarItemsContext";
 import { PublishInCanvasButton } from "../../../PublishInCanvasButton";
 import Modal, { ModalControl } from "@/components/Modal";
 import { useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
+import { getCompareUrl } from "@/services/urlUtils";
 
 function getDuplicateName(name: string, existingNames: string[]): string {
   const match = name.match(/^(.*)\s+(\d+)$/);
@@ -214,6 +216,13 @@ export const PageDayItemContextMenu: FC<{
                       className={`unstyled ${baseButtonClasses} ${normalButtonClass}`}
                       publishedClassName="text-left py-1"
                     />
+                    <Link
+                      to={getCompareUrl(courseName, moduleName, "page", item.name)}
+                      onClick={handleClose}
+                      className={`block px-3 ${baseButtonClasses} ${normalButtonClass}`}
+                    >
+                      Compare with Canvas
+                    </Link>
                     <button
                       onClick={handleDeleteFromCanvas}
                       disabled={deleteFromCanvasMutation.isPending}

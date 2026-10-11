@@ -9,7 +9,7 @@ const MAX_LISTED = 5;
 
 /**
  * Tooltip body for a calendar item that is out of sync with Canvas: every
- * difference, plus a link to the compare page for assignments and quizzes.
+ * difference, plus a link to the compare page.
  */
 export const SyncDifferencesTooltip: FC<{
   type: "assignment" | "page" | "quiz";
@@ -32,7 +32,6 @@ export const SyncDifferencesTooltip: FC<{
   if (status !== "incomplete" || differences.length === 0)
     return <>{message}</>;
 
-  const canCompare = type === "assignment" || type === "quiz";
   // the tooltip has a fixed max height; keep the compare link in view
   const shown = differences.slice(0, MAX_LISTED);
   const hidden = differences.length - shown.length;
@@ -57,17 +56,15 @@ export const SyncDifferencesTooltip: FC<{
       {unpublished && (
         <div className="text-rose-300 pt-1">not published in canvas</div>
       )}
-      {canCompare && (
-        <div className="border-t border-slate-700 mt-2 pt-1 flex justify-between gap-3 text-xs">
-          <Link
-            to={getCompareUrl(courseName, moduleName, type, itemName)}
-            className="text-blue-300 hover:underline"
-          >
-            Compare with Canvas →
-          </Link>
-          <span className="text-slate-500">right-click for more</span>
-        </div>
-      )}
+      <div className="border-t border-slate-700 mt-2 pt-1 flex justify-between gap-3 text-xs">
+        <Link
+          to={getCompareUrl(courseName, moduleName, type, itemName)}
+          className="text-blue-300 hover:underline"
+        >
+          Compare with Canvas →
+        </Link>
+        <span className="text-slate-500">right-click for more</span>
+      </div>
     </div>
   );
 };

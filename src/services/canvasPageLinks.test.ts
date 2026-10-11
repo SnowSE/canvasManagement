@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { resolveCanvasPageHrefsInHtml } from "./urlUtils";
+import { getCompareUrl, resolveCanvasPageHrefsInHtml } from "./urlUtils";
+
+describe("getCompareUrl", () => {
+  it("has a compare page for pages, like assignments and quizzes", () => {
+    expect(getCompareUrl("1400", "01 Intro", "page", "Belts")).toBe(
+      "/course/1400/modules/01%20Intro/page/Belts/compare"
+    );
+  });
+});
 
 const pages = [
   { moduleName: "01 Intro", name: "Belt Tour" },

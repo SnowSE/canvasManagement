@@ -24,6 +24,7 @@ import { Route as CourseCourseNameModulesModuleNamePagePageNameRouteImport } fro
 import { Route as CourseCourseNameModulesModuleNameQuizQuizNameRouteImport } from './routes/course/$courseName/modules/$moduleName/quiz.$quizName'
 import { Route as CourseCourseNameModulesModuleNameAssignmentAssignmentNameCompareRouteImport } from './routes/course/$courseName/modules/$moduleName/assignment.$assignmentName_.compare'
 import { Route as CourseCourseNameModulesModuleNameAssignmentAssignmentNameHistoryRouteImport } from './routes/course/$courseName/modules/$moduleName/assignment.$assignmentName_.history'
+import { Route as CourseCourseNameModulesModuleNamePagePageNameCompareRouteImport } from './routes/course/$courseName/modules/$moduleName/page.$pageName_.compare'
 import { Route as CourseCourseNameModulesModuleNamePagePageNameHistoryRouteImport } from './routes/course/$courseName/modules/$moduleName/page.$pageName_.history'
 import { Route as CourseCourseNameModulesModuleNameQuizQuizNameCompareRouteImport } from './routes/course/$courseName/modules/$moduleName/quiz.$quizName_.compare'
 import { Route as CourseCourseNameModulesModuleNameQuizQuizNameHistoryRouteImport } from './routes/course/$courseName/modules/$moduleName/quiz.$quizName_.history'
@@ -115,6 +116,12 @@ const CourseCourseNameModulesModuleNameAssignmentAssignmentNameHistoryRoute =
       getParentRoute: () => CourseCourseNameRoute,
     } as any,
   )
+const CourseCourseNameModulesModuleNamePagePageNameCompareRoute =
+  CourseCourseNameModulesModuleNamePagePageNameCompareRouteImport.update({
+    id: '/modules/$moduleName/page/$pageName_/compare',
+    path: '/modules/$moduleName/page/$pageName/compare',
+    getParentRoute: () => CourseCourseNameRoute,
+  } as any)
 const CourseCourseNameModulesModuleNamePagePageNameHistoryRoute =
   CourseCourseNameModulesModuleNamePagePageNameHistoryRouteImport.update({
     id: '/modules/$moduleName/page/$pageName_/history',
@@ -150,6 +157,7 @@ export interface FileRoutesByFullPath {
   '/course/$courseName/modules/$moduleName/quiz/$quizName': typeof CourseCourseNameModulesModuleNameQuizQuizNameRoute
   '/course/$courseName/modules/$moduleName/assignment/$assignmentName/compare': typeof CourseCourseNameModulesModuleNameAssignmentAssignmentNameCompareRoute
   '/course/$courseName/modules/$moduleName/assignment/$assignmentName/history': typeof CourseCourseNameModulesModuleNameAssignmentAssignmentNameHistoryRoute
+  '/course/$courseName/modules/$moduleName/page/$pageName/compare': typeof CourseCourseNameModulesModuleNamePagePageNameCompareRoute
   '/course/$courseName/modules/$moduleName/page/$pageName/history': typeof CourseCourseNameModulesModuleNamePagePageNameHistoryRoute
   '/course/$courseName/modules/$moduleName/quiz/$quizName/compare': typeof CourseCourseNameModulesModuleNameQuizQuizNameCompareRoute
   '/course/$courseName/modules/$moduleName/quiz/$quizName/history': typeof CourseCourseNameModulesModuleNameQuizQuizNameHistoryRoute
@@ -169,6 +177,7 @@ export interface FileRoutesByTo {
   '/course/$courseName/modules/$moduleName/quiz/$quizName': typeof CourseCourseNameModulesModuleNameQuizQuizNameRoute
   '/course/$courseName/modules/$moduleName/assignment/$assignmentName/compare': typeof CourseCourseNameModulesModuleNameAssignmentAssignmentNameCompareRoute
   '/course/$courseName/modules/$moduleName/assignment/$assignmentName/history': typeof CourseCourseNameModulesModuleNameAssignmentAssignmentNameHistoryRoute
+  '/course/$courseName/modules/$moduleName/page/$pageName/compare': typeof CourseCourseNameModulesModuleNamePagePageNameCompareRoute
   '/course/$courseName/modules/$moduleName/page/$pageName/history': typeof CourseCourseNameModulesModuleNamePagePageNameHistoryRoute
   '/course/$courseName/modules/$moduleName/quiz/$quizName/compare': typeof CourseCourseNameModulesModuleNameQuizQuizNameCompareRoute
   '/course/$courseName/modules/$moduleName/quiz/$quizName/history': typeof CourseCourseNameModulesModuleNameQuizQuizNameHistoryRoute
@@ -190,6 +199,7 @@ export interface FileRoutesById {
   '/course/$courseName/modules/$moduleName/quiz/$quizName': typeof CourseCourseNameModulesModuleNameQuizQuizNameRoute
   '/course/$courseName/modules/$moduleName/assignment/$assignmentName_/compare': typeof CourseCourseNameModulesModuleNameAssignmentAssignmentNameCompareRoute
   '/course/$courseName/modules/$moduleName/assignment/$assignmentName_/history': typeof CourseCourseNameModulesModuleNameAssignmentAssignmentNameHistoryRoute
+  '/course/$courseName/modules/$moduleName/page/$pageName_/compare': typeof CourseCourseNameModulesModuleNamePagePageNameCompareRoute
   '/course/$courseName/modules/$moduleName/page/$pageName_/history': typeof CourseCourseNameModulesModuleNamePagePageNameHistoryRoute
   '/course/$courseName/modules/$moduleName/quiz/$quizName_/compare': typeof CourseCourseNameModulesModuleNameQuizQuizNameCompareRoute
   '/course/$courseName/modules/$moduleName/quiz/$quizName_/history': typeof CourseCourseNameModulesModuleNameQuizQuizNameHistoryRoute
@@ -212,6 +222,7 @@ export interface FileRouteTypes {
     | '/course/$courseName/modules/$moduleName/quiz/$quizName'
     | '/course/$courseName/modules/$moduleName/assignment/$assignmentName/compare'
     | '/course/$courseName/modules/$moduleName/assignment/$assignmentName/history'
+    | '/course/$courseName/modules/$moduleName/page/$pageName/compare'
     | '/course/$courseName/modules/$moduleName/page/$pageName/history'
     | '/course/$courseName/modules/$moduleName/quiz/$quizName/compare'
     | '/course/$courseName/modules/$moduleName/quiz/$quizName/history'
@@ -231,6 +242,7 @@ export interface FileRouteTypes {
     | '/course/$courseName/modules/$moduleName/quiz/$quizName'
     | '/course/$courseName/modules/$moduleName/assignment/$assignmentName/compare'
     | '/course/$courseName/modules/$moduleName/assignment/$assignmentName/history'
+    | '/course/$courseName/modules/$moduleName/page/$pageName/compare'
     | '/course/$courseName/modules/$moduleName/page/$pageName/history'
     | '/course/$courseName/modules/$moduleName/quiz/$quizName/compare'
     | '/course/$courseName/modules/$moduleName/quiz/$quizName/history'
@@ -251,6 +263,7 @@ export interface FileRouteTypes {
     | '/course/$courseName/modules/$moduleName/quiz/$quizName'
     | '/course/$courseName/modules/$moduleName/assignment/$assignmentName_/compare'
     | '/course/$courseName/modules/$moduleName/assignment/$assignmentName_/history'
+    | '/course/$courseName/modules/$moduleName/page/$pageName_/compare'
     | '/course/$courseName/modules/$moduleName/page/$pageName_/history'
     | '/course/$courseName/modules/$moduleName/quiz/$quizName_/compare'
     | '/course/$courseName/modules/$moduleName/quiz/$quizName_/history'
@@ -372,6 +385,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CourseCourseNameModulesModuleNameAssignmentAssignmentNameHistoryRouteImport
       parentRoute: typeof CourseCourseNameRoute
     }
+    '/course/$courseName/modules/$moduleName/page/$pageName_/compare': {
+      id: '/course/$courseName/modules/$moduleName/page/$pageName_/compare'
+      path: '/modules/$moduleName/page/$pageName/compare'
+      fullPath: '/course/$courseName/modules/$moduleName/page/$pageName/compare'
+      preLoaderRoute: typeof CourseCourseNameModulesModuleNamePagePageNameCompareRouteImport
+      parentRoute: typeof CourseCourseNameRoute
+    }
     '/course/$courseName/modules/$moduleName/page/$pageName_/history': {
       id: '/course/$courseName/modules/$moduleName/page/$pageName_/history'
       path: '/modules/$moduleName/page/$pageName/history'
@@ -406,6 +426,7 @@ interface CourseCourseNameRouteChildren {
   CourseCourseNameModulesModuleNameQuizQuizNameRoute: typeof CourseCourseNameModulesModuleNameQuizQuizNameRoute
   CourseCourseNameModulesModuleNameAssignmentAssignmentNameCompareRoute: typeof CourseCourseNameModulesModuleNameAssignmentAssignmentNameCompareRoute
   CourseCourseNameModulesModuleNameAssignmentAssignmentNameHistoryRoute: typeof CourseCourseNameModulesModuleNameAssignmentAssignmentNameHistoryRoute
+  CourseCourseNameModulesModuleNamePagePageNameCompareRoute: typeof CourseCourseNameModulesModuleNamePagePageNameCompareRoute
   CourseCourseNameModulesModuleNamePagePageNameHistoryRoute: typeof CourseCourseNameModulesModuleNamePagePageNameHistoryRoute
   CourseCourseNameModulesModuleNameQuizQuizNameCompareRoute: typeof CourseCourseNameModulesModuleNameQuizQuizNameCompareRoute
   CourseCourseNameModulesModuleNameQuizQuizNameHistoryRoute: typeof CourseCourseNameModulesModuleNameQuizQuizNameHistoryRoute
@@ -428,6 +449,8 @@ const CourseCourseNameRouteChildren: CourseCourseNameRouteChildren = {
     CourseCourseNameModulesModuleNameAssignmentAssignmentNameCompareRoute,
   CourseCourseNameModulesModuleNameAssignmentAssignmentNameHistoryRoute:
     CourseCourseNameModulesModuleNameAssignmentAssignmentNameHistoryRoute,
+  CourseCourseNameModulesModuleNamePagePageNameCompareRoute:
+    CourseCourseNameModulesModuleNamePagePageNameCompareRoute,
   CourseCourseNameModulesModuleNamePagePageNameHistoryRoute:
     CourseCourseNameModulesModuleNamePagePageNameHistoryRoute,
   CourseCourseNameModulesModuleNameQuizQuizNameCompareRoute:
