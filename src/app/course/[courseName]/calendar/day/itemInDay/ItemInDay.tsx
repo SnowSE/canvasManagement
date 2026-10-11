@@ -29,6 +29,7 @@ export const ItemInDay: FC<{
   item: IModuleItem;
   message: ReactNode;
   differences?: SyncField[];
+  unpublished?: boolean;
   scheduleEntry?: AssignmentScheduleEntry;
 }> = ({
   type,
@@ -37,6 +38,7 @@ export const ItemInDay: FC<{
   item,
   message,
   differences = [],
+  unpublished,
   scheduleEntry,
 }) => {
   const { courseName } = useCourseContext();
@@ -152,6 +154,7 @@ export const ItemInDay: FC<{
                 status={status}
                 message={message}
                 differences={differences}
+                unpublished={unpublished}
               />
             }
             targetRef={targetRef}

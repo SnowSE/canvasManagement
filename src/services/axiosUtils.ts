@@ -2,6 +2,7 @@ import { baseCanvasUrl } from "@/features/canvas/services/canvasServiceUtils";
 import { isServer } from "@tanstack/react-query";
 import axios, { AxiosInstance, AxiosError } from "axios";
 import { showErrorToast } from "@/app/MyToaster";
+import { createCanvasRequestQueue } from "./canvasRequestQueue";
 
 const canvasBaseUrl = "https://snow.instructure.com/api/v1/";
 
@@ -16,6 +17,15 @@ if (!isServer) {
     return config;
   });
 } else {
+  // The browser's Canvas calls come through the /api/canvas proxy, so queueing
+  // here covers every Canvas request the app makes.
+  const canvasQueue = createCanvasRequestQueue();
+  const send = axios.getAdapter(axios.defaults.adapter);
+  axiosClient.defaults.adapter = (config) =>
+    config.url?.startsWith(canvasBaseUrl)
+      ? canvasQueue.run(config, send)
+      : send(config);
+
   const token = process.env.CANVAS_TOKEN;
   if (!token) {
     console.error("CANVAS_TOKEN not in environment");

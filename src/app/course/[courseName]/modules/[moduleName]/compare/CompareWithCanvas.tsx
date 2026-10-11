@@ -37,7 +37,6 @@ import {
 } from "@/services/utils/htmlTextDiff";
 
 const sectionLabels: Record<SyncSection, string> = {
-  status: "Status",
   dates: "Dates",
   grading: "Grading",
   groups: "Groups",
@@ -111,6 +110,7 @@ export function CompareAssignmentWithCanvas({
       canvasLoading={canvasAssignments === undefined}
       canvasFetching={isFetching}
       canvasId={canvasAssignment?.id}
+      canvasPublished={canvasAssignment?.published}
       canvasUrl={
         canvasAssignment &&
         `${baseCanvasUrl}/courses/${settings.canvasId}/assignments/${canvasAssignment.id}`
@@ -184,6 +184,7 @@ export function CompareQuizWithCanvas({
       }
       canvasFetching={isFetching || questionsFetching}
       canvasId={canvasQuiz?.id}
+      canvasPublished={canvasQuiz?.published}
       canvasUrl={
         canvasQuiz &&
         `${baseCanvasUrl}/courses/${settings.canvasId}/quizzes/${canvasQuiz.id}`
@@ -213,6 +214,7 @@ const CompareLayout: FC<{
   canvasLoading: boolean;
   canvasFetching: boolean;
   canvasId?: number;
+  canvasPublished?: boolean;
   canvasUrl?: string;
   onRefresh: () => void;
   onUpdate: () => void;
@@ -226,6 +228,7 @@ const CompareLayout: FC<{
   canvasLoading,
   canvasFetching,
   canvasId,
+  canvasPublished,
   canvasUrl,
   onRefresh,
   onUpdate,
@@ -262,6 +265,7 @@ const CompareLayout: FC<{
               ) : inCanvas ? (
                 <span>
                   Canvas {type} {canvasId}
+                  {!canvasPublished && " · not published"}
                 </span>
               ) : (
                 <span>not in Canvas yet</span>

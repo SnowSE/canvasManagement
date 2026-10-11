@@ -28,6 +28,8 @@ export type TodayItem = {
   message: ReactNode;
   // every way the file and Canvas disagree; empty when in sync or not in Canvas
   differences: SyncField[];
+  // in Canvas but students can't see it; red border, not a difference
+  unpublished?: boolean;
   // set when this is one batch of an assignment's Schedule rather than its DueAt
   scheduleEntry?: AssignmentScheduleEntry;
 };

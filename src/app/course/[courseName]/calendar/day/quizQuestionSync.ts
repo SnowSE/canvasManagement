@@ -189,46 +189,208 @@ function compareQuestion(
   ];
 }
 
+// ---------------------------------------------------------------------------
+// Lining the file's questions up with Canvas's
+//
+// Comparing the nth question with the nth breaks as soon as one is deleted or
+// inserted: every question after it is reported as changed. Instead the two
+// lists are aligned the way a text diff aligns lines, matching questions by
+// content (text first, answers second), so a question deleted from the file
+// shows up as one "only in Canvas" row and the rest still line up.
+// ---------------------------------------------------------------------------
+
+/** How alike two questions must be to count as the same question edited. */
+const SAME_QUESTION = 0.5;
+
+const words = (text: string) =>
+  text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
+
+/** Dice coefficient over word multisets: 1 for the same words, 0 for none shared. */
+function wordSimilarity(a: string, b: string) {
+  if (a === b) return 1;
+  const aw = words(a);
+  const bw = words(b);
+  if (aw.length === 0 || bw.length === 0) return 0;
+  const counts = new Map<string, number>();
+  for (const w of aw) counts.set(w, (counts.get(w) ?? 0) + 1);
+  let shared = 0;
+  for (const w of bw) {
+    const n = counts.get(w) ?? 0;
+    if (n > 0) {
+      shared++;
+      counts.set(w, n - 1);
+    }
+  }
+  return (2 * shared) / (aw.length + bw.length);
+}
+
+interface QuestionSignature {
+  text: string;
+  answers: string;
+}
+
+function questionSimilarity(a: QuestionSignature, b: QuestionSignature) {
+  // text decides; answers break ties between questions that share a prompt
+  // ("Match the term to its definition.")
+  return (
+    0.75 * wordSimilarity(a.text, b.text) +
+    0.25 * wordSimilarity(a.answers, b.answers)
+  );
+}
+
+type AlignedRow =
+  | { local: number; canvas: number; moved?: boolean }
+  | { local: number; canvas?: undefined }
+  | { local?: undefined; canvas: number };
+
 /**
- * One row per question, in quiz order: type, points, text, answers and
- * feedback against what Canvas has. Canvas lists a quiz's questions in quiz
- * order, so the nth question is compared with the nth.
+ * Pairs file and Canvas questions in order, maximizing how alike the pairs
+ * are. Questions that match nothing are left unpaired, except that an
+ * unpaired file question and an unpaired Canvas question at the same spot are
+ * paired as one rewritten question. Finally a question that only moved (in
+ * both lists, but in a different order) is paired back up and marked moved.
+ */
+export function alignQuestions(
+  local: QuestionSignature[],
+  canvas: QuestionSignature[],
+): AlignedRow[] {
+  const n = local.length;
+  const m = canvas.length;
+  const similarity = local.map((l) => canvas.map((c) => questionSimilarity(l, c)));
+  // a real match is worth far more than a rewritten-in-place pair, which is
+  // only worth taking when it costs no real match
+  const pairScore = (i: number, j: number) =>
+    similarity[i][j] >= SAME_QUESTION ? 1 + similarity[i][j] : 0.001;
+
+  const best = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(0));
+  for (let i = 1; i <= n; i++)
+    for (let j = 1; j <= m; j++)
+      best[i][j] = Math.max(
+        best[i - 1][j],
+        best[i][j - 1],
+        best[i - 1][j - 1] + pairScore(i - 1, j - 1),
+      );
+
+  const rows: AlignedRow[] = [];
+  let i = n;
+  let j = m;
+  while (i > 0 || j > 0) {
+    if (
+      i > 0 &&
+      j > 0 &&
+      best[i][j] === best[i - 1][j - 1] + pairScore(i - 1, j - 1)
+    ) {
+      rows.push({ local: i - 1, canvas: j - 1 });
+      i--;
+      j--;
+    } else if (j > 0 && (i === 0 || best[i][j] === best[i][j - 1])) {
+      rows.push({ canvas: j - 1 });
+      j--;
+    } else {
+      rows.push({ local: i - 1 });
+      i--;
+    }
+  }
+  rows.reverse();
+
+  // a question that moved is left unpaired on both sides; pair it back up
+  const fileOnly = rows.filter((r) => r.canvas === undefined);
+  const canvasOnly = rows.filter((r) => r.local === undefined);
+  const moved = new Map<AlignedRow, number>();
+  const taken = new Set<AlignedRow>();
+  for (const f of fileOnly) {
+    let match: AlignedRow | undefined;
+    let matchSimilarity = SAME_QUESTION;
+    for (const c of canvasOnly) {
+      if (taken.has(c)) continue;
+      const s = similarity[f.local!][c.canvas!];
+      if (s >= matchSimilarity) {
+        match = c;
+        matchSimilarity = s;
+      }
+    }
+    if (match) {
+      moved.set(f, match.canvas!);
+      taken.add(match);
+    }
+  }
+  return rows
+    .filter((r) => !taken.has(r))
+    .map((r) =>
+      moved.has(r) ? { local: r.local!, canvas: moved.get(r)!, moved: true } : r,
+    );
+}
+
+/**
+ * One row per question: type, points, text, answers and feedback against what
+ * Canvas has. Rows follow the file's order, with a question that is only in
+ * Canvas (deleted from the file) shown where it sits in Canvas.
  */
 export function checkQuizQuestions(
   questions: LocalQuizQuestion[],
   canvasQuestions: CanvasQuizQuestion[],
   settings: LocalCourseSettings,
 ): SyncField[] {
-  const count = Math.max(questions.length, canvasQuestions.length);
-  return Array.from({ length: count }, (_, i): SyncField => {
-    const question = questions[i];
-    const canvasQuestion = canvasQuestions[i];
-    const number = i + 1;
+  const localHtml = questions.map((question) =>
+    markdownToHTMLSafe({
+      markdownString: getQuestionTextForCanvas(question),
+      settings,
+    }),
+  );
+  const rows = alignQuestions(
+    questions.map((question, i) => ({
+      text: plainText(localHtml[i]),
+      answers: localAnswerLines(question, settings).join("\n"),
+    })),
+    canvasQuestions.map((question) => ({
+      text: plainText(question.question_text),
+      answers: canvasAnswerLines(question).join("\n"),
+    })),
+  );
+
+  return rows.map((row): SyncField => {
     const base = {
-      key: `question${number}`,
+      key: `question:${row.local ?? "-"}:${row.canvas ?? "-"}`,
       section: "questions" as const,
     };
 
-    if (!canvasQuestion)
+    if (row.canvas === undefined) {
+      const number = row.local + 1;
       return {
         ...base,
         label: `Question ${number}`,
-        local: excerpt(plainText(markdownToHTMLSafe({ markdownString: question.text, settings }))),
+        local: excerpt(plainText(localHtml[row.local])),
         canvas: UNSET,
         same: false,
         message: `question ${number} not in canvas`,
       };
-    if (!question)
+    }
+    if (row.local === undefined) {
+      const number = row.canvas + 1;
       return {
         ...base,
-        label: `Question ${number}`,
+        label: `Canvas question ${number}`,
         local: UNSET,
-        canvas: excerpt(plainText(canvasQuestion.question_text)),
+        canvas: excerpt(plainText(canvasQuestions[row.canvas].question_text)),
         same: false,
-        message: `question ${number} is only in canvas`,
+        message: `canvas question ${number} is not in the file`,
       };
+    }
 
-    const aspects = compareQuestion(question, canvasQuestion, settings);
+    const question = questions[row.local];
+    const number = row.local + 1;
+    const aspects = compareQuestion(
+      question,
+      canvasQuestions[row.canvas],
+      settings,
+    );
+    if ("moved" in row && row.moved)
+      aspects.unshift({
+        name: "position",
+        local: String(number),
+        canvas: String(row.canvas + 1),
+        same: false,
+      });
     const different = aspects.filter((a) => !a.same);
     const label = `Question ${number} · ${typeLabel(getQuestionTypeForCanvas(question))}`;
     if (different.length === 0) {

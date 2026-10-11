@@ -6,11 +6,14 @@ import { useState, useRef, useCallback, useEffect } from "react";
  * it (to click a link, say) without it closing — hiding waits `hideDelayMs`
  * and is cancelled when the tooltip is entered.
  */
-export const useTooltip = (delayMs: number = 150, hideDelayMs: number = 200) => {
+export const useTooltip = <T extends Element = HTMLAnchorElement>(
+  delayMs: number = 150,
+  hideDelayMs: number = 200,
+) => {
   const [visible, setVisible] = useState(false);
   const showTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const targetRef = useRef<HTMLAnchorElement>(null);
+  const targetRef = useRef<T>(null);
 
   const clearTimers = useCallback(() => {
     if (showTimeoutRef.current) {

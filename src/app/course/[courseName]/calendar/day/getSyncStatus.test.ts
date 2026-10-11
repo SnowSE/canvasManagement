@@ -71,7 +71,7 @@ describe("getSyncStatus - assignment", () => {
     expect(result.status).toBe("localOnly");
   });
 
-  it("returns incomplete when not published", () => {
+  it("marks an unpublished item incomplete without counting it as a difference", () => {
     const result = getSyncStatus({
       item: baseLocalAssignment,
       canvasItem: { ...baseCanvasAssignment, published: false },
@@ -79,7 +79,9 @@ describe("getSyncStatus - assignment", () => {
       settings: baseSettings,
     });
     expect(result.status).toBe("incomplete");
+    expect(result.unpublished).toBe(true);
     expect(result.message).toContain("not published");
+    expect(result.differences).toEqual([]);
   });
 
   it("returns incomplete when due date missing in canvas", () => {

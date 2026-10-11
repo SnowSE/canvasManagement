@@ -18,7 +18,16 @@ export const SyncDifferencesTooltip: FC<{
   status: "localOnly" | "incomplete" | "published";
   message: ReactNode;
   differences: SyncField[];
-}> = ({ type, moduleName, itemName, status, message, differences }) => {
+  unpublished?: boolean;
+}> = ({
+  type,
+  moduleName,
+  itemName,
+  status,
+  message,
+  differences,
+  unpublished,
+}) => {
   const { courseName } = useCourseContext();
   if (status !== "incomplete" || differences.length === 0)
     return <>{message}</>;
@@ -44,6 +53,9 @@ export const SyncDifferencesTooltip: FC<{
         <div className="text-slate-400 ps-5">
           and {hidden} more on the compare page
         </div>
+      )}
+      {unpublished && (
+        <div className="text-rose-300 pt-1">not published in canvas</div>
       )}
       {canCompare && (
         <div className="border-t border-slate-700 mt-2 pt-1 flex justify-between gap-3 text-xs">

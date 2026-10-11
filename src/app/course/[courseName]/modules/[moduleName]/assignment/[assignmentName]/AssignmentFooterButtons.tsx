@@ -92,7 +92,7 @@ export function AssignmentFooterButtons({
               quizzes: canvasQuizzes,
             },
             roster: { students: rosterStudents, groupSets: rosterGroupSets },
-          }).differences.filter((d) => d.key !== "published")
+          }).differences
         : [],
     [
       assignment,

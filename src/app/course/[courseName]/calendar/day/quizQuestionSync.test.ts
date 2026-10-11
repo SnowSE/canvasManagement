@@ -149,7 +149,7 @@ essay`),
       [canvasMultipleChoice],
       settings,
     );
-    expect(extra[0].message).toBe("question 1 is only in canvas");
+    expect(extra[0].message).toBe("canvas question 1 is not in the file");
   });
 
   it("compares matching pairs and distractors", () => {
@@ -201,5 +201,78 @@ You [action] the rollout and flip a [mechanism].
         settings,
       )[0].same,
     ).toBe(false);
+  });
+});
+
+describe("checkQuizQuestions - lining questions up", () => {
+  const essays = [
+    "Explain why a heartbeat timeout cannot prove a peer crashed.",
+    "Describe what a vector clock records and why.",
+    "Name the telemetry you would add to a geolocation feature.",
+    "Compute the error budget for a 99.5 percent SLO over thirty days.",
+    "Contrast leader election with consensus on a single value.",
+  ];
+  const fileOf = (texts: string[]) =>
+    questionsOf(
+      texts.map((t) => `Points: 1\n${t}\nessay`).join("\n\n---\n\n"),
+    );
+  const canvasOf = (texts: string[]) =>
+    texts.map((t, i) =>
+      canvasQuestion({
+        id: i + 1,
+        question_type: "essay_question",
+        question_text: themed(`<p>${t}</p>`),
+      }),
+    );
+
+  it("shows a question deleted from the file as one row and keeps the rest lined up", () => {
+    const fields = checkQuizQuestions(
+      fileOf([essays[0], essays[1], essays[3], essays[4]]),
+      canvasOf(essays),
+      settings,
+    );
+    expect(fields.map((f) => f.same)).toEqual([true, true, false, true, true]);
+    expect(fields[2].label).toBe("Canvas question 3");
+    expect(fields[2].message).toBe("canvas question 3 is not in the file");
+    expect(fields[2].canvas).toContain("geolocation");
+    expect(fields[3].label).toBe("Question 3 · essay");
+  });
+
+  it("shows a question added to the file as one row", () => {
+    const fields = checkQuizQuestions(
+      fileOf(essays),
+      canvasOf([essays[0], essays[2], essays[3], essays[4]]),
+      settings,
+    );
+    expect(fields.map((f) => f.same)).toEqual([true, false, true, true, true]);
+    expect(fields[1].message).toBe("question 2 not in canvas");
+  });
+
+  it("still compares an edited question with its old version", () => {
+    const edited = [...essays];
+    edited[2] = "Name the telemetry you would add to a geolocation screen.";
+    const fields = checkQuizQuestions(fileOf(edited), canvasOf(essays), settings);
+    expect(fields).toHaveLength(5);
+    expect(fields[2].message).toBe("question 3 text different");
+  });
+
+  it("pairs a question rewritten in place with the one it replaced", () => {
+    const rewritten = [...essays];
+    rewritten[2] = "What does idempotency buy a retrying client?";
+    const fields = checkQuizQuestions(fileOf(rewritten), canvasOf(essays), settings);
+    expect(fields).toHaveLength(5);
+    expect(fields[2].message).toBe("question 3 text different");
+  });
+
+  it("reports a moved question as moved, not as deleted and added", () => {
+    const fields = checkQuizQuestions(
+      fileOf([essays[4], essays[0], essays[1], essays[2], essays[3]]),
+      canvasOf(essays),
+      settings,
+    );
+    expect(fields).toHaveLength(5);
+    expect(fields[0].message).toBe("question 1 position different");
+    expect(fields[0].canvas).toContain("position: 5");
+    expect(fields.slice(1).every((f) => f.same)).toBe(true);
   });
 });

@@ -35,7 +35,6 @@ export interface RosterForStatus {
 }
 
 export type SyncSection =
-  | "status"
   | "dates"
   | "grading"
   | "groups"
@@ -69,6 +68,12 @@ export type ItemSyncStatus = {
   /** The first difference's message (kept for the calendar tooltip and tests). */
   message: string;
   differences: SyncField[];
+  /**
+   * In Canvas but students can't see it. Keeps the calendar border red, but is
+   * not one of the differences: publishing is the instructor's call, not
+   * something the file says or Update in Canvas would change.
+   */
+  unpublished?: boolean;
 };
 
 export interface SyncReport extends ItemSyncStatus {
@@ -93,18 +98,6 @@ function formatDate(value: string | undefined): string | undefined {
   if (!value) return undefined;
   const date = getDateFromString(value);
   return date ? dateToMarkdownString(date) : value;
-}
-
-function checkPublished(published: boolean | undefined): SyncField {
-  return field({
-    key: "published",
-    label: "Published",
-    section: "status",
-    local: "published",
-    canvas: published ? "published" : "not published",
-    same: !!published,
-    message: "not published in canvas",
-  });
 }
 
 /**
@@ -642,13 +635,17 @@ function checkQuiz(
 
 function buildReport(
   fields: SyncField[],
+  published: boolean | undefined,
   description?: SyncDescription,
 ): SyncReport {
   const differences = fields.filter((f) => !f.same);
+  const unpublished = !published;
   return {
-    status: differences.length > 0 ? "incomplete" : "published",
-    message: differences[0]?.message ?? "",
+    status: differences.length > 0 || unpublished ? "incomplete" : "published",
+    message:
+      differences[0]?.message ?? (unpublished ? "not published in canvas" : ""),
     differences,
+    unpublished,
     fields,
     description,
   };
@@ -685,9 +682,9 @@ export function getSyncReport({
       fields: [],
     };
 
-  const fields: SyncField[] = [checkPublished(canvasItem.published)];
+  const fields: SyncField[] = [];
 
-  if (type === "page") return buildReport(fields);
+  if (type === "page") return buildReport(fields, canvasItem.published);
 
   const checked =
     type === "quiz"
@@ -713,12 +710,12 @@ export function getSyncReport({
         settings,
       ),
     );
-  return buildReport(fields, checked.description);
+  return buildReport(fields, canvasItem.published, checked.description);
 }
 
 export function getSyncStatus(
   args: Parameters<typeof getSyncReport>[0],
 ): ItemSyncStatus {
-  const { status, message, differences } = getSyncReport(args);
-  return { status, message, differences };
+  const { status, message, differences, unpublished } = getSyncReport(args);
+  return { status, message, differences, unpublished };
 }

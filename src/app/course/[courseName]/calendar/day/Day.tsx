@@ -96,6 +96,7 @@ export default function Day({ day, month }: { day: string; month: number }) {
               status,
               message,
               differences,
+              unpublished,
               scheduleEntry,
             }) => (
               <ItemInDay
@@ -106,6 +107,7 @@ export default function Day({ day, month }: { day: string; month: number }) {
                 status={status}
                 message={message}
                 differences={differences}
+                unpublished={unpublished}
                 scheduleEntry={scheduleEntry}
               />
             ),

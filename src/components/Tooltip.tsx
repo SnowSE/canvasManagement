@@ -6,7 +6,7 @@ const edgeMargin = 8;
 
 export const Tooltip: React.FC<{
   message: ReactNode;
-  targetRef: React.RefObject<HTMLAnchorElement | null>;
+  targetRef: React.RefObject<Element | null>;
   visible: boolean;
   /** Pass `useTooltip().tooltipProps` so the tooltip stays open while hovered. */
   onMouseEnter?: () => void;

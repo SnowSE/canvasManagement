@@ -70,7 +70,7 @@ export function QuizButtons({
               quizzes: canvasQuizzes,
             },
             canvasQuestions,
-          }).differences.filter((d) => d.key !== "published")
+          }).differences
         : [],
     [
       canvasAssignments,
