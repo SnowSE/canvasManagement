@@ -66,6 +66,13 @@ function localAnswerLines(
         (a) =>
           `[${a.blank_id}] ${correctMark(Number(a.answer_weight) > 0)}${plainText(String(a.answer_text ?? ""))}`,
       );
+    // Canvas keeps only the text of a short answer, and markdown would read
+    // an answer like "+" as a list or "a*b*c" as emphasis
+    case QuestionType.SHORT_ANSWER_WITH_ANSWERS:
+      return sent.map(
+        (a) =>
+          `${correctMark(Number(a.answer_weight) > 0)}${String(a.answer_text ?? "")}`,
+      );
     case QuestionType.NUMERICAL:
       return sent.map((a) =>
         a.numerical_answer_type === "range_answer"
@@ -102,6 +109,8 @@ function canvasAnswerLines(question: CanvasQuizQuestion): string[] {
         (a) =>
           `[${a.blank_id}] ${correctMark(a.weight > 0)}${plainText(a.text)}`,
       );
+    case "short_answer_question":
+      return answers.map((a) => `${correctMark(a.weight > 0)}${a.text}`);
     case "numerical_question":
       return answers.map((a) =>
         a.numerical_answer_type === "range_answer"

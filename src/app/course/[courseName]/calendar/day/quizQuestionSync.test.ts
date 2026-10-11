@@ -149,6 +149,29 @@ essay`),
     expect(field.local).toContain("points: 2");
   });
 
+  it("compares short answers as text, since Canvas keeps no html for them", () => {
+    const [field] = checkQuizQuestions(
+      questionsOf(`Points: 1
+Give the root operator, then the postfix expression.
+*a) +
+*b) 5782-*+63*+
+short_answer=`),
+      [
+        canvasQuestion({
+          question_type: "short_answer_question",
+          question_text: "<p>Give the root operator, then the postfix expression.</p>",
+          answers: [
+            { id: 1, text: "+", html: "", weight: 100 },
+            { id: 2, text: "5782-*+63*+", html: "", weight: 100 },
+          ],
+        }),
+      ],
+      settings,
+    );
+    expect(field.message).toBe("");
+    expect(field.same).toBe(true);
+  });
+
   it("can ignore answer order, since each student attempt shuffles its answers", () => {
     const shuffled = {
       ...canvasMultipleChoice,
