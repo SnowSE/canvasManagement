@@ -19,10 +19,15 @@ import {
   useUpdateAssignmentInCanvasMutation,
 } from "@/features/canvas/hooks/canvasAssignmentHooks";
 import {
+  useCanvasAttemptQuestionsQuery,
   useCanvasQuizQuestionsQuery,
+  useCanvasQuizVersionsTakenQuery,
   useCanvasQuizzesQuery,
   useUpdateQuizInCanvasMutation,
 } from "@/features/canvas/hooks/canvasQuizHooks";
+import { checkQuizQuestions } from "@/app/course/[courseName]/calendar/day/quizQuestionSync";
+import { LocalQuiz } from "@/features/local/quizzes/models/localQuiz";
+import { LocalCourseSettings } from "@/features/local/course/localCourseSettings";
 import {
   useRosterGroupSetsQuery,
   useRosterStudentsQuery,
@@ -48,6 +53,7 @@ const sectionLabels: Record<SyncSection, string> = {
   schedule: "Schedule",
   rubric: "Rubric",
   questions: "Questions",
+  options: "Quiz options",
   description: "Description",
 };
 
@@ -68,6 +74,7 @@ export function CompareAssignmentWithCanvas({
     data: canvasAssignments,
     isFetching,
     refetch,
+    dataUpdatedAt,
   } = useCanvasAssignmentsQuery();
   const { data: canvasQuizzes } = useCanvasQuizzesQuery();
   const { data: rosterStudents } = useRosterStudentsQuery();
@@ -114,6 +121,7 @@ export function CompareAssignmentWithCanvas({
       report={report}
       canvasLoading={canvasAssignments === undefined}
       canvasFetching={isFetching}
+      loadedAt={dataUpdatedAt}
       canvasId={canvasAssignment?.id}
       canvasPublished={canvasAssignment?.published}
       canvasUrl={
@@ -140,7 +148,12 @@ export function CompareQuizWithCanvas({
 }) {
   const { data: settings } = useLocalCourseSettingsQuery();
   const { data: quiz } = useQuizQuery(moduleName, quizName);
-  const { data: canvasQuizzes, isFetching, refetch } = useCanvasQuizzesQuery();
+  const {
+    data: canvasQuizzes,
+    isFetching,
+    refetch,
+    dataUpdatedAt,
+  } = useCanvasQuizzesQuery();
   const { data: canvasAssignments } = useCanvasAssignmentsQuery();
   const update = useUpdateQuizInCanvasMutation();
 
@@ -153,7 +166,10 @@ export function CompareQuizWithCanvas({
     data: canvasQuestions,
     isFetching: questionsFetching,
     refetch: refetchQuestions,
+    dataUpdatedAt: questionsUpdatedAt,
   } = useCanvasQuizQuestionsQuery(canvasQuiz?.id);
+  const { data: versions, refetch: refetchVersions } =
+    useCanvasQuizVersionsTakenQuery(canvasQuiz?.id);
   const report = useMemo(
     () =>
       getSyncReport({
@@ -188,6 +204,7 @@ export function CompareQuizWithCanvas({
         (canvasQuiz !== undefined && canvasQuestions === undefined)
       }
       canvasFetching={isFetching || questionsFetching}
+      loadedAt={Math.min(dataUpdatedAt, questionsUpdatedAt || dataUpdatedAt)}
       canvasId={canvasQuiz?.id}
       canvasPublished={canvasQuiz?.published}
       canvasUrl={
@@ -196,14 +213,27 @@ export function CompareQuizWithCanvas({
       }
       onRefresh={() => {
         refetch();
-        if (canvasQuiz) refetchQuestions();
+        if (canvasQuiz) {
+          refetchQuestions();
+          refetchVersions();
+        }
       }}
       onUpdate={() =>
         canvasQuiz && update.mutate({ quiz, canvasQuizId: canvasQuiz.id })
       }
       updating={update.isPending}
-      updateNote="Update Canvas pushes the file's settings and replaces the questions in Canvas with the file's. On a published quiz, students keep getting the old questions until you click Save it now on the quiz page in Canvas (the API can't do that). If students have started, it warns first: they keep the questions they got and are not regraded."
-    />
+      updateNote="Update Canvas pushes the file's settings and, if any question differs, replaces the questions in Canvas with the file's. When it replaces them on a published quiz, students keep getting the old questions until you click Save it now on the quiz page in Canvas (the API can't do that). If students have started, it warns first: they keep the questions they got and are not regraded. It refuses to change the point total they were scored out of."
+    >
+      {versions?.map((v, i) => (
+        <VersionSection
+          key={v.version}
+          version={v}
+          latest={i === 0}
+          quiz={quiz}
+          settings={settings}
+        />
+      ))}
+    </CompareLayout>
   );
 }
 
@@ -216,7 +246,12 @@ export function ComparePageWithCanvas({
 }) {
   const { data: settings } = useLocalCourseSettingsQuery();
   const { data: page } = usePageQuery(moduleName, pageName);
-  const { data: canvasPages, isFetching, refetch } = useCanvasPagesQuery();
+  const {
+    data: canvasPages,
+    isFetching,
+    refetch,
+    dataUpdatedAt,
+  } = useCanvasPagesQuery();
   const { data: canvasAssignments } = useCanvasAssignmentsQuery();
   const { data: canvasQuizzes } = useCanvasQuizzesQuery();
   const update = useUpdateCanvasPageMutation();
@@ -249,6 +284,7 @@ export function ComparePageWithCanvas({
       report={report}
       canvasLoading={canvasPages === undefined}
       canvasFetching={isFetching}
+      loadedAt={dataUpdatedAt}
       canvasId={canvasPage?.page_id}
       canvasUrl={
         canvasPage &&
@@ -265,6 +301,38 @@ export function ComparePageWithCanvas({
   );
 }
 
+/**
+ * The file against the questions students got on one quiz version, read
+ * from one attempt. Canvas's current questions can differ from these until
+ * "Save it now", and the API has no "unsaved changes" flag, so this is the
+ * only way to see what students actually got.
+ */
+const VersionSection: FC<{
+  version: { version: number; attempts: number; attemptId: number };
+  latest: boolean;
+  quiz: LocalQuiz;
+  settings: LocalCourseSettings;
+}> = ({ version, latest, quiz, settings }) => {
+  const { data: questions } = useCanvasAttemptQuestionsQuery(version.attemptId);
+  const fields = useMemo(
+    () =>
+      questions &&
+      checkQuizQuestions(quiz.questions, questions, settings, {
+        ignoreAnswerOrder: true,
+      }),
+    [questions, quiz.questions, settings],
+  );
+  const differing = fields?.filter((f) => !f.same).length ?? 0;
+  const title = `What students got · version ${version.version}${latest ? " (latest)" : ""} · ${version.attempts} attempt${version.attempts === 1 ? "" : "s"}${fields ? ` · ${differing === 0 ? "matches the file" : `${differing} question${differing === 1 ? "" : "s"} differ`}` : ""}`;
+  return fields ? (
+    <FieldsTable fields={fields} title={title} canvasLabel="students got" />
+  ) : (
+    <div className="pb-6 text-sm text-slate-400">
+      {title} <Spinner />
+    </div>
+  );
+};
+
 /* ------------------------------------------------------------------ */
 /* Shared page                                                          */
 /* ------------------------------------------------------------------ */
@@ -276,6 +344,8 @@ const CompareLayout: FC<{
   report: SyncReport;
   canvasLoading: boolean;
   canvasFetching: boolean;
+  /** When the Canvas copy shown was read (ms since epoch). */
+  loadedAt: number;
   canvasId?: number;
   canvasPublished?: boolean;
   canvasUrl?: string;
@@ -283,6 +353,8 @@ const CompareLayout: FC<{
   onUpdate: () => void;
   updating: boolean;
   updateNote: string;
+  /** Extra sections after the settings and questions, such as what students got. */
+  children?: ReactNode;
 }> = ({
   type,
   moduleName,
@@ -290,6 +362,7 @@ const CompareLayout: FC<{
   report,
   canvasLoading,
   canvasFetching,
+  loadedAt,
   canvasId,
   canvasPublished,
   canvasUrl,
@@ -297,6 +370,7 @@ const CompareLayout: FC<{
   onUpdate,
   updating,
   updateNote,
+  children,
 }) => {
   const { courseName } = useCourseContext();
   const router = useRouter();
@@ -333,6 +407,9 @@ const CompareLayout: FC<{
               ) : (
                 <span>not in Canvas yet</span>
               )}
+              {loadedAt > 0 && (
+                <span>read from Canvas at {new Date(loadedAt).toLocaleTimeString()}</span>
+              )}
               <button
                 className="unstyled text-blue-300 hover:underline disabled:opacity-50"
                 onClick={onRefresh}
@@ -349,6 +426,7 @@ const CompareLayout: FC<{
         {inCanvas && (
           <>
             <FieldsTable fields={report.fields} />
+            {children}
             {report.description && (
               <DescriptionDiff
                 localHtml={report.description.localHtml}
@@ -459,17 +537,23 @@ const Dot: FC<{ className: string }> = ({ className }) => (
 /* Settings table                                                       */
 /* ------------------------------------------------------------------ */
 
-const FieldsTable: FC<{ fields: SyncField[] }> = ({ fields }) => {
+const FieldsTable: FC<{
+  fields: SyncField[];
+  title?: ReactNode;
+  /** What the right-hand column is, e.g. what students got. */
+  canvasLabel?: string;
+}> = ({ fields, title, canvasLabel = "Canvas now" }) => {
   const rows = fields.filter((f) => f.section !== "description");
   return (
     <section className="pb-6">
       <div className="flex flex-row flex-wrap justify-between items-baseline gap-3 pb-2">
         <h3 className="text-sm uppercase tracking-wider text-slate-400 font-semibold">
-          {rows.some((f) => f.section === "questions")
-            ? "Settings and questions"
-            : "Settings"}
+          {title ??
+            (rows.some((f) => f.section === "questions")
+              ? "Settings and questions"
+              : "Settings")}
         </h3>
-        <Legend />
+        <Legend canvasLabel={canvasLabel} />
       </div>
       <div className="overflow-x-auto">
         {/* fixed layout: with auto layout one long rubric label decided the
@@ -488,7 +572,7 @@ const FieldsTable: FC<{ fields: SyncField[] }> = ({ fields }) => {
               <th className="text-start font-medium">Setting</th>
               <th className="text-start font-medium">File</th>
               <th></th>
-              <th className="text-start font-medium">Canvas</th>
+              <th className="text-start font-medium">{canvasLabel}</th>
               <th></th>
             </tr>
           </thead>
@@ -533,26 +617,16 @@ const FieldsTable: FC<{ fields: SyncField[] }> = ({ fields }) => {
   );
 };
 
-// a matching question is just its text, kept to one line so the table stays
-// short; a differing one shows every line of what differs
+// every question shows in full, answers included; "≠ " marks what differs
 const Cell: FC<{ field: SyncField; side: "local" | "canvas" }> = ({
   field,
   side,
-}) => {
-  const value = (
-    <Value
-      text={field[side]}
-      tone={field.same ? undefined : side === "local" ? "file" : "canvas"}
-    />
-  );
-  return field.section === "questions" && field.same ? (
-    <div className="truncate [&>span]:whitespace-nowrap" title={field[side]}>
-      {value}
-    </div>
-  ) : (
-    value
-  );
-};
+}) => (
+  <Value
+    text={field[side]}
+    tone={field.same ? undefined : side === "local" ? "file" : "canvas"}
+  />
+);
 
 const Value: FC<{ text: string; tone?: "file" | "canvas" }> = ({ text, tone }) => (
   <span
@@ -569,7 +643,7 @@ const Value: FC<{ text: string; tone?: "file" | "canvas" }> = ({ text, tone }) =
   </span>
 );
 
-const Legend = () => (
+const Legend: FC<{ canvasLabel: string }> = ({ canvasLabel }) => (
   <div className="flex gap-4 text-xs text-slate-400">
     <span>
       <span className="inline-block w-2.5 h-2.5 rounded-sm bg-green-900/60 border border-green-800 me-1.5 align-[-1px]" />
@@ -577,7 +651,7 @@ const Legend = () => (
     </span>
     <span>
       <span className="inline-block w-2.5 h-2.5 rounded-sm bg-rose-900/60 border border-rose-900 me-1.5 align-[-1px]" />
-      Canvas now
+      {canvasLabel}
     </span>
   </div>
 );

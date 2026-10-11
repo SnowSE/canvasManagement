@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { checkQuizQuestions } from "./quizQuestionSync";
+import { checkQuizQuestions, pointTotalChangeError } from "./quizQuestionSync";
 import { CanvasQuizQuestion } from "@/features/canvas/models/quizzes/canvasQuizQuestionModel";
 import {
   DayOfWeek,
@@ -81,6 +81,35 @@ describe("checkQuizQuestions", () => {
     expect(field.label).toBe("Question 1 · multiple choice");
   });
 
+  it("shows a matching question's answers, not just its text", () => {
+    const [field] = checkQuizQuestions(
+      questionsOf(multipleChoice),
+      [canvasMultipleChoice],
+      settings,
+    );
+    expect(field.local.split("\n")).toEqual([
+      "type: multiple choice · points: 1",
+      "Staged rollout exists to:",
+      "✓ Bound the blast radius",
+      "Save bandwidth",
+      "+ Right.",
+    ]);
+    expect(field.canvas).toBe(field.local);
+  });
+
+  it("shows the whole question when one part differs, marking that part", () => {
+    const [field] = checkQuizQuestions(
+      questionsOf(multipleChoice),
+      [{ ...canvasMultipleChoice, correct_comments: "Yes." }],
+      settings,
+    );
+    expect(field.local).toContain("Staged rollout exists to:");
+    expect(field.local).toContain("✓ Bound the blast radius");
+    expect(field.local).toContain("≠ + Right.");
+    expect(field.canvas).toContain("≠ + Yes.");
+    expect(field.canvas).not.toContain("≠ Staged");
+  });
+
   it("reports a different correct answer", () => {
     const [field] = checkQuizQuestions(
       questionsOf(multipleChoice),
@@ -118,6 +147,52 @@ essay`),
     expect(field.local).toContain("type: essay");
     expect(field.canvas).toContain("type: short answer");
     expect(field.local).toContain("points: 2");
+  });
+
+  it("compares short answers as text, since Canvas keeps no html for them", () => {
+    const [field] = checkQuizQuestions(
+      questionsOf(`Points: 1
+Give the root operator, then the postfix expression.
+*a) +
+*b) 5782-*+63*+
+short_answer=`),
+      [
+        canvasQuestion({
+          question_type: "short_answer_question",
+          question_text: "<p>Give the root operator, then the postfix expression.</p>",
+          answers: [
+            { id: 1, text: "+", html: "", weight: 100 },
+            { id: 2, text: "5782-*+63*+", html: "", weight: 100 },
+          ],
+        }),
+      ],
+      settings,
+    );
+    expect(field.message).toBe("");
+    expect(field.same).toBe(true);
+  });
+
+  it("can ignore answer order, since each student attempt shuffles its answers", () => {
+    const shuffled = {
+      ...canvasMultipleChoice,
+      answers: [...canvasMultipleChoice.answers!].reverse(),
+    };
+    const [inOrder] = checkQuizQuestions(
+      questionsOf(multipleChoice),
+      [shuffled],
+      settings,
+    );
+    expect(inOrder.same).toBe(false);
+
+    const [ignoringOrder] = checkQuizQuestions(
+      questionsOf(multipleChoice),
+      [shuffled],
+      settings,
+      { ignoreAnswerOrder: true },
+    );
+    expect(ignoringOrder.same).toBe(true);
+    // shown lined up with the file's order
+    expect(ignoringOrder.canvas).toBe(ignoringOrder.local);
   });
 
   it("reports changed feedback", () => {
@@ -274,5 +349,23 @@ describe("checkQuizQuestions - lining questions up", () => {
     expect(fields[0].message).toBe("question 1 position different");
     expect(fields[0].canvas).toContain("position: 5");
     expect(fields.slice(1).every((f) => f.same)).toBe(true);
+  });
+});
+
+describe("pointTotalChangeError", () => {
+  it("allows an update that keeps the total students were scored out of", () => {
+    expect(
+      pointTotalChangeError(questionsOf(multipleChoice), [canvasMultipleChoice]),
+    ).toBeUndefined();
+  });
+
+  it("refuses one that changes it, giving both totals", () => {
+    expect(
+      pointTotalChangeError(questionsOf(multipleChoice), [
+        { ...canvasMultipleChoice, points_possible: 3 },
+      ]),
+    ).toBe(
+      "Students who started were scored out of 3 points, and the file's questions total 1. Changing the total needs a regrade in Canvas, so the quiz was not updated.",
+    );
   });
 });

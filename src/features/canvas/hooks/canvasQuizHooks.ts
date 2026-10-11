@@ -16,6 +16,10 @@ import {
 import toast from "react-hot-toast";
 import { showActionNeededToast, showErrorToast } from "@/app/MyToaster";
 import { baseCanvasUrl } from "../services/canvasServiceUtils";
+import {
+  checkQuizQuestions,
+  pointTotalChangeError,
+} from "@/app/course/[courseName]/calendar/day/quizQuestionSync";
 
 export const canvasQuizKeys = {
   quizzes: (canvasCourseId: number) =>
@@ -23,6 +27,8 @@ export const canvasQuizKeys = {
   // under quizzes, so anything that refreshes the quizzes refreshes these too
   questions: (canvasCourseId: number, canvasQuizId: number) =>
     ["canvas", canvasCourseId, "quizzes", canvasQuizId, "questions"] as const,
+  versionsTaken: (canvasCourseId: number, canvasQuizId: number) =>
+    ["canvas", canvasCourseId, "quizzes", canvasQuizId, "versionsTaken"] as const,
 };
 
 export const useCanvasQuizzesQuery = () => {
@@ -45,6 +51,29 @@ export const useCanvasQuizQuestionsQuery = (canvasQuizId: number | undefined) =>
     enabled: canvasQuizId !== undefined,
   });
 };
+
+/** Each quiz version students took, newest first; empty if nobody started. */
+export const useCanvasQuizVersionsTakenQuery = (
+  canvasQuizId: number | undefined,
+) => {
+  const { data: settings } = useLocalCourseSettingsQuery();
+
+  return useQuery({
+    queryKey: canvasQuizKeys.versionsTaken(settings.canvasId, canvasQuizId ?? 0),
+    queryFn: () =>
+      canvasQuizService.getVersionsTaken(settings.canvasId, canvasQuizId!),
+    enabled: canvasQuizId !== undefined,
+  });
+};
+
+/** The questions one attempt got; an attempt never changes, so it is never refetched. */
+export const useCanvasAttemptQuestionsQuery = (attemptId: number | undefined) =>
+  useQuery({
+    queryKey: ["canvas", "quizAttemptQuestions", attemptId],
+    queryFn: () => canvasQuizService.getAttemptQuestions(attemptId!),
+    enabled: attemptId !== undefined,
+    staleTime: Infinity,
+  });
 
 export const useAddQuizToCanvasMutation = () => {
   const { data: settings } = useLocalCourseSettingsQuery();
@@ -105,7 +134,7 @@ export const useAddQuizToCanvasMutation = () => {
 const submissionWarning = (count: number) =>
   `${count} student${count === 1 ? " has" : "s have"} already started this quiz in Canvas.
 
-Updating replaces its questions. Students who already started keep the questions and answer key they got, and Canvas will not regrade them. If the point total changes, their scores are out of the new total.
+Updating replaces its questions. Students who already started keep the questions and answer key they got, and Canvas will not regrade them.
 
 Update anyway?`;
 
@@ -131,12 +160,19 @@ export const useUpdateQuizInCanvasMutation = () => {
       quiz: LocalQuiz;
       canvasQuizId: number;
     }) => {
-      const submissions = await canvasQuizService.countSubmissions(
+      const versions = await canvasQuizService.getVersionsTaken(
         settings.canvasId,
         canvasQuizId
       );
-      if (submissions > 0 && !window.confirm(submissionWarning(submissions)))
-        return false;
+      if (versions.length > 0) {
+        const studentsGot = await canvasQuizService.getAttemptQuestions(
+          versions[0].attemptId
+        );
+        const pointsError = pointTotalChangeError(quiz.questions, studentsGot);
+        if (pointsError) throw new Error(pointsError);
+        const submissions = versions.reduce((sum, v) => sum + v.attempts, 0);
+        if (!window.confirm(submissionWarning(submissions))) return false;
+      }
 
       const progress = toast.loading("Updating quiz in Canvas");
       try {
@@ -153,9 +189,17 @@ export const useUpdateQuizInCanvasMutation = () => {
             canvasAssignmentGroupId: assignmentGroup?.canvasId,
             canvasLinkTargets,
             onStep: (step) => toast.loading(`${step}…`, { id: progress }),
+            questionsMatch: (canvasQuestions) =>
+              checkQuizQuestions(
+                quiz.questions,
+                canvasQuestions,
+                publishSettings,
+              ).every((q) => q.same),
           }
         );
-        const updated = `Updated "${quiz.name}" in Canvas: settings, ${summary.questionsRemoved} questions removed, ${summary.questionsAdded} added.`;
+        const updated = summary.questionsReplaced
+          ? `Updated "${quiz.name}" in Canvas: settings, ${summary.questionsRemoved} questions removed, ${summary.questionsAdded} added.`
+          : `Updated "${quiz.name}" in Canvas: settings. Its questions already matched the file, so they were left alone.`;
         if (summary.needsSaveInCanvas) {
           toast.dismiss(progress);
           showActionNeededToast(
@@ -164,10 +208,12 @@ export const useUpdateQuizInCanvasMutation = () => {
             "Open the quiz in Canvas",
           );
         } else {
-          toast.success(`${updated} Students will get them when you publish.`, {
-            id: progress,
-            duration: 8_000,
-          });
+          toast.success(
+            summary.questionsReplaced
+              ? `${updated} Students will get them when you publish.`
+              : updated,
+            { id: progress, duration: 8_000 },
+          );
         }
       } catch (error) {
         toast.dismiss(progress);
