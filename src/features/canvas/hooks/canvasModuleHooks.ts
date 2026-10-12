@@ -1,6 +1,9 @@
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { canvasModuleService } from "../services/canvasModuleService";
+import {
+  canvasModuleService,
+  ModuleItemContent,
+} from "../services/canvasModuleService";
 import { IModuleItem } from "@/features/local/modules/IModuleItem";
 import toast from "react-hot-toast";
 
@@ -32,28 +35,38 @@ export const useAddCanvasModuleMutation = () => {
 };
 
 /**
+ * Finds a Canvas module's id by name, creating the module if Canvas has none.
+ * Loads the module list first (not just whatever is cached), so a missing
+ * module isn't created twice.
+ */
+export const useCanvasModuleIdByName = () => {
+  const { data: settings } = useLocalCourseSettingsQuery();
+  const queryClient = useQueryClient();
+  const addModule = useAddCanvasModuleMutation();
+  return async (moduleName: string) => {
+    const modules = await queryClient.ensureQueryData({
+      queryKey: canvasCourseModuleKeys.modules(settings.canvasId),
+      queryFn: () => canvasModuleService.getCourseModules(settings.canvasId),
+    });
+    return (
+      modules.find((m) => m.name === moduleName)?.id ??
+      (await addModule.mutateAsync(moduleName))
+    );
+  };
+};
+
+/**
  * For Update in Canvas: puts an item in the Canvas module named after its
  * folder, so moving a file to another module moves it in Canvas too.
  */
 export const usePlaceInCanvasModule = () => {
   const { data: settings } = useLocalCourseSettingsQuery();
   const queryClient = useQueryClient();
-  const addModule = useAddCanvasModuleMutation();
-  return async (
-    moduleName: string,
-    item: Parameters<typeof canvasModuleService.placeInModule>[2]
-  ) => {
-    // loaded, not just cached, so a missing module isn't created twice
-    const modules = await queryClient.ensureQueryData({
-      queryKey: canvasCourseModuleKeys.modules(settings.canvasId),
-      queryFn: () => canvasModuleService.getCourseModules(settings.canvasId),
-    });
-    const moduleId =
-      modules.find((m) => m.name === moduleName)?.id ??
-      (await addModule.mutateAsync(moduleName));
+  const moduleIdByName = useCanvasModuleIdByName();
+  return async (moduleName: string, item: ModuleItemContent) => {
     const placed = await canvasModuleService.placeInModule(
       settings.canvasId,
-      moduleId,
+      await moduleIdByName(moduleName),
       item
     );
     if (placed !== "already") {

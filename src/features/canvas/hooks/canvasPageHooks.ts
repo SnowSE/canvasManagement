@@ -1,8 +1,8 @@
 import { LocalCoursePage } from "@/features/local/pages/localCoursePageModels";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  useCanvasModulesQuery,
-  useAddCanvasModuleMutation,
+  useCanvasModuleIdByName,
+  usePlaceInCanvasModule,
 } from "./canvasModuleHooks";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import { canvasModuleService } from "../services/canvasModuleService";
@@ -10,7 +10,6 @@ import { canvasPageService } from "../services/canvasPageService";
 import { useCanvasLinkTargets } from "./useCanvasLinkTargets";
 import { useCommitAfterPublish } from "@/features/local/git/gitHooks";
 import { usePrepareImagesForCanvas } from "./usePrepareImagesForCanvas";
-import { usePlaceInCanvasModule } from "./canvasModuleHooks";
 
 export const canvasPageKeys = {
   pagesInCourse: (courseCanvasId: number) => [
@@ -31,8 +30,7 @@ export const useCanvasPagesQuery = () => {
 export const useCreateCanvasPageMutation = () => {
   const { data: settings } = useLocalCourseSettingsQuery();
   const queryClient = useQueryClient();
-  const { data: canvasModules } = useCanvasModulesQuery();
-  const addModule = useAddCanvasModuleMutation();
+  const moduleIdByName = useCanvasModuleIdByName();
   const canvasLinkTargets = useCanvasLinkTargets();
   const prepareImages = usePrepareImagesForCanvas();
 
@@ -46,10 +44,6 @@ export const useCreateCanvasPageMutation = () => {
       page: LocalCoursePage;
       moduleName: string;
     }) => {
-      if (!canvasModules) {
-        console.log("cannot add page until modules loaded");
-        return;
-      }
       const publishSettings = await prepareImages([page.text]);
       const canvasPage = await canvasPageService.create(
         settings.canvasId,
@@ -57,17 +51,15 @@ export const useCreateCanvasPageMutation = () => {
         publishSettings,
         canvasLinkTargets
       );
-
-      const canvasModule = canvasModules.find((c) => c.name === moduleName);
-      const moduleId = canvasModule
-        ? canvasModule.id
-        : await addModule.mutateAsync(moduleName);
-
-      await canvasModuleService.createPageModuleItem(
+      await canvasModuleService.addModuleItem(
         settings.canvasId,
-        moduleId,
-        page.name,
-        canvasPage
+        await moduleIdByName(moduleName),
+        {
+          type: "Page",
+          id: canvasPage.page_id,
+          title: page.name,
+          pageUrl: canvasPage.url,
+        }
       );
       return canvasPage;
     },

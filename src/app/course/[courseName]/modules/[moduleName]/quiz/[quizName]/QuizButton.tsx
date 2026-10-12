@@ -128,7 +128,11 @@ export function QuizButtons({
       onAdd={() => addToCanvas.mutate({ quiz, moduleName })}
       onUpdate={() =>
         quizInCanvas &&
-        updateInCanvas.mutate({ quiz, canvasQuizId: quizInCanvas.id, moduleName })
+        updateInCanvas.mutate({
+          quiz,
+          canvasQuizId: quizInCanvas.id,
+          moduleName,
+        })
       }
       updateTitle="Pushes settings and, if any question differs, replaces the questions in Canvas with the file's. If it replaced them on a published quiz, click Save it now in Canvas afterwards so students get them. Warns first if students have started."
       extraActions={extraActions}

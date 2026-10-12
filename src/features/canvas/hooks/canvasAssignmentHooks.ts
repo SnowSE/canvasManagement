@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { LocalAssignment } from "@/features/local/assignments/models/localAssignment";
 import {
-  useAddCanvasModuleMutation,
-  useCanvasModulesQuery,
+  useCanvasModuleIdByName,
+  usePlaceInCanvasModule,
 } from "./canvasModuleHooks";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import { canvasModuleService } from "../services/canvasModuleService";
@@ -12,7 +12,6 @@ import { useCanvasLinkTargets } from "./useCanvasLinkTargets";
 import { useCommitAfterPublish } from "@/features/local/git/gitHooks";
 import { useAssignmentPublishOptions } from "./useAssignmentPublishOptions";
 import { usePrepareImagesForCanvas } from "./usePrepareImagesForCanvas";
-import { usePlaceInCanvasModule } from "./canvasModuleHooks";
 
 export const canvasAssignmentKeys = {
   assignments: (canvasCourseId: number) =>
@@ -30,8 +29,7 @@ export const useCanvasAssignmentsQuery = () => {
 
 export const useAddAssignmentToCanvasMutation = () => {
   const { data: settings } = useLocalCourseSettingsQuery();
-  const { data: canvasModules } = useCanvasModulesQuery();
-  const addModule = useAddCanvasModuleMutation();
+  const moduleIdByName = useCanvasModuleIdByName();
   const queryClient = useQueryClient();
   const canvasLinkTargets = useCanvasLinkTargets();
   const getPublishOptions = useAssignmentPublishOptions();
@@ -47,11 +45,6 @@ export const useAddAssignmentToCanvasMutation = () => {
       assignment: LocalAssignment;
       moduleName: string;
     }) => {
-      if (!canvasModules) {
-        // console.log("cannot add assignment until modules loaded");
-        throw new Error("cannot add assignment until modules loaded");
-      }
-
       const assignmentGroup = settings.assignmentGroups.find(
         (g) => g.name === assignment.localAssignmentGroupName,
       );
@@ -65,17 +58,10 @@ export const useAddAssignmentToCanvasMutation = () => {
         canvasLinkTargets,
         getPublishOptions(assignment),
       );
-      const canvasModule = canvasModules.find((c) => c.name === moduleName);
-      const moduleId = canvasModule
-        ? canvasModule.id
-        : await addModule.mutateAsync(moduleName);
-
-      await canvasModuleService.createModuleItem(
+      await canvasModuleService.addModuleItem(
         settings.canvasId,
-        moduleId,
-        assignment.name,
-        "Assignment",
-        canvasAssignmentId,
+        await moduleIdByName(moduleName),
+        { type: "Assignment", id: canvasAssignmentId, title: assignment.name },
       );
     },
     onSuccess: (_data, variables) => {

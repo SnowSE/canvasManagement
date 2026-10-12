@@ -1,9 +1,16 @@
 import { CanvasModuleItem } from "@/features/canvas/models/modules/canvasModuleItems";
-import { CanvasPage } from "@/features/canvas/models/pages/canvasPageModel";
 import { canvasApi, paginatedRequest } from "./canvasServiceUtils";
 import { CanvasModule } from "@/features/canvas/models/modules/canvasModule";
 import { axiosClient } from "@/services/axiosUtils";
 import { rateLimitAwarePost } from "./canvasWebRequestUtils";
+
+/** A Canvas item to put in a module; a page is added by its url. */
+export interface ModuleItemContent {
+  type: "Assignment" | "Quiz" | "Page";
+  id: number;
+  title: string;
+  pageUrl?: string;
+}
 
 export const canvasModuleService = {
   async updateModuleItem(
@@ -28,31 +35,20 @@ export const canvasModuleService = {
     return response.data;
   },
 
-  async createModuleItem(
+  async addModuleItem(
     canvasCourseId: number,
     canvasModuleId: number,
-    title: string,
-    type: "Assignment" | "Quiz",
-    contentId: number | string
+    item: ModuleItemContent
   ) {
-    console.log(`Creating new module item ${title}`);
-    const url = `${canvasApi}/courses/${canvasCourseId}/modules/${canvasModuleId}/items`;
-    const body = { module_item: { title, type, content_id: contentId } };
-    await rateLimitAwarePost(url, body);
-  },
-
-  async createPageModuleItem(
-    canvasCourseId: number,
-    canvasModuleId: number,
-    title: string,
-    canvasPage: CanvasPage
-  ) {
-    console.log(`Creating new module item ${title}`);
-    const url = `${canvasApi}/courses/${canvasCourseId}/modules/${canvasModuleId}/items`;
-    const body = {
-      module_item: { title, type: "Page", page_url: canvasPage.url },
-    };
-    await rateLimitAwarePost<CanvasModuleItem>(url, body);
+    await rateLimitAwarePost<CanvasModuleItem>(
+      `${canvasApi}/courses/${canvasCourseId}/modules/${canvasModuleId}/items`,
+      {
+        module_item:
+          item.type === "Page"
+            ? { title: item.title, type: "Page", page_url: item.pageUrl }
+            : { title: item.title, type: item.type, content_id: item.id },
+      }
+    );
   },
 
   /**
@@ -62,12 +58,7 @@ export const canvasModuleService = {
   async placeInModule(
     canvasCourseId: number,
     canvasModuleId: number,
-    item: {
-      type: "Assignment" | "Quiz" | "Page";
-      id: number;
-      title: string;
-      pageUrl?: string;
-    }
+    item: ModuleItemContent
   ): Promise<"already" | "moved" | "added"> {
     const { data } = await axiosClient.get<{
       items: { current?: { id: number; module_id: number } }[];
@@ -86,15 +77,7 @@ export const canvasModuleService = {
       return "moved";
     }
 
-    await rateLimitAwarePost(
-      `${canvasApi}/courses/${canvasCourseId}/modules/${canvasModuleId}/items`,
-      {
-        module_item:
-          item.type === "Page"
-            ? { title: item.title, type: "Page", page_url: item.pageUrl }
-            : { title: item.title, type: item.type, content_id: item.id },
-      }
-    );
+    await canvasModuleService.addModuleItem(canvasCourseId, canvasModuleId, item);
     return "added";
   },
 
