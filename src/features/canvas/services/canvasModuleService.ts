@@ -12,6 +12,20 @@ export interface ModuleItemContent {
   pageUrl?: string;
 }
 
+/** The names of the Canvas modules that hold an item; a page is matched by its url. */
+export function canvasModuleNames(
+  modules: CanvasModule[],
+  type: "assignment" | "quiz" | "page",
+  canvasItem: { id?: number; url?: string },
+): string[] {
+  const holds = (i: CanvasModuleItem) =>
+    type === "page"
+      ? i.type === "Page" && i.page_url === canvasItem.url
+      : i.type === (type === "quiz" ? "Quiz" : "Assignment") &&
+        i.content_id === canvasItem.id;
+  return modules.filter((m) => m.items?.some(holds)).map((m) => m.name);
+}
+
 export const canvasModuleService = {
   async updateModuleItem(
     canvasCourseId: number,
@@ -85,6 +99,25 @@ export const canvasModuleService = {
     const url = `${canvasApi}/courses/${canvasCourseId}/modules`;
     const response = await paginatedRequest<CanvasModule[]>({ url });
     return response;
+  },
+
+  /** Every module with its items; Canvas leaves the items out of a large module, so those are fetched on their own. */
+  async getCourseModulesWithItems(canvasCourseId: number) {
+    const modules = await paginatedRequest<CanvasModule[]>({
+      url: `${canvasApi}/courses/${canvasCourseId}/modules?include[]=items`,
+    });
+    return Promise.all(
+      modules.map(async (m) =>
+        m.items
+          ? m
+          : {
+              ...m,
+              items: await paginatedRequest<CanvasModuleItem[]>({
+                url: `${canvasApi}/courses/${canvasCourseId}/modules/${m.id}/items`,
+              }),
+            }
+      )
+    );
   },
 
   async createModule(canvasCourseId: number, moduleName: string) {

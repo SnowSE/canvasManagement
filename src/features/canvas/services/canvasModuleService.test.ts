@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { canvasModuleService } from "./canvasModuleService";
+import { canvasModuleNames, canvasModuleService } from "./canvasModuleService";
+import { CanvasModule } from "../models/modules/canvasModule";
 import { axiosClient } from "@/services/axiosUtils";
 import { rateLimitAwarePost } from "./canvasWebRequestUtils";
 
@@ -73,5 +74,30 @@ describe("placeInModule", () => {
     expect(vi.mocked(rateLimitAwarePost).mock.calls[0][1]).toEqual({
       module_item: { title: "Schedule", type: "Page", page_url: "schedule" },
     });
+  });
+});
+
+describe("canvasModuleNames", () => {
+  const module = (name: string, items: object[]) =>
+    ({ name, items }) as unknown as CanvasModule;
+  const modules = [
+    module("Week 1", [
+      { type: "Assignment", content_id: 7 },
+      { type: "Page", page_url: "schedule" },
+    ]),
+    module("Week 2", [{ type: "Quiz", content_id: 7 }]),
+  ];
+
+  it("finds an assignment or quiz by type and id", () => {
+    expect(canvasModuleNames(modules, "assignment", { id: 7 })).toEqual(["Week 1"]);
+    expect(canvasModuleNames(modules, "quiz", { id: 7 })).toEqual(["Week 2"]);
+  });
+
+  it("finds a page by its url", () => {
+    expect(canvasModuleNames(modules, "page", { url: "schedule" })).toEqual(["Week 1"]);
+  });
+
+  it("is empty for an item in no module", () => {
+    expect(canvasModuleNames(modules, "quiz", { id: 8 })).toEqual([]);
   });
 });

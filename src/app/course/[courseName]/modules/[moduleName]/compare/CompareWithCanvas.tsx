@@ -25,6 +25,7 @@ import {
   useCanvasQuizzesQuery,
   useUpdateQuizInCanvasMutation,
 } from "@/features/canvas/hooks/canvasQuizHooks";
+import { useCanvasModuleNames } from "@/features/canvas/hooks/canvasModuleHooks";
 import { checkQuizQuestions } from "@/app/course/[courseName]/calendar/day/quizQuestionSync";
 import { LocalQuiz } from "@/features/local/quizzes/models/localQuiz";
 import { LocalCourseSettings } from "@/features/local/course/localCourseSettings";
@@ -47,6 +48,7 @@ import {
 } from "@/services/utils/htmlTextDiff";
 
 const sectionLabels: Record<SyncSection, string> = {
+  module: "Module",
   dates: "Dates",
   grading: "Grading",
   groups: "Groups",
@@ -81,14 +83,18 @@ export function CompareAssignmentWithCanvas({
   const { data: rosterGroupSets } = useRosterGroupSetsQuery();
   const update = useUpdateAssignmentInCanvasMutation();
 
-  // never compare against a stale copy
-  useEffect(() => {
-    refetch();
-  }, [refetch]);
-
   const canvasAssignment = canvasAssignments?.find(
     (a) => a.name === assignmentName,
   );
+  const { names: canvasModules, refetch: refetchModules } =
+    useCanvasModuleNames("assignment", canvasAssignment);
+
+  // never compare against a stale copy
+  useEffect(() => {
+    refetch();
+    refetchModules();
+  }, [refetch, refetchModules]);
+
   const report = useMemo(
     () =>
       getSyncReport({
@@ -101,12 +107,15 @@ export function CompareAssignmentWithCanvas({
           quizzes: canvasQuizzes,
         },
         roster: { students: rosterStudents, groupSets: rosterGroupSets },
+        module: canvasModules && { file: moduleName, canvas: canvasModules },
       }),
     [
       assignment,
       canvasAssignment,
       canvasAssignments,
+      canvasModules,
       canvasQuizzes,
+      moduleName,
       rosterGroupSets,
       rosterStudents,
       settings,
@@ -128,7 +137,10 @@ export function CompareAssignmentWithCanvas({
         canvasAssignment &&
         `${baseCanvasUrl}/courses/${settings.canvasId}/assignments/${canvasAssignment.id}`
       }
-      onRefresh={() => refetch()}
+      onRefresh={() => {
+        refetch();
+        refetchModules();
+      }}
       onUpdate={() =>
         canvasAssignment &&
         update.mutate({
@@ -138,7 +150,7 @@ export function CompareAssignmentWithCanvas({
         })
       }
       updating={update.isPending}
-      updateNote="Update Canvas pushes the file's dates, group settings, rubric and description. Submissions and grades are untouched."
+      updateNote="Update Canvas pushes the file's dates, group settings, rubric and description, and moves the assignment to the file's module. Submissions and grades are untouched."
     />
   );
 }
@@ -161,11 +173,15 @@ export function CompareQuizWithCanvas({
   const { data: canvasAssignments } = useCanvasAssignmentsQuery();
   const update = useUpdateQuizInCanvasMutation();
 
+  const canvasQuiz = canvasQuizzes?.find((q) => q.title === quizName);
+  const { names: canvasModules, refetch: refetchModules } =
+    useCanvasModuleNames("quiz", canvasQuiz);
+
   useEffect(() => {
     refetch();
-  }, [refetch]);
+    refetchModules();
+  }, [refetch, refetchModules]);
 
-  const canvasQuiz = canvasQuizzes?.find((q) => q.title === quizName);
   const {
     data: canvasQuestions,
     isFetching: questionsFetching,
@@ -186,12 +202,15 @@ export function CompareQuizWithCanvas({
           quizzes: canvasQuizzes,
         },
         canvasQuestions,
+        module: canvasModules && { file: moduleName, canvas: canvasModules },
       }),
     [
       canvasAssignments,
+      canvasModules,
       canvasQuestions,
       canvasQuiz,
       canvasQuizzes,
+      moduleName,
       quiz,
       settings,
     ],
@@ -217,6 +236,7 @@ export function CompareQuizWithCanvas({
       }
       onRefresh={() => {
         refetch();
+        refetchModules();
         if (canvasQuiz) {
           refetchQuestions();
           refetchVersions();
@@ -227,7 +247,7 @@ export function CompareQuizWithCanvas({
         update.mutate({ quiz, canvasQuizId: canvasQuiz.id, moduleName })
       }
       updating={update.isPending}
-      updateNote="Update Canvas pushes the file's settings and, if any question differs, replaces the questions in Canvas with the file's. When it replaces them on a published quiz, students keep getting the old questions until you click Save it now on the quiz page in Canvas (the API can't do that). If students have started, it warns first: they keep the questions they got and are not regraded. It refuses to change the point total they were scored out of."
+      updateNote="Update Canvas pushes the file's settings, moves the quiz to the file's module and, if any question differs, replaces the questions in Canvas with the file's. When it replaces them on a published quiz, students keep getting the old questions until you click Save it now on the quiz page in Canvas (the API can't do that). If students have started, it warns first: they keep the questions they got and are not regraded. It refuses to change the point total they were scored out of."
     >
       {versions?.map((v, i) => (
         <VersionSection
@@ -261,11 +281,15 @@ export function ComparePageWithCanvas({
   const { data: canvasQuizzes } = useCanvasQuizzesQuery();
   const update = useUpdateCanvasPageMutation();
 
+  const canvasPage = canvasPages?.find((p) => p.title === pageName);
+  const { names: canvasModules, refetch: refetchModules } =
+    useCanvasModuleNames("page", canvasPage);
+
   useEffect(() => {
     refetch();
-  }, [refetch]);
+    refetchModules();
+  }, [refetch, refetchModules]);
 
-  const canvasPage = canvasPages?.find((p) => p.title === pageName);
   const report = useMemo(
     () =>
       getSyncReport({
@@ -277,8 +301,17 @@ export function ComparePageWithCanvas({
           assignments: canvasAssignments,
           quizzes: canvasQuizzes,
         },
+        module: canvasModules && { file: moduleName, canvas: canvasModules },
       }),
-    [canvasAssignments, canvasPage, canvasQuizzes, page, settings],
+    [
+      canvasAssignments,
+      canvasModules,
+      canvasPage,
+      canvasQuizzes,
+      moduleName,
+      page,
+      settings,
+    ],
   );
 
   return (
@@ -295,13 +328,16 @@ export function ComparePageWithCanvas({
         canvasPage &&
         `${baseCanvasUrl}/courses/${settings.canvasId}/pages/${canvasPage.url}`
       }
-      onRefresh={() => refetch()}
+      onRefresh={() => {
+        refetch();
+        refetchModules();
+      }}
       onUpdate={() =>
         canvasPage &&
         update.mutate({ page, canvasPage, moduleName })
       }
       updating={update.isPending}
-      updateNote="Update in Canvas replaces the page's content with the file's."
+      updateNote="Update in Canvas replaces the page's content with the file's and moves the page to the file's module."
     />
   );
 }

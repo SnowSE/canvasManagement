@@ -2,6 +2,7 @@ import {
   EditorFooter,
   FooterAction,
 } from "@/app/course/[courseName]/EditorFooter";
+import { useCanvasModuleNames } from "@/features/canvas/hooks/canvasModuleHooks";
 import { getSyncReport } from "@/app/course/[courseName]/calendar/day/getAssignmentSyncStatus";
 import { TrashIcon } from "@/components/icons/ActionIcons";
 import { useCanvasAssignmentsQuery } from "@/features/canvas/hooks/canvasAssignmentHooks";
@@ -53,6 +54,7 @@ export function QuizButtons({
   );
 
   const quizInCanvas = canvasQuizzes?.find((c) => c.title === quizName);
+  const { names: canvasModules } = useCanvasModuleNames("quiz", quizInCanvas);
   const { data: canvasQuestions } = useCanvasQuizQuestionsQuery(
     quizInCanvas?.id,
   );
@@ -70,12 +72,15 @@ export function QuizButtons({
               quizzes: canvasQuizzes,
             },
             canvasQuestions,
+            module: canvasModules && { file: moduleName, canvas: canvasModules },
           }).differences
         : [],
     [
       canvasAssignments,
+      canvasModules,
       canvasQuestions,
       canvasQuizzes,
+      moduleName,
       quiz,
       quizInCanvas,
       settings,

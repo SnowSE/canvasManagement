@@ -20,6 +20,7 @@ import {
 } from "@/features/local/pages/pageHooks";
 import { useCanvasAssignmentsQuery } from "@/features/canvas/hooks/canvasAssignmentHooks";
 import { useCanvasQuizzesQuery } from "@/features/canvas/hooks/canvasQuizHooks";
+import { useCanvasModuleNames } from "@/features/canvas/hooks/canvasModuleHooks";
 import { getSyncReport } from "@/app/course/[courseName]/calendar/day/getAssignmentSyncStatus";
 import { getCompareUrl, getCourseUrl } from "@/services/urlUtils";
 import { useNavigate } from "@tanstack/react-router";
@@ -51,6 +52,7 @@ export default function EditPageButtons({
   );
 
   const pageInCanvas = canvasPages?.find((p) => p.title === pageName);
+  const { names: canvasModules } = useCanvasModuleNames("page", pageInCanvas);
   const { data: canvasAssignments } = useCanvasAssignmentsQuery();
   const { data: canvasQuizzes } = useCanvasQuizzesQuery();
   const differences = useMemo(
@@ -65,9 +67,18 @@ export default function EditPageButtons({
               assignments: canvasAssignments,
               quizzes: canvasQuizzes,
             },
+            module: canvasModules && { file: moduleName, canvas: canvasModules },
           }).differences.filter((d) => d.key !== "published")
         : [],
-    [canvasAssignments, canvasQuizzes, page, pageInCanvas, settings],
+    [
+      canvasAssignments,
+      canvasModules,
+      canvasQuizzes,
+      moduleName,
+      page,
+      pageInCanvas,
+      settings,
+    ],
   );
 
   const requestIsPending =

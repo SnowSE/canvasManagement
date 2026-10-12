@@ -1,11 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { LocalAssignment } from "@/features/local/assignments/models/localAssignment";
 import {
-  useCanvasModuleIdByName,
+  useAddToCanvasModule,
   usePlaceInCanvasModule,
 } from "./canvasModuleHooks";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
-import { canvasModuleService } from "../services/canvasModuleService";
 import { canvasAssignmentService } from "../services/canvasAssignmentService";
 import { showErrorToast } from "@/app/MyToaster";
 import { useCanvasLinkTargets } from "./useCanvasLinkTargets";
@@ -29,7 +28,7 @@ export const useCanvasAssignmentsQuery = () => {
 
 export const useAddAssignmentToCanvasMutation = () => {
   const { data: settings } = useLocalCourseSettingsQuery();
-  const moduleIdByName = useCanvasModuleIdByName();
+  const addToModule = useAddToCanvasModule();
   const queryClient = useQueryClient();
   const canvasLinkTargets = useCanvasLinkTargets();
   const getPublishOptions = useAssignmentPublishOptions();
@@ -58,11 +57,11 @@ export const useAddAssignmentToCanvasMutation = () => {
         canvasLinkTargets,
         getPublishOptions(assignment),
       );
-      await canvasModuleService.addModuleItem(
-        settings.canvasId,
-        await moduleIdByName(moduleName),
-        { type: "Assignment", id: canvasAssignmentId, title: assignment.name },
-      );
+      await addToModule(moduleName, {
+        type: "Assignment",
+        id: canvasAssignmentId,
+        title: assignment.name,
+      });
     },
     onSuccess: (_data, variables) => {
       commitAfterPublish(`assignment "${variables.assignment.name}"`);

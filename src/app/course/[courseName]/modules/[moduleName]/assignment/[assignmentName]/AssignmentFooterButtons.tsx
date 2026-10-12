@@ -2,6 +2,7 @@ import {
   EditorFooter,
   FooterAction,
 } from "@/app/course/[courseName]/EditorFooter";
+import { useCanvasModuleNames } from "@/features/canvas/hooks/canvasModuleHooks";
 import { getSyncReport } from "@/app/course/[courseName]/calendar/day/getAssignmentSyncStatus";
 import { ClassroomIcon, TrashIcon } from "@/components/icons/ActionIcons";
 import { useCourseContext } from "@/app/course/[courseName]/context/courseContext";
@@ -71,6 +72,10 @@ export function AssignmentFooterButtons({
   const assignmentInCanvas = canvasAssignments?.find(
     (a) => a.name === assignmentName,
   );
+  const { names: canvasModules } = useCanvasModuleNames(
+    "assignment",
+    assignmentInCanvas,
+  );
 
   const anythingIsLoading =
     addToCanvas.isPending ||
@@ -92,13 +97,16 @@ export function AssignmentFooterButtons({
               quizzes: canvasQuizzes,
             },
             roster: { students: rosterStudents, groupSets: rosterGroupSets },
+            module: canvasModules && { file: moduleName, canvas: canvasModules },
           }).differences
         : [],
     [
       assignment,
       assignmentInCanvas,
       canvasAssignments,
+      canvasModules,
       canvasQuizzes,
+      moduleName,
       rosterGroupSets,
       rosterStudents,
       settings,

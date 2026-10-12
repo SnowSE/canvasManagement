@@ -1,11 +1,10 @@
 import { LocalCoursePage } from "@/features/local/pages/localCoursePageModels";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  useCanvasModuleIdByName,
+  useAddToCanvasModule,
   usePlaceInCanvasModule,
 } from "./canvasModuleHooks";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
-import { canvasModuleService } from "../services/canvasModuleService";
 import { canvasPageService } from "../services/canvasPageService";
 import { useCanvasLinkTargets } from "./useCanvasLinkTargets";
 import { useCommitAfterPublish } from "@/features/local/git/gitHooks";
@@ -30,7 +29,7 @@ export const useCanvasPagesQuery = () => {
 export const useCreateCanvasPageMutation = () => {
   const { data: settings } = useLocalCourseSettingsQuery();
   const queryClient = useQueryClient();
-  const moduleIdByName = useCanvasModuleIdByName();
+  const addToModule = useAddToCanvasModule();
   const canvasLinkTargets = useCanvasLinkTargets();
   const prepareImages = usePrepareImagesForCanvas();
 
@@ -51,16 +50,12 @@ export const useCreateCanvasPageMutation = () => {
         publishSettings,
         canvasLinkTargets
       );
-      await canvasModuleService.addModuleItem(
-        settings.canvasId,
-        await moduleIdByName(moduleName),
-        {
-          type: "Page",
-          id: canvasPage.page_id,
-          title: page.name,
-          pageUrl: canvasPage.url,
-        }
-      );
+      await addToModule(moduleName, {
+        type: "Page",
+        id: canvasPage.page_id,
+        title: page.name,
+        pageUrl: canvasPage.url,
+      });
       return canvasPage;
     },
     onSuccess: (_data, variables) => {

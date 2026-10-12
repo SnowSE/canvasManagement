@@ -1,11 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  useCanvasModuleIdByName,
+  useAddToCanvasModule,
   usePlaceInCanvasModule,
 } from "./canvasModuleHooks";
 import { LocalQuiz } from "@/features/local/quizzes/models/localQuiz";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
-import { canvasModuleService } from "../services/canvasModuleService";
 import { canvasQuizService } from "../services/canvasQuizService";
 import { useCanvasLinkTargets } from "./useCanvasLinkTargets";
 import { useCommitAfterPublish } from "@/features/local/git/gitHooks";
@@ -78,7 +77,7 @@ export const useCanvasAttemptQuestionsQuery = (attemptId: number | undefined) =>
 export const useAddQuizToCanvasMutation = () => {
   const { data: settings } = useLocalCourseSettingsQuery();
   const queryClient = useQueryClient();
-  const moduleIdByName = useCanvasModuleIdByName();
+  const addToModule = useAddToCanvasModule();
   const canvasLinkTargets = useCanvasLinkTargets();
   const prepareImages = usePrepareImagesForCanvas();
 
@@ -103,11 +102,11 @@ export const useAddQuizToCanvasMutation = () => {
         assignmentGroup?.canvasId,
         canvasLinkTargets
       );
-      await canvasModuleService.addModuleItem(
-        settings.canvasId,
-        await moduleIdByName(moduleName),
-        { type: "Quiz", id: canvasQuizId, title: quiz.name }
-      );
+      await addToModule(moduleName, {
+        type: "Quiz",
+        id: canvasQuizId,
+        title: quiz.name,
+      });
     },
     onSuccess: (_data, variables) => {
       commitAfterPublish(`quiz "${variables.quiz.name}"`);
