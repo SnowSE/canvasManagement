@@ -35,6 +35,7 @@ export interface RosterForStatus {
 }
 
 export type SyncSection =
+  | "modules"
   | "dates"
   | "grading"
   | "groups"
@@ -678,6 +679,26 @@ function buildReport(
 }
 
 /**
+ * The file's module folder against the Canvas modules holding the item: a
+ * file is in one folder, so Canvas should have the item in that module only.
+ */
+function checkModules(file: string, canvasModules: string[]): SyncField {
+  const canvas = [...new Set(canvasModules)].sort();
+  return field({
+    key: "modules",
+    label: "Modules",
+    section: "modules",
+    local: file,
+    canvas: canvas.join(", ") || UNSET,
+    same: canvas.length === 1 && canvas[0] === file,
+    message:
+      canvas.length > 0
+        ? `modules different: ${file} vs ${canvas.join(", ")}`
+        : "not in a module in canvas",
+  });
+}
+
+/**
  * Compares a local item with its Canvas copy field by field. `status` and
  * `message` drive the calendar border and tooltip; `fields` and `description`
  * feed the compare page.
@@ -690,6 +711,7 @@ export function getSyncReport({
   canvasLinkTargets,
   roster,
   canvasQuestions,
+  module,
 }: {
   item: LocalQuiz | LocalAssignment | LocalCoursePage;
   canvasItem: CanvasQuiz | CanvasAssignment | CanvasPage | undefined;
@@ -699,6 +721,8 @@ export function getSyncReport({
   roster?: RosterForStatus;
   /** A quiz's questions in Canvas; without them only its settings are compared. */
   canvasQuestions?: CanvasQuizQuestion[];
+  /** The file's module and the Canvas modules holding the item; without them the module is not compared. */
+  module?: { file: string; canvas: string[] };
 }): SyncReport {
   if (!canvasItem)
     return {
@@ -708,7 +732,9 @@ export function getSyncReport({
       fields: [],
     };
 
-  const fields: SyncField[] = [];
+  const fields: SyncField[] = module
+    ? [checkModules(module.file, module.canvas)]
+    : [];
 
   if (type === "page") {
     const page = item as LocalCoursePage;

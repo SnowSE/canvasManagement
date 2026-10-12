@@ -534,3 +534,47 @@ describe("getSyncReport - quiz options", () => {
     ).toEqual([]);
   });
 });
+
+describe("getSyncReport - module", () => {
+  const report = (canvasModules?: string[]) =>
+    getSyncReport({
+      item: baseLocalAssignment,
+      canvasItem: baseCanvasAssignment,
+      type: "assignment",
+      settings: baseSettings,
+      module: canvasModules && { file: "Week 2", canvas: canvasModules },
+    });
+
+  it("matches when the Canvas item is only in the file's module", () => {
+    expect(report(["Week 2"]).differences).toEqual([]);
+  });
+
+  it("differs when the Canvas item is also in another module", () => {
+    expect(report(["Week 2", "Week 1"]).differences[0]).toMatchObject({
+      label: "Modules",
+      canvas: "Week 1, Week 2",
+      message: "modules different: Week 2 vs Week 1, Week 2",
+    });
+  });
+
+  it("differs when the file moved to another module", () => {
+    const [difference] = report(["Week 1"]).differences;
+    expect(difference).toMatchObject({
+      key: "modules",
+      local: "Week 2",
+      canvas: "Week 1",
+      message: "modules different: Week 2 vs Week 1",
+    });
+  });
+
+  it("differs when the Canvas item is in no module", () => {
+    expect(report([]).differences[0]).toMatchObject({
+      canvas: "—",
+      message: "not in a module in canvas",
+    });
+  });
+
+  it("is not compared until the Canvas modules load", () => {
+    expect(report(undefined).fields.map((f) => f.key)).not.toContain("modules");
+  });
+});

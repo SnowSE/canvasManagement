@@ -6,7 +6,6 @@ import {
 } from "@/features/local/utils/timeUtils";
 import { ReactNode } from "react";
 import { useCalendarItemsContext } from "../../context/calendarItemsContext";
-import { getStatus } from "./getStatus";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import { useCanvasAssignmentsQuery } from "@/features/canvas/hooks/canvasAssignmentHooks";
 import { useCanvasPagesQuery } from "@/features/canvas/hooks/canvasPageHooks";
@@ -16,7 +15,13 @@ import {
   useRosterGroupSetsQuery,
   useRosterStudentsQuery,
 } from "@/features/canvas/roster/rosterHooks";
-import { getScheduleEntryStatus, SyncField } from "./getAssignmentSyncStatus";
+import {
+  getScheduleEntryStatus,
+  getSyncStatus,
+  SyncField,
+} from "./getAssignmentSyncStatus";
+import { useCanvasModulesWithItemsQuery } from "@/features/canvas/hooks/canvasModuleHooks";
+import { canvasModuleNames } from "@/features/canvas/services/canvasModuleService";
 import { AssignmentScheduleEntry } from "@/features/local/assignments/models/localAssignment";
 import { useCalendarQuizQuestions } from "../../context/CalendarQuizQuestionsProvider";
 
@@ -52,6 +57,15 @@ export function useTodaysItems(day: string) {
   const roster = { students: rosterStudents, groupSets: rosterGroupSets };
   // filled in the background for this week's and the next three weeks' quizzes
   const quizQuestions = useCalendarQuizQuestions();
+  const { data: canvasModules } = useCanvasModulesWithItemsQuery();
+  const module = (
+    file: string,
+    type: TodayItem["type"],
+    canvasItem: { id?: number; url?: string } | undefined,
+  ) =>
+    canvasModules && canvasItem
+      ? { file, canvas: canvasModuleNames(canvasModules, type, canvasItem) }
+      : undefined;
 
   const assignments: TodayItem[] = todaysModules
     ? Object.keys(todaysModules).flatMap((moduleName) =>
@@ -63,7 +77,7 @@ export function useTodaysItems(day: string) {
             type: "assignment" as const,
             item: assignment,
             moduleName,
-            ...getStatus({
+            ...getSyncStatus({
               item: assignment,
               canvasItem: canvasAssignment,
               type: "assignment",
@@ -73,6 +87,7 @@ export function useTodaysItems(day: string) {
                 quizzes: canvasQuizzes,
               },
               roster,
+              module: module(moduleName, "assignment", canvasAssignment),
             }),
           };
         }),
@@ -111,12 +126,13 @@ export function useTodaysItems(day: string) {
             type: "quiz" as const,
             item: quiz,
             moduleName,
-            ...getStatus({
+            ...getSyncStatus({
               item: quiz,
               canvasItem: canvasQuiz,
               type: "quiz",
               settings,
               canvasQuestions: quizQuestions[quiz.name],
+              module: module(moduleName, "quiz", canvasQuiz),
             }),
           };
         }),
@@ -131,11 +147,12 @@ export function useTodaysItems(day: string) {
             type: "page" as const,
             item: page,
             moduleName,
-            ...getStatus({
+            ...getSyncStatus({
               item: page,
               canvasItem: canvasPage,
               type: "page",
               settings,
+              module: module(moduleName, "page", canvasPage),
             }),
           };
         }),

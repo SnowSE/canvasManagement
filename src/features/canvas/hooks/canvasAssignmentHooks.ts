@@ -1,11 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { LocalAssignment } from "@/features/local/assignments/models/localAssignment";
 import {
-  useAddCanvasModuleMutation,
-  useCanvasModulesQuery,
+  useAddToCanvasModule,
+  usePlaceInCanvasModule,
 } from "./canvasModuleHooks";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
-import { canvasModuleService } from "../services/canvasModuleService";
 import { canvasAssignmentService } from "../services/canvasAssignmentService";
 import { showErrorToast } from "@/app/MyToaster";
 import { useCanvasLinkTargets } from "./useCanvasLinkTargets";
@@ -29,8 +28,7 @@ export const useCanvasAssignmentsQuery = () => {
 
 export const useAddAssignmentToCanvasMutation = () => {
   const { data: settings } = useLocalCourseSettingsQuery();
-  const { data: canvasModules } = useCanvasModulesQuery();
-  const addModule = useAddCanvasModuleMutation();
+  const addToModule = useAddToCanvasModule();
   const queryClient = useQueryClient();
   const canvasLinkTargets = useCanvasLinkTargets();
   const getPublishOptions = useAssignmentPublishOptions();
@@ -46,11 +44,6 @@ export const useAddAssignmentToCanvasMutation = () => {
       assignment: LocalAssignment;
       moduleName: string;
     }) => {
-      if (!canvasModules) {
-        // console.log("cannot add assignment until modules loaded");
-        throw new Error("cannot add assignment until modules loaded");
-      }
-
       const assignmentGroup = settings.assignmentGroups.find(
         (g) => g.name === assignment.localAssignmentGroupName,
       );
@@ -64,18 +57,11 @@ export const useAddAssignmentToCanvasMutation = () => {
         canvasLinkTargets,
         getPublishOptions(assignment),
       );
-      const canvasModule = canvasModules.find((c) => c.name === moduleName);
-      const moduleId = canvasModule
-        ? canvasModule.id
-        : await addModule.mutateAsync(moduleName);
-
-      await canvasModuleService.createModuleItem(
-        settings.canvasId,
-        moduleId,
-        assignment.name,
-        "Assignment",
-        canvasAssignmentId,
-      );
+      await addToModule(moduleName, {
+        type: "Assignment",
+        id: canvasAssignmentId,
+        title: assignment.name,
+      });
     },
     onSuccess: (_data, variables) => {
       commitAfterPublish(`assignment "${variables.assignment.name}"`);
@@ -96,6 +82,7 @@ export const useUpdateAssignmentInCanvasMutation = () => {
   const canvasLinkTargets = useCanvasLinkTargets();
   const getPublishOptions = useAssignmentPublishOptions();
   const prepareImages = usePrepareImagesForCanvas();
+  const placeInModule = usePlaceInCanvasModule();
 
   const commitAfterPublish = useCommitAfterPublish();
 
@@ -103,9 +90,11 @@ export const useUpdateAssignmentInCanvasMutation = () => {
     mutationFn: async ({
       assignment,
       canvasAssignmentId,
+      moduleName,
     }: {
       assignment: LocalAssignment;
       canvasAssignmentId: number;
+      moduleName: string;
     }) => {
       const assignmentGroup = settings.assignmentGroups.find(
         (g) => g.name === assignment.localAssignmentGroupName,
@@ -120,6 +109,11 @@ export const useUpdateAssignmentInCanvasMutation = () => {
         canvasLinkTargets,
         getPublishOptions(assignment),
       );
+      await placeInModule(moduleName, {
+        type: "Assignment",
+        id: canvasAssignmentId,
+        title: assignment.name,
+      });
     },
     onSuccess: (_data, variables) => {
       commitAfterPublish(`assignment "${variables.assignment.name}"`);

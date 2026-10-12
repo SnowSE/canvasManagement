@@ -1,11 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  useAddCanvasModuleMutation,
-  useCanvasModulesQuery,
+  useAddToCanvasModule,
+  usePlaceInCanvasModule,
 } from "./canvasModuleHooks";
 import { LocalQuiz } from "@/features/local/quizzes/models/localQuiz";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
-import { canvasModuleService } from "../services/canvasModuleService";
 import { canvasQuizService } from "../services/canvasQuizService";
 import { useCanvasLinkTargets } from "./useCanvasLinkTargets";
 import { useCommitAfterPublish } from "@/features/local/git/gitHooks";
@@ -78,8 +77,7 @@ export const useCanvasAttemptQuestionsQuery = (attemptId: number | undefined) =>
 export const useAddQuizToCanvasMutation = () => {
   const { data: settings } = useLocalCourseSettingsQuery();
   const queryClient = useQueryClient();
-  const { data: canvasModules } = useCanvasModulesQuery();
-  const addModule = useAddCanvasModuleMutation();
+  const addToModule = useAddToCanvasModule();
   const canvasLinkTargets = useCanvasLinkTargets();
   const prepareImages = usePrepareImagesForCanvas();
 
@@ -93,10 +91,6 @@ export const useAddQuizToCanvasMutation = () => {
       quiz: LocalQuiz;
       moduleName: string;
     }) => {
-      if (!canvasModules) {
-        console.log("cannot add quiz until modules loaded");
-        return;
-      }
       const assignmentGroup = settings.assignmentGroups.find(
         (g) => g.name === quiz.localAssignmentGroupName
       );
@@ -108,19 +102,11 @@ export const useAddQuizToCanvasMutation = () => {
         assignmentGroup?.canvasId,
         canvasLinkTargets
       );
-
-      const canvasModule = canvasModules.find((c) => c.name === moduleName);
-      const moduleId = canvasModule
-        ? canvasModule.id
-        : await addModule.mutateAsync(moduleName);
-
-      await canvasModuleService.createModuleItem(
-        settings.canvasId,
-        moduleId,
-        quiz.name,
-        "Quiz",
-        canvasQuizId
-      );
+      await addToModule(moduleName, {
+        type: "Quiz",
+        id: canvasQuizId,
+        title: quiz.name,
+      });
     },
     onSuccess: (_data, variables) => {
       commitAfterPublish(`quiz "${variables.quiz.name}"`);
@@ -149,6 +135,7 @@ export const useUpdateQuizInCanvasMutation = () => {
   const queryClient = useQueryClient();
   const canvasLinkTargets = useCanvasLinkTargets();
   const prepareImages = usePrepareImagesForCanvas();
+  const placeInModule = usePlaceInCanvasModule();
 
   const commitAfterPublish = useCommitAfterPublish();
 
@@ -156,9 +143,11 @@ export const useUpdateQuizInCanvasMutation = () => {
     mutationFn: async ({
       quiz,
       canvasQuizId,
+      moduleName,
     }: {
       quiz: LocalQuiz;
       canvasQuizId: number;
+      moduleName: string;
     }) => {
       const versions = await canvasQuizService.getVersionsTaken(
         settings.canvasId,
@@ -197,6 +186,11 @@ export const useUpdateQuizInCanvasMutation = () => {
               ).every((q) => q.same),
           }
         );
+        await placeInModule(moduleName, {
+          type: "Quiz",
+          id: canvasQuizId,
+          title: quiz.name,
+        });
         const updated = summary.questionsReplaced
           ? `Updated "${quiz.name}" in Canvas: settings, ${summary.questionsRemoved} questions removed, ${summary.questionsAdded} added.`
           : `Updated "${quiz.name}" in Canvas: settings. Its questions already matched the file, so they were left alone.`;
