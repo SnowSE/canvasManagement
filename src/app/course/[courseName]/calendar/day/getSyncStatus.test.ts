@@ -545,17 +545,25 @@ describe("getSyncReport - module", () => {
       module: canvasModules && { file: "Week 2", canvas: canvasModules },
     });
 
-  it("matches when the Canvas item is in the file's module", () => {
-    expect(report(["Week 1", "Week 2"]).differences).toEqual([]);
+  it("matches when the Canvas item is only in the file's module", () => {
+    expect(report(["Week 2"]).differences).toEqual([]);
+  });
+
+  it("differs when the Canvas item is also in another module", () => {
+    expect(report(["Week 2", "Week 1"]).differences[0]).toMatchObject({
+      label: "Modules",
+      canvas: "Week 1, Week 2",
+      message: "modules different: Week 2 vs Week 1, Week 2",
+    });
   });
 
   it("differs when the file moved to another module", () => {
     const [difference] = report(["Week 1"]).differences;
     expect(difference).toMatchObject({
-      key: "module",
+      key: "modules",
       local: "Week 2",
       canvas: "Week 1",
-      message: "module different: Week 2 vs Week 1",
+      message: "modules different: Week 2 vs Week 1",
     });
   });
 
@@ -567,6 +575,6 @@ describe("getSyncReport - module", () => {
   });
 
   it("is not compared until the Canvas modules load", () => {
-    expect(report(undefined).fields.map((f) => f.key)).not.toContain("module");
+    expect(report(undefined).fields.map((f) => f.key)).not.toContain("modules");
   });
 });

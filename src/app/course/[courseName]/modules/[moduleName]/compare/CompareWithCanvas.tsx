@@ -48,7 +48,7 @@ import {
 } from "@/services/utils/htmlTextDiff";
 
 const sectionLabels: Record<SyncSection, string> = {
-  module: "Module",
+  modules: "Modules",
   dates: "Dates",
   grading: "Grading",
   groups: "Groups",

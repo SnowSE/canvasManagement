@@ -2,12 +2,18 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { canvasModuleNames, canvasModuleService } from "./canvasModuleService";
 import { CanvasModule } from "../models/modules/canvasModule";
 import { axiosClient } from "@/services/axiosUtils";
-import { rateLimitAwarePost } from "./canvasWebRequestUtils";
+import {
+  rateLimitAwareDelete,
+  rateLimitAwarePost,
+} from "./canvasWebRequestUtils";
 
 vi.mock("@/services/axiosUtils", () => ({
   axiosClient: { get: vi.fn(), put: vi.fn() },
 }));
-vi.mock("./canvasWebRequestUtils", () => ({ rateLimitAwarePost: vi.fn() }));
+vi.mock("./canvasWebRequestUtils", () => ({
+  rateLimitAwarePost: vi.fn(),
+  rateLimitAwareDelete: vi.fn(),
+}));
 vi.mock("./canvasServiceUtils", () => ({
   canvasApi: "https://test.instructure.com/api/v1",
   paginatedRequest: vi.fn(),
@@ -26,18 +32,37 @@ describe("placeInModule", () => {
   const quiz = { type: "Quiz" as const, id: 7, title: "Quiz 1" };
   beforeEach(() => vi.clearAllMocks());
 
-  it("leaves an item alone when it is already in the module", async () => {
-    inModules(3, 9);
+  it("leaves an item alone when it is only in the module", async () => {
+    inModules(9);
 
-    expect(await canvasModuleService.placeInModule(42, 9, quiz)).toBe("already");
+    expect(await canvasModuleService.placeInModule(42, 9, quiz)).toEqual({
+      placed: "already",
+      removed: 0,
+    });
     expect(axiosClient.put).not.toHaveBeenCalled();
     expect(rateLimitAwarePost).not.toHaveBeenCalled();
+    expect(rateLimitAwareDelete).not.toHaveBeenCalled();
+  });
+
+  it("removes an item from other modules when it is also in the module", async () => {
+    inModules(3, 9);
+
+    expect(await canvasModuleService.placeInModule(42, 9, quiz)).toEqual({
+      placed: "already",
+      removed: 1,
+    });
+    expect(vi.mocked(rateLimitAwareDelete).mock.calls).toEqual([
+      ["https://test.instructure.com/api/v1/courses/42/modules/3/items/500"],
+    ]);
   });
 
   it("moves an item from another module", async () => {
     inModules(3);
 
-    expect(await canvasModuleService.placeInModule(42, 9, quiz)).toBe("moved");
+    expect(await canvasModuleService.placeInModule(42, 9, quiz)).toEqual({
+      placed: "moved",
+      removed: 0,
+    });
     expect(vi.mocked(axiosClient.put).mock.calls).toEqual([
       [
         "https://test.instructure.com/api/v1/courses/42/modules/3/items/500",
@@ -46,10 +71,28 @@ describe("placeInModule", () => {
     ]);
   });
 
+  it("moves one copy and removes the rest when it is in other modules", async () => {
+    inModules(3, 4);
+
+    expect(await canvasModuleService.placeInModule(42, 9, quiz)).toEqual({
+      placed: "moved",
+      removed: 1,
+    });
+    expect(vi.mocked(axiosClient.put).mock.calls[0][0]).toBe(
+      "https://test.instructure.com/api/v1/courses/42/modules/3/items/500",
+    );
+    expect(vi.mocked(rateLimitAwareDelete).mock.calls).toEqual([
+      ["https://test.instructure.com/api/v1/courses/42/modules/4/items/501"],
+    ]);
+  });
+
   it("adds an item that is in no module", async () => {
     inModules();
 
-    expect(await canvasModuleService.placeInModule(42, 9, quiz)).toBe("added");
+    expect(await canvasModuleService.placeInModule(42, 9, quiz)).toEqual({
+      placed: "added",
+      removed: 0,
+    });
     expect(vi.mocked(rateLimitAwarePost).mock.calls).toEqual([
       [
         "https://test.instructure.com/api/v1/courses/42/modules/9/items",

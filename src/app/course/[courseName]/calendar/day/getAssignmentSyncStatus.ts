@@ -35,7 +35,7 @@ export interface RosterForStatus {
 }
 
 export type SyncSection =
-  | "module"
+  | "modules"
   | "dates"
   | "grading"
   | "groups"
@@ -678,18 +678,22 @@ function buildReport(
   };
 }
 
-/** The file's module folder against the Canvas modules the item is in. */
-function checkModule(file: string, canvas: string[]): SyncField {
+/**
+ * The file's module folder against the Canvas modules holding the item: a
+ * file is in one folder, so Canvas should have the item in that module only.
+ */
+function checkModules(file: string, canvasModules: string[]): SyncField {
+  const canvas = [...new Set(canvasModules)].sort();
   return field({
-    key: "module",
-    label: "Module",
-    section: "module",
+    key: "modules",
+    label: "Modules",
+    section: "modules",
     local: file,
     canvas: canvas.join(", ") || UNSET,
-    same: canvas.includes(file),
+    same: canvas.length === 1 && canvas[0] === file,
     message:
       canvas.length > 0
-        ? `module different: ${file} vs ${canvas.join(", ")}`
+        ? `modules different: ${file} vs ${canvas.join(", ")}`
         : "not in a module in canvas",
   });
 }
@@ -729,7 +733,7 @@ export function getSyncReport({
     };
 
   const fields: SyncField[] = module
-    ? [checkModule(module.file, module.canvas)]
+    ? [checkModules(module.file, module.canvas)]
     : [];
 
   if (type === "page") {

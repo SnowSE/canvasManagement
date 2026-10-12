@@ -102,28 +102,32 @@ export const useAddToCanvasModule = () => {
 };
 
 /**
- * For Update in Canvas: puts an item in the Canvas module named after its
- * folder, so moving a file to another module moves it in Canvas too.
+ * For Update in Canvas: makes the Canvas module named after an item's folder
+ * the only one holding it, so moving a file to another module moves it in
+ * Canvas too.
  */
 export const usePlaceInCanvasModule = () => {
   const { data: settings } = useLocalCourseSettingsQuery();
   const queryClient = useQueryClient();
   const moduleIdByName = useCanvasModuleIdByName();
   return async (moduleName: string, item: ModuleItemContent) => {
-    const placed = await canvasModuleService.placeInModule(
+    const { placed, removed } = await canvasModuleService.placeInModule(
       settings.canvasId,
       await moduleIdByName(moduleName),
       item
     );
-    if (placed !== "already") {
-      toast.success(
-        `${placed === "moved" ? "Moved" : "Added"} "${item.title}" to the "${moduleName}" module in Canvas.`
-      );
+    const changes = [
+      placed === "moved" && `moved it to the "${moduleName}" module`,
+      placed === "added" && `added it to the "${moduleName}" module`,
+      removed > 0 &&
+        `removed it from ${removed} other module${removed === 1 ? "" : "s"}`,
+    ].filter(Boolean);
+    if (changes.length > 0) {
+      toast.success(`In Canvas, ${changes.join(" and ")}: "${item.title}".`);
       queryClient.invalidateQueries({
         queryKey: canvasCourseModuleKeys.modules(settings.canvasId),
       });
     }
-    return placed;
   };
 };
 
