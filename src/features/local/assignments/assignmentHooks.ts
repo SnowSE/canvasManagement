@@ -22,16 +22,15 @@ export const useAssignmentQuery = (
   );
 };
 
-export const useAssignmentNamesQuery = (moduleName: string) => {
+export const useAssignmentsQueries = (moduleName: string) => {
   const { courseName } = useCourseContext();
   const trpc = useTRPC();
-  return useSuspenseQuery({
-    ...trpc.assignment.getAllAssignments.queryOptions({
-      moduleName,
+  return useSuspenseQuery(
+    trpc.assignment.getAllAssignments.queryOptions({
       courseName,
-    }),
-    select: (assignments) => assignments.map((a) => a.name),
-  });
+      moduleName,
+    })
+  );
 };
 
 export const useUpdateAssignmentMutation = () => {
@@ -73,7 +72,7 @@ export const useUpdateAssignmentMutation = () => {
         queryClient.invalidateQueries({
           queryKey: trpc.assignment.getAssignment.queryKey({
             courseName,
-            moduleName,
+            moduleName: previousModuleName,
             assignmentName: previousAssignmentName,
           }),
         });

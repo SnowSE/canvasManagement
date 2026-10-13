@@ -30,15 +30,22 @@ io.on("connection", (socket) => {
     console.log(`Sending file changed websocket message: ${relativePath}`);
     socket.emit("fileChanged", relativePath);
   };
+  // a module folder added, renamed or removed changes the module list
+  const folderHandler = (folderPath) =>
+    socket.emit("folderChanged", folderPath.replace(folderToWatch, ""));
   watcher.on("change", changeHandler);
   watcher.on("unlink", changeHandler);
   watcher.on("add", changeHandler);
+  watcher.on("addDir", folderHandler);
+  watcher.on("unlinkDir", folderHandler);
 
   socket.on("disconnect", () => {
     console.log("Client disconnected");
     watcher.off("change", changeHandler);
     watcher.off("unlink", changeHandler);
     watcher.off("add", changeHandler);
+    watcher.off("addDir", folderHandler);
+    watcher.off("unlinkDir", folderHandler);
   });
 });
 
