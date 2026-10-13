@@ -22,9 +22,7 @@ import { useCourseContext } from "../context/courseContext";
 import { Expandable } from "../../../../components/Expandable";
 import { useDragStyleContext } from "../context/drag/dragStyleContext";
 import { useQuizzesQueries } from "@/features/local/quizzes/quizHooks";
-import { useTRPC } from "@/services/serverFunctions/trpcClient";
-import { useSuspenseQueries } from "@tanstack/react-query";
-import { useAssignmentNamesQuery } from "@/features/local/assignments/assignmentHooks";
+import { useAssignmentsQueries } from "@/features/local/assignments/assignmentHooks";
 import { useReorderCanvasModuleItemsMutation } from "@/features/canvas/hooks/canvasModuleHooks";
 import { useCanvasModulesQuery } from "@/features/canvas/hooks/canvasModuleHooks";
 import { Spinner } from "@/components/Spinner";
@@ -36,22 +34,9 @@ export default function ExpandableModule({
 }: {
   moduleName: string;
 }) {
-  const trpc = useTRPC();
   const { itemDropOnModule } = useDraggingContext();
   const { courseName } = useCourseContext();
-  const { data: assignmentNames } = useAssignmentNamesQuery(moduleName);
-
-  const assignmentsQueries = useSuspenseQueries({
-    queries: assignmentNames.map((assignmentName) =>
-      trpc.assignment.getAssignment.queryOptions({
-        courseName,
-        moduleName,
-        assignmentName,
-      }),
-    ),
-  });
-  const assignments = assignmentsQueries.map((result) => result.data);
-
+  const { data: assignments } = useAssignmentsQueries(moduleName);
   const { data: quizzes } = useQuizzesQueries(moduleName);
   const { data: pages } = usePagesQueries(moduleName);
   const modal = useModal();

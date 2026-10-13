@@ -95,6 +95,7 @@ footer{margin-top:64px;color:var(--faint);font-size:13px;border-top:1px solid va
             KV Wire Protocol Spec.md
         02 Async Messaging/
           ...</code></pre>
+<p>Every <code>.md</code> file in an <code>assignments</code>, <code>quizzes</code> or <code>pages</code> folder is an item; other files there are ignored. You can add, rename or delete module folders and files with other tools while the app is open, and it picks up the change without a reload.</p>
 <p><code>globalSettings.yml</code> lists the course folders you want to see right now, so old semesters can stay on disk without cluttering the app:</p>
 <pre><code><span class="k">courses</span>:<span class="v"></span>
   - path: ./4620_Distributed/2026-fall/Modules/
@@ -364,6 +365,7 @@ Next week you&#x27;ll implement primary-backup replication...
 <h2 id="changes">Recent changes</h2>
 <div class="tw"><table>
 <tr><th>When</th><th>What changed</th></tr>
+<tr><td style="white-space:nowrap">Oct 2026</td><td>Renaming or deleting module folders and files outside the app no longer fills the error list: the module list follows a renamed module folder without a reload, files that aren&rsquo;t <code>.md</code> are ignored, and a module&rsquo;s assignments load in one request.</td></tr>
 <tr><td style="white-space:nowrap">Oct 2026</td><td><a href="#publishing">Update in Canvas</a> moves an item to the module its file is now in, or adds it to that module if it was in none, and takes it out of any other module. <a href="#compare">Compare with Canvas</a>, the editor footer and the calendar count a moved file, or an item in more than one Canvas module, as a difference.</td></tr>
 <tr><td style="white-space:nowrap">Oct 2026</td><td>Opening a course whose term has ended no longer shows a <em>roster.groupSets &hellip; 403</em> error: Canvas won&rsquo;t list group sets for a finished course, so it shows none.</td></tr>
 <tr><td style="white-space:nowrap">Oct 2026</td><td><a href="#compare">Compare with Canvas</a> checks a quiz&rsquo;s password, allowed attempts, shuffle answers, show correct answers and one question at a time, so changing only one of them no longer shows the quiz as in sync.</td></tr>

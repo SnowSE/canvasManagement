@@ -10,6 +10,7 @@ import { GlobalSettings } from "@/features/local/globalSettings/globalSettingsMo
 interface ServerToClientEvents {
   message: (data: string) => void;
   fileChanged: (filePath: string) => void;
+  folderChanged: (folderPath: string) => void;
 }
 
 interface ClientToServerEvents {
@@ -44,6 +45,7 @@ function getCourseNameByPath(
 
 export function ClientCacheInvalidation() {
   const invalidateCache = useFilePathInvalidation();
+  const invalidateModuleNames = useModuleNamesInvalidation();
   const [connectionAttempted, setConnectionAttempted] = useState(false);
   useEffect(() => {
     if (!connectionAttempted) {
@@ -60,6 +62,7 @@ export function ClientCacheInvalidation() {
     });
 
     socket.on("fileChanged", invalidateCache);
+    socket.on("folderChanged", invalidateModuleNames);
 
     socket.on("connect_error", (error) => {
       console.error("Connection error:", error);
@@ -70,12 +73,30 @@ export function ClientCacheInvalidation() {
     return () => {
       socket.off("message");
       socket.off("fileChanged");
+      socket.off("folderChanged");
       socket.off("connect_error");
     };
-  }, [connectionAttempted, invalidateCache]);
+  }, [connectionAttempted, invalidateCache, invalidateModuleNames]);
 
   return <></>;
 }
+
+const useModuleNamesInvalidation = () => {
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
+  const { data: settings } = useGlobalSettingsQuery();
+
+  return useCallback(
+    (folderPath: string) => {
+      const courseName = getCourseNameByPath(folderPath, settings);
+      if (!courseName) return;
+      queryClient.invalidateQueries({
+        queryKey: trpc.module.getModuleNames.queryKey(courseName),
+      });
+    },
+    [queryClient, trpc.module.getModuleNames, settings]
+  );
+};
 
 const useFilePathInvalidation = () => {
   const trpc = useTRPC();
