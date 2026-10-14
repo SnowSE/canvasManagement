@@ -87,7 +87,7 @@ export const useUpdateCanvasPageMutation = () => {
     }) => {
       await canvasPageService.update(
         settings.canvasId,
-        canvasPage.page_id,
+        canvasPage,
         page,
         await prepareImages([page.text]),
         canvasLinkTargets
