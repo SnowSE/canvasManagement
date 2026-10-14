@@ -6,6 +6,7 @@ import {
 } from "./canvasModuleHooks";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import { canvasAssignmentService } from "../services/canvasAssignmentService";
+import { assignmentModuleItem } from "../services/canvasModuleService";
 import { showErrorToast } from "@/app/MyToaster";
 import { useCanvasLinkTargets } from "./useCanvasLinkTargets";
 import { useCommitAfterPublish } from "@/features/local/git/gitHooks";
@@ -49,7 +50,7 @@ export const useAddAssignmentToCanvasMutation = () => {
       );
 
       const publishSettings = await prepareImages([assignment.description]);
-      const canvasAssignmentId = await canvasAssignmentService.create(
+      const canvasAssignment = await canvasAssignmentService.create(
         settings.canvasId,
         assignment,
         publishSettings,
@@ -57,11 +58,7 @@ export const useAddAssignmentToCanvasMutation = () => {
         canvasLinkTargets,
         getPublishOptions(assignment),
       );
-      await addToModule(moduleName, {
-        type: "Assignment",
-        id: canvasAssignmentId,
-        title: assignment.name,
-      });
+      await addToModule(moduleName, assignmentModuleItem(canvasAssignment));
     },
     onSuccess: (_data, variables) => {
       commitAfterPublish(`assignment "${variables.assignment.name}"`);
@@ -100,7 +97,7 @@ export const useUpdateAssignmentInCanvasMutation = () => {
         (g) => g.name === assignment.localAssignmentGroupName,
       );
       const publishSettings = await prepareImages([assignment.description]);
-      await canvasAssignmentService.update(
+      const canvasAssignment = await canvasAssignmentService.update(
         settings.canvasId,
         canvasAssignmentId,
         assignment,
@@ -109,11 +106,7 @@ export const useUpdateAssignmentInCanvasMutation = () => {
         canvasLinkTargets,
         getPublishOptions(assignment),
       );
-      await placeInModule(moduleName, {
-        type: "Assignment",
-        id: canvasAssignmentId,
-        title: assignment.name,
-      });
+      await placeInModule(moduleName, assignmentModuleItem(canvasAssignment));
     },
     onSuccess: (_data, variables) => {
       commitAfterPublish(`assignment "${variables.assignment.name}"`);
