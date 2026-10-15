@@ -90,7 +90,7 @@ export const canvasAssignmentService = {
       publishOptions?.overrides ?? []
     );
 
-    return canvasAssignment.id;
+    return canvasAssignment;
   },
 
   async update(
@@ -146,6 +146,7 @@ export const canvasAssignmentService = {
       canvasAssignment,
       publishOptions?.overrides ?? []
     );
+    return canvasAssignment;
   },
 
   async getOverrides(

@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { canvasModuleNames, canvasModuleService } from "./canvasModuleService";
+import {
+  assignmentModuleItem,
+  canvasModuleNames,
+  canvasModuleService,
+} from "./canvasModuleService";
 import { CanvasModule } from "../models/modules/canvasModule";
 import { axiosClient } from "@/services/axiosUtils";
 import {
@@ -129,11 +133,21 @@ describe("canvasModuleNames", () => {
       { type: "Page", page_url: "schedule" },
     ]),
     module("Week 2", [{ type: "Quiz", content_id: 7 }]),
+    module("Week 3", [{ type: "Discussion", content_id: 30 }]),
   ];
 
   it("finds an assignment or quiz by type and id", () => {
     expect(canvasModuleNames(modules, "assignment", { id: 7 })).toEqual(["Week 1"]);
     expect(canvasModuleNames(modules, "quiz", { id: 7 })).toEqual(["Week 2"]);
+  });
+
+  it("finds a graded discussion by its discussion's id", () => {
+    expect(
+      canvasModuleNames(modules, "assignment", {
+        id: 8,
+        discussion_topic: { id: 30 },
+      }),
+    ).toEqual(["Week 3"]);
   });
 
   it("finds a page by its url", () => {
@@ -142,5 +156,21 @@ describe("canvasModuleNames", () => {
 
   it("is empty for an item in no module", () => {
     expect(canvasModuleNames(modules, "quiz", { id: 8 })).toEqual([]);
+  });
+});
+
+describe("assignmentModuleItem", () => {
+  it("is the assignment itself", () => {
+    expect(assignmentModuleItem({ id: 7, name: "HW 1" })).toEqual({
+      type: "Assignment",
+      id: 7,
+      title: "HW 1",
+    });
+  });
+
+  it("is the discussion for a graded discussion, which Canvas files as one", () => {
+    expect(
+      assignmentModuleItem({ id: 7, name: "Tour", discussion_topic: { id: 30 } }),
+    ).toEqual({ type: "Discussion", id: 30, title: "Tour" });
   });
 });

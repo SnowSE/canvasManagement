@@ -6,7 +6,7 @@ import { rateLimitAwareDelete, rateLimitAwarePost } from "./canvasWebRequestUtil
 
 /** A Canvas item to put in a module; a page is added by its url. */
 export interface ModuleItemContent {
-  type: "Assignment" | "Quiz" | "Page";
+  type: "Assignment" | "Discussion" | "Quiz" | "Page";
   id: number;
   title: string;
   pageUrl?: string;
@@ -16,15 +16,39 @@ export interface ModuleItemContent {
 export function canvasModuleNames(
   modules: CanvasModule[],
   type: "assignment" | "quiz" | "page",
-  canvasItem: { id?: number; url?: string },
+  canvasItem: { id?: number; url?: string; discussion_topic?: { id: number } },
 ): string[] {
   const holds = (i: CanvasModuleItem) =>
     type === "page"
       ? i.type === "Page" && i.page_url === canvasItem.url
-      : i.type === (type === "quiz" ? "Quiz" : "Assignment") &&
-        i.content_id === canvasItem.id;
+      : type === "quiz"
+        ? i.type === "Quiz" && i.content_id === canvasItem.id
+        : i.type === "Discussion"
+          ? i.content_id === canvasItem.discussion_topic?.id
+          : i.type === "Assignment" && i.content_id === canvasItem.id;
   return modules.filter((m) => m.items?.some(holds)).map((m) => m.name);
 }
+
+/**
+ * What a module holds for an assignment: Canvas files a graded discussion as
+ * its discussion, not its assignment.
+ */
+export const assignmentModuleItem = (canvasAssignment: {
+  id: number;
+  name: string;
+  discussion_topic?: { id: number };
+}): ModuleItemContent =>
+  canvasAssignment.discussion_topic
+    ? {
+        type: "Discussion",
+        id: canvasAssignment.discussion_topic.id,
+        title: canvasAssignment.name,
+      }
+    : {
+        type: "Assignment",
+        id: canvasAssignment.id,
+        title: canvasAssignment.name,
+      };
 
 export const canvasModuleService = {
   async updateModuleItem(
