@@ -6,6 +6,21 @@ import { LocalCourseSettings } from "@/features/local/course/localCourseSettings
 import { axiosClient } from "@/services/axiosUtils";
 import { markdownToHTMLSafe } from "@/services/htmlMarkdownUtils";
 import { CanvasLinkTargets } from "@/services/urlUtils";
+import { fillEmbed } from "./frontPageEmbed";
+
+// undefined when the course has no front page
+const getFrontPage = async (courseId: number) => {
+  try {
+    const { data } = await axiosClient.get<CanvasPage>(
+      `${canvasApi}/courses/${courseId}/front_page`
+    );
+    return data;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
+    if (error?.response?.status === 404) return undefined;
+    throw error;
+  }
+};
 
 export const canvasPageService = {
   async getAll(courseId: number): Promise<CanvasPage[]> {
@@ -56,24 +71,29 @@ export const canvasPageService = {
 
   async update(
     courseId: number,
-    canvasPageId: number,
+    canvasPage: { page_id: number; url: string },
     page: LocalCoursePage,
     settings: LocalCourseSettings,
     canvasLinkTargets?: CanvasLinkTargets
   ): Promise<void> {
     console.log(`Updating course page: ${page.name}`);
-    const url = `${canvasApi}/courses/${courseId}/pages/${canvasPageId}`;
-    const body = {
-      wiki_page: {
-        title: page.name,
-        body: markdownToHTMLSafe({
-          markdownString: page.text,
-          settings,
-          canvasLinkTargets,
-        }),
-      },
-    };
-    await axiosClient.put(url, body);
+    const url = `${canvasApi}/courses/${courseId}/pages/${canvasPage.page_id}`;
+    const html = markdownToHTMLSafe({
+      markdownString: page.text,
+      settings,
+      canvasLinkTargets,
+    });
+    const [, frontPage] = await Promise.all([
+      axiosClient.put(url, { wiki_page: { title: page.name, body: html } }),
+      getFrontPage(courseId),
+    ]);
+    if (!frontPage || frontPage.url === canvasPage.url) return;
+    const filled = fillEmbed(frontPage.body ?? "", canvasPage.url, html);
+    if (filled === undefined) return;
+    console.log(`Filling ${canvasPage.url} into the front page`);
+    await axiosClient.put(`${canvasApi}/courses/${courseId}/front_page`, {
+      wiki_page: { body: filled },
+    });
   },
 
   async publish(courseId: number, canvasPageId: number): Promise<void> {
