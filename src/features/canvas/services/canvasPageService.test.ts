@@ -20,10 +20,11 @@ vi.mock("@/services/htmlMarkdownUtils", () => ({
 
 const api = "https://test.instructure.com/api/v1/courses/42";
 const page = { name: "Course Schedule", text: "schedule", dueAt: "" };
+const embedded = { ...page, addToHome: true };
 const settings = {} as LocalCourseSettings;
 const schedule = { page_id: 7, url: "course-schedule" };
 
-const frontPage = (front: { url: string; body: string } | "none") =>
+const frontPageInCanvas = (front: { url: string; body: string } | "none") =>
   vi
     .mocked(axiosClient.get)
     .mockImplementation(async () =>
@@ -32,13 +33,15 @@ const frontPage = (front: { url: string; body: string } | "none") =>
         : { data: front },
     );
 
+const putUrls = () => vi.mocked(axiosClient.put).mock.calls.map(([url]) => url);
+
 describe("updating a page", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("fills its marker on the front page", async () => {
-    frontPage({ url: "home", body: '<h2>Hi</h2><div id="embed-course-schedule"></div>' });
+  it("fills its marker on the front page with AddToHome: true", async () => {
+    frontPageInCanvas({ url: "home", body: '<h2>Hi</h2><div id="embed-course-schedule"></div>' });
 
-    await canvasPageService.update(42, schedule, page, settings);
+    await canvasPageService.update(42, schedule, embedded, settings);
 
     expect(axiosClient.put).toHaveBeenCalledWith(`${api}/front_page`, {
       wiki_page: {
@@ -47,33 +50,54 @@ describe("updating a page", () => {
     });
   });
 
-  it("writes only the page when the front page has no marker for it", async () => {
-    frontPage({ url: "home", body: "<h2>Hi</h2>" });
-
+  it("doesn't read the front page without AddToHome", async () => {
     await canvasPageService.update(42, schedule, page, settings);
 
-    expect(vi.mocked(axiosClient.put).mock.calls.map(([url]) => url)).toEqual([
-      `${api}/pages/7`,
-    ]);
+    expect(axiosClient.get).not.toHaveBeenCalled();
+    expect(putUrls()).toEqual([`${api}/pages/7`]);
+  });
+
+  it("adds its marker at the end when the front page has none", async () => {
+    frontPageInCanvas({ url: "home", body: "<h2>Hi</h2>" });
+
+    await canvasPageService.update(42, schedule, embedded, settings);
+
+    expect(axiosClient.put).toHaveBeenCalledWith(`${api}/front_page`, {
+      wiki_page: { body: '<h2>Hi</h2><div id="embed-course-schedule"><p>schedule</p></div>' },
+    });
+  });
+
+  it("empties its marker with AddToHome: false, keeping it in place", async () => {
+    frontPageInCanvas({ url: "home", body: '<h2>Hi</h2><div id="embed-course-schedule"><p>old</p></div>' });
+
+    await canvasPageService.update(42, schedule, { ...page, addToHome: false }, settings);
+
+    expect(axiosClient.put).toHaveBeenCalledWith(`${api}/front_page`, {
+      wiki_page: { body: '<h2>Hi</h2><div id="embed-course-schedule"></div>' },
+    });
+  });
+
+  it("leaves a front page without its marker alone with AddToHome: false", async () => {
+    frontPageInCanvas({ url: "home", body: "<h2>Hi</h2>" });
+
+    await canvasPageService.update(42, schedule, { ...page, addToHome: false }, settings);
+
+    expect(putUrls()).toEqual([`${api}/pages/7`]);
   });
 
   it("works in a course without a front page", async () => {
-    frontPage("none");
+    frontPageInCanvas("none");
 
-    await canvasPageService.update(42, schedule, page, settings);
+    await canvasPageService.update(42, schedule, embedded, settings);
 
-    expect(vi.mocked(axiosClient.put).mock.calls.map(([url]) => url)).toEqual([
-      `${api}/pages/7`,
-    ]);
+    expect(putUrls()).toEqual([`${api}/pages/7`]);
   });
 
   it("doesn't embed the front page in itself", async () => {
-    frontPage({ url: "course-schedule", body: '<div id="embed-course-schedule"></div>' });
+    frontPageInCanvas({ url: "course-schedule", body: '<div id="embed-course-schedule"></div>' });
 
-    await canvasPageService.update(42, schedule, page, settings);
+    await canvasPageService.update(42, schedule, embedded, settings);
 
-    expect(vi.mocked(axiosClient.put).mock.calls.map(([url]) => url)).toEqual([
-      `${api}/pages/7`,
-    ]);
+    expect(putUrls()).toEqual([`${api}/pages/7`]);
   });
 });
