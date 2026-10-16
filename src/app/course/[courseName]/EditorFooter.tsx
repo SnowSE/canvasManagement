@@ -285,7 +285,9 @@ export function EditorFooter({
             <HelpIcon />
           </button>
         )}
-        {previousUrl && (
+        {/* the arrows keep their spots on the first and last item, so
+            clicking through never lands on a different button */}
+        {previousUrl ? (
           <Link
             className={iconOnly}
             to={previousUrl}
@@ -294,8 +296,12 @@ export function EditorFooter({
           >
             <PreviousIcon />
           </Link>
+        ) : (
+          <span className={iconOnly + " invisible"} aria-hidden="true">
+            <PreviousIcon />
+          </span>
         )}
-        {nextUrl && (
+        {nextUrl ? (
           <Link
             className={iconOnly}
             to={nextUrl}
@@ -304,6 +310,10 @@ export function EditorFooter({
           >
             <NextIcon />
           </Link>
+        ) : (
+          <span className={iconOnly + " invisible"} aria-hidden="true">
+            <NextIcon />
+          </span>
         )}
         <ActionControl action={calendar} className={ghost} />
       </div>
