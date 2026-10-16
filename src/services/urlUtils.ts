@@ -16,11 +16,11 @@ export function getModuleItemUrl(
     encodeURIComponent(itemName)
   );
 }
-/** The file-vs-Canvas compare page for an assignment or quiz. */
+/** The file-vs-Canvas compare page for an assignment, quiz, or page. */
 export function getCompareUrl(
   courseName: string,
   moduleName: string,
-  type: "assignment" | "quiz",
+  type: "assignment" | "page" | "quiz",
   itemName: string
 ) {
   return getModuleItemUrl(courseName, moduleName, type, itemName) + "/compare";
@@ -73,6 +73,27 @@ export function canvasPageSlug(title: string) {
     .replace(/&/g, " and ")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+// Canvas resolves "../pages/belt-tour" from any page or assignment to the
+// course's page with that slug. Previews send the same link to the local page,
+// keeping any #fragment. Only page links change; unknown slugs are left alone.
+export function resolveCanvasPageHrefsInHtml(
+  html: string,
+  courseName: string,
+  pages: { moduleName: string; name: string }[]
+) {
+  return html.replace(
+    /href="\.\.\/pages\/([^"#?/]+)([#?][^"]*)?"/g,
+    (fullMatch, slug: string, suffix = "") => {
+      const page = pages.find(
+        (p) => canvasPageSlug(p.name) === canvasPageSlug(slug)
+      );
+      if (!page) return fullMatch;
+      const url = getModuleItemUrl(courseName, page.moduleName, "page", page.name);
+      return `href="${url}${suffix}"`;
+    }
+  );
 }
 
 // Canvas items whose ids we need to build links to them. Pages are addressed

@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { getSyncStatus } from "./getAssignmentSyncStatus";
+import { getSyncReport, getSyncStatus } from "./getAssignmentSyncStatus";
+import { LocalQuiz } from "@/features/local/quizzes/models/localQuiz";
+import { CanvasQuiz } from "@/features/canvas/models/quizzes/canvasQuizModel";
 import { LocalAssignment } from "@/features/local/assignments/models/localAssignment";
 import { CanvasAssignment } from "@/features/canvas/models/assignments/canvasAssignment";
 import { CanvasRubricCriteria } from "@/features/canvas/models/assignments/canvasRubricCriteria";
@@ -435,5 +437,144 @@ describe("getSyncStatus - rubric comparison", () => {
       settings: baseSettings,
     });
     expect(result.status).toBe("published");
+  });
+});
+
+describe("getSyncStatus - page", () => {
+  const page = { name: "Belts", text: "hello world", dueAt: "08/21/2023 23:59:00" };
+  const canvasPage = {
+    page_id: 1,
+    url: "belts",
+    title: "Belts",
+    published: true,
+    front_page: false,
+    body: "<p>hello world</p>",
+  };
+
+  it("returns published when the content matches", () => {
+    const result = getSyncStatus({
+      item: page,
+      canvasItem: canvasPage,
+      type: "page",
+      settings: baseSettings,
+    });
+    expect(result.status).toBe("published");
+  });
+
+  it("returns incomplete when the content differs", () => {
+    const result = getSyncStatus({
+      item: { ...page, text: "hello there" },
+      canvasItem: canvasPage,
+      type: "page",
+      settings: baseSettings,
+    });
+    expect(result.status).toBe("incomplete");
+    expect(result.message).toContain("different");
+  });
+});
+
+describe("getSyncReport - quiz options", () => {
+  const quiz: LocalQuiz = {
+    name: "Quiz",
+    description: "",
+    password: "demo",
+    dueAt: "08/21/2023 23:59:00",
+    shuffleAnswers: true,
+    showCorrectAnswers: true,
+    oneQuestionAtATime: false,
+    allowedAttempts: 1,
+    questions: [],
+  };
+  const canvasQuiz = {
+    id: 1,
+    title: "Quiz",
+    description: "",
+    due_at: "08/21/2023 23:59:00",
+    access_code: "demo",
+    shuffle_answers: true,
+    show_correct_answers: true,
+    one_question_at_a_time: false,
+    allowed_attempts: 1,
+  } as CanvasQuiz;
+  const report = (canvas: Partial<CanvasQuiz>, local: Partial<LocalQuiz> = {}) =>
+    getSyncReport({
+      item: { ...quiz, ...local },
+      canvasItem: { ...canvasQuiz, ...canvas },
+      type: "quiz",
+      settings: baseSettings,
+    });
+
+  it("matches when every option agrees", () => {
+    expect(report({}).fields.filter((f) => !f.same)).toEqual([]);
+  });
+
+  it("reports each option that differs", () => {
+    const fields = report({
+      access_code: "old",
+      shuffle_answers: false,
+      show_correct_answers: false,
+      one_question_at_a_time: true,
+      allowed_attempts: -1,
+    }).fields.filter((f) => !f.same);
+    expect(fields.map((f) => f.label)).toEqual([
+      "Password",
+      "Shuffle answers",
+      "Show correct answers",
+      "One question at a time",
+      "Allowed attempts",
+    ]);
+  });
+
+  it("treats no password and an empty one as the same", () => {
+    expect(
+      report({ access_code: undefined }, { password: undefined }).fields.filter((f) => !f.same),
+    ).toEqual([]);
+    expect(
+      report({ access_code: "" }, { password: undefined }).fields.filter((f) => !f.same),
+    ).toEqual([]);
+  });
+});
+
+describe("getSyncReport - module", () => {
+  const report = (canvasModules?: string[]) =>
+    getSyncReport({
+      item: baseLocalAssignment,
+      canvasItem: baseCanvasAssignment,
+      type: "assignment",
+      settings: baseSettings,
+      module: canvasModules && { file: "Week 2", canvas: canvasModules },
+    });
+
+  it("matches when the Canvas item is only in the file's module", () => {
+    expect(report(["Week 2"]).differences).toEqual([]);
+  });
+
+  it("differs when the Canvas item is also in another module", () => {
+    expect(report(["Week 2", "Week 1"]).differences[0]).toMatchObject({
+      label: "Modules",
+      canvas: "Week 1, Week 2",
+      message: "modules different: Week 2 vs Week 1, Week 2",
+    });
+  });
+
+  it("differs when the file moved to another module", () => {
+    const [difference] = report(["Week 1"]).differences;
+    expect(difference).toMatchObject({
+      key: "modules",
+      local: "Week 2",
+      canvas: "Week 1",
+      message: "modules different: Week 2 vs Week 1",
+    });
+  });
+
+  it("differs when the Canvas item is in no module", () => {
+    expect(report([]).differences[0]).toMatchObject({
+      canvas: "—",
+      message: "not in a module in canvas",
+    });
+  });
+
+  it("is not compared until the Canvas modules load", () => {
+    expect(report(undefined).fields.map((f) => f.key)).not.toContain("modules");
   });
 });

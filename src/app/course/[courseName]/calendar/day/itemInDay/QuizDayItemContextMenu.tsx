@@ -107,6 +107,7 @@ export const QuizDayItemContextMenu: FC<{
     updateInCanvasMutation.mutate({
       quiz: item as LocalQuiz,
       canvasQuizId: quizInCanvas.id,
+      moduleName,
     });
     handleClose();
   };
@@ -173,7 +174,7 @@ export const QuizDayItemContextMenu: FC<{
                   <button
                     onClick={handleUpdateCanvas}
                     disabled={updateInCanvasMutation.isPending}
-                    title="Pushes settings and replaces the questions in Canvas with the file's. On a published quiz, click Save it now in Canvas afterwards so students get them. Warns first if students have started."
+                    title="Pushes settings and, if any question differs, replaces the questions in Canvas with the file's. If it replaced them on a published quiz, click Save it now in Canvas afterwards so students get them. Warns first if students have started."
                     className={`unstyled ${baseButtonClasses} ${normalButtonClass}`}
                   >
                     Update Canvas

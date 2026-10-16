@@ -1,7 +1,13 @@
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { canvasModuleService } from "../services/canvasModuleService";
+import {
+  canvasModuleService,
+  canvasModuleNames,
+  ModuleItemContent,
+} from "../services/canvasModuleService";
 import { IModuleItem } from "@/features/local/modules/IModuleItem";
+import toast from "react-hot-toast";
+import { useMemo } from "react";
 
 export const canvasCourseModuleKeys = {
   modules: (canvasId: number) => ["canvas", canvasId, "module list"] as const,
@@ -16,6 +22,33 @@ export const useCanvasModulesQuery = () => {
   });
 };
 
+/** Every Canvas module with its items, for finding which modules hold an item. */
+export const useCanvasModulesWithItemsQuery = () => {
+  const { data: settings } = useLocalCourseSettingsQuery();
+  return useQuery({
+    // under the module list's key, so whatever refreshes the list refreshes this
+    queryKey: [...canvasCourseModuleKeys.modules(settings.canvasId), "items"],
+    queryFn: () =>
+      canvasModuleService.getCourseModulesWithItems(settings.canvasId),
+  });
+};
+
+/**
+ * For comparing an item's module: the names of the Canvas modules holding it,
+ * undefined while they load or when the item isn't in Canvas.
+ */
+export const useCanvasModuleNames = (
+  type: Parameters<typeof canvasModuleNames>[1],
+  canvasItem: Parameters<typeof canvasModuleNames>[2] | undefined
+) => {
+  const { data: modules, refetch } = useCanvasModulesWithItemsQuery();
+  const names = useMemo(
+    () => modules && canvasItem && canvasModuleNames(modules, type, canvasItem),
+    [modules, type, canvasItem]
+  );
+  return { names, refetch };
+};
+
 export const useAddCanvasModuleMutation = () => {
   const { data: settings } = useLocalCourseSettingsQuery();
   const queryClient = useQueryClient();
@@ -28,6 +61,74 @@ export const useAddCanvasModuleMutation = () => {
       });
     },
   });
+};
+
+/**
+ * Finds a Canvas module's id by name, creating the module if Canvas has none.
+ * Loads the module list first (not just whatever is cached), so a missing
+ * module isn't created twice.
+ */
+export const useCanvasModuleIdByName = () => {
+  const { data: settings } = useLocalCourseSettingsQuery();
+  const queryClient = useQueryClient();
+  const addModule = useAddCanvasModuleMutation();
+  return async (moduleName: string) => {
+    const modules = await queryClient.ensureQueryData({
+      queryKey: canvasCourseModuleKeys.modules(settings.canvasId),
+      queryFn: () => canvasModuleService.getCourseModules(settings.canvasId),
+    });
+    return (
+      modules.find((m) => m.name === moduleName)?.id ??
+      (await addModule.mutateAsync(moduleName))
+    );
+  };
+};
+
+/** For Add to Canvas: adds a new item to the module named after its folder. */
+export const useAddToCanvasModule = () => {
+  const { data: settings } = useLocalCourseSettingsQuery();
+  const queryClient = useQueryClient();
+  const moduleIdByName = useCanvasModuleIdByName();
+  return async (moduleName: string, item: ModuleItemContent) => {
+    await canvasModuleService.addModuleItem(
+      settings.canvasId,
+      await moduleIdByName(moduleName),
+      item
+    );
+    queryClient.invalidateQueries({
+      queryKey: canvasCourseModuleKeys.modules(settings.canvasId),
+    });
+  };
+};
+
+/**
+ * For Update in Canvas: makes the Canvas module named after an item's folder
+ * the only one holding it, so moving a file to another module moves it in
+ * Canvas too.
+ */
+export const usePlaceInCanvasModule = () => {
+  const { data: settings } = useLocalCourseSettingsQuery();
+  const queryClient = useQueryClient();
+  const moduleIdByName = useCanvasModuleIdByName();
+  return async (moduleName: string, item: ModuleItemContent) => {
+    const { placed, removed } = await canvasModuleService.placeInModule(
+      settings.canvasId,
+      await moduleIdByName(moduleName),
+      item
+    );
+    const changes = [
+      placed === "moved" && `moved it to the "${moduleName}" module`,
+      placed === "added" && `added it to the "${moduleName}" module`,
+      removed > 0 &&
+        `removed it from ${removed} other module${removed === 1 ? "" : "s"}`,
+    ].filter(Boolean);
+    if (changes.length > 0) {
+      toast.success(`In Canvas, ${changes.join(" and ")}: "${item.title}".`);
+      queryClient.invalidateQueries({
+        queryKey: canvasCourseModuleKeys.modules(settings.canvasId),
+      });
+    }
+  };
 };
 
 export const useReorderCanvasModuleItemsMutation = () => {

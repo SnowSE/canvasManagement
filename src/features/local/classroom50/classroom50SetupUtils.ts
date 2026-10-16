@@ -62,7 +62,7 @@ export const isAuthFailureResult = (
   isAuthFailureOutput(`${result.stderr}\n${result.stdout}`);
 
 export const extensionListIncludesTeacher = (output: string) =>
-  /\bgh-teacher\b/.test(output);
+  /\bgh[ -]teacher\b/.test(output);
 
 export const parseOrgMemberships = (
   json: string

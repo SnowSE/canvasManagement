@@ -140,6 +140,7 @@ export const AssignmentDayItemContextMenu: FC<{
       updateInCanvasMutation.mutate({
         canvasAssignmentId: assignmentInCanvas.id,
         assignment: item as LocalAssignment,
+        moduleName,
       });
       handleClose();
     }

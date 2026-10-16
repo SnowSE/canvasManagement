@@ -18,9 +18,13 @@ import {
   useDeletePageMutation,
   usePageQuery,
 } from "@/features/local/pages/pageHooks";
-import { getCourseUrl } from "@/services/urlUtils";
+import { useCanvasAssignmentsQuery } from "@/features/canvas/hooks/canvasAssignmentHooks";
+import { useCanvasQuizzesQuery } from "@/features/canvas/hooks/canvasQuizHooks";
+import { useCanvasModuleNames } from "@/features/canvas/hooks/canvasModuleHooks";
+import { getSyncReport } from "@/app/course/[courseName]/calendar/day/getAssignmentSyncStatus";
+import { getCompareUrl, getCourseUrl } from "@/services/urlUtils";
 import { useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useItemNavigation } from "../../../../hooks/useItemNavigation";
 
 export default function EditPageButtons({
@@ -48,6 +52,34 @@ export default function EditPageButtons({
   );
 
   const pageInCanvas = canvasPages?.find((p) => p.title === pageName);
+  const { names: canvasModules } = useCanvasModuleNames("page", pageInCanvas);
+  const { data: canvasAssignments } = useCanvasAssignmentsQuery();
+  const { data: canvasQuizzes } = useCanvasQuizzesQuery();
+  const differences = useMemo(
+    () =>
+      pageInCanvas
+        ? getSyncReport({
+            item: page,
+            canvasItem: pageInCanvas,
+            type: "page",
+            settings,
+            canvasLinkTargets: {
+              assignments: canvasAssignments,
+              quizzes: canvasQuizzes,
+            },
+            module: canvasModules && { file: moduleName, canvas: canvasModules },
+          }).differences.filter((d) => d.key !== "published")
+        : [],
+    [
+      canvasAssignments,
+      canvasModules,
+      canvasQuizzes,
+      moduleName,
+      page,
+      pageInCanvas,
+      settings,
+    ],
+  );
 
   const requestIsPending =
     createPageInCanvas.isPending ||
@@ -90,13 +122,18 @@ export default function EditPageButtons({
         pageInCanvas &&
         `${baseCanvasUrl}/courses/${settings.canvasId}/pages/${pageInCanvas.url}`
       }
+      differences={differences}
+      compareUrl={
+        pageInCanvas && getCompareUrl(courseName, moduleName, "page", pageName)
+      }
       busy={requestIsPending}
       onAdd={() => createPageInCanvas.mutate({ page, moduleName })}
       onUpdate={() =>
         pageInCanvas &&
         updatePageInCanvas.mutate({
           page,
-          canvasPageId: pageInCanvas.page_id,
+          canvasPage: pageInCanvas,
+          moduleName,
         })
       }
       extraActions={extraActions}

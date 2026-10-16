@@ -54,7 +54,7 @@ describe("AssignmentHtmlTest", () => {
     });
 
     expect(html).toContain(
-      `href="https://classroom50.org/my-org/my-class/assignments/my-slug"`
+      `href="https://classroom50.org/my-org/my-class/assignments/my-slug/accept"`
     );
   });
 
@@ -74,7 +74,7 @@ describe("AssignmentHtmlTest", () => {
     });
 
     expect(html).toContain(
-      `href="https://classroom50.org/my-org/my-class/assignments/my-slug"`
+      `href="https://classroom50.org/my-org/my-class/assignments/my-slug/accept"`
     );
   });
 
@@ -97,7 +97,7 @@ describe("AssignmentHtmlTest", () => {
     });
 
     expect(html).toContain(
-      `href="https://classroom.example.edu/my-org/my-class/assignments/my-slug"`
+      `href="https://classroom.example.edu/my-org/my-class/assignments/my-slug/accept"`
     );
   });
 

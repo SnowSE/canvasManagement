@@ -66,6 +66,13 @@ function localAnswerLines(
         (a) =>
           `[${a.blank_id}] ${correctMark(Number(a.answer_weight) > 0)}${plainText(String(a.answer_text ?? ""))}`,
       );
+    // Canvas keeps only the text of a short answer, and markdown would read
+    // an answer like "+" as a list or "a*b*c" as emphasis
+    case QuestionType.SHORT_ANSWER_WITH_ANSWERS:
+      return sent.map(
+        (a) =>
+          `${correctMark(Number(a.answer_weight) > 0)}${String(a.answer_text ?? "")}`,
+      );
     case QuestionType.NUMERICAL:
       return sent.map((a) =>
         a.numerical_answer_type === "range_answer"
@@ -102,6 +109,8 @@ function canvasAnswerLines(question: CanvasQuizQuestion): string[] {
         (a) =>
           `[${a.blank_id}] ${correctMark(a.weight > 0)}${plainText(a.text)}`,
       );
+    case "short_answer_question":
+      return answers.map((a) => `${correctMark(a.weight > 0)}${a.text}`);
     case "numerical_question":
       return answers.map((a) =>
         a.numerical_answer_type === "range_answer"
@@ -115,6 +124,12 @@ function canvasAnswerLines(question: CanvasQuizQuestion): string[] {
   }
 }
 
+/** `lines` lined up with `order`; lines not in it go last. */
+const inOrderOf = (order: string[], lines: string[]) =>
+  [...lines].sort(
+    (a, b) => (order.indexOf(a) >>> 0) - (order.indexOf(b) >>> 0),
+  );
+
 interface Aspect {
   name: string;
   local: string;
@@ -126,6 +141,7 @@ function compareQuestion(
   question: LocalQuizQuestion,
   canvasQuestion: CanvasQuizQuestion,
   settings: LocalCourseSettings,
+  ignoreAnswerOrder: boolean,
 ): Aspect[] {
   const localHtml = markdownToHTMLSafe({
     markdownString: getQuestionTextForCanvas(question),
@@ -133,7 +149,9 @@ function compareQuestion(
   });
   const localType = getQuestionTypeForCanvas(question);
   const localAnswers = localAnswerLines(question, settings);
-  const canvasAnswers = canvasAnswerLines(canvasQuestion);
+  const canvasAnswers = ignoreAnswerOrder
+    ? inOrderOf(localAnswers, canvasAnswerLines(canvasQuestion))
+    : canvasAnswerLines(canvasQuestion);
   const feedback = (correct?: string, incorrect?: string, neutral?: string) =>
     [
       correct && `+ ${plainText(correct)}`,
@@ -168,8 +186,8 @@ function compareQuestion(
     },
     {
       name: "text",
-      local: excerpt(plainText(localHtml), 200),
-      canvas: excerpt(plainText(canvasQuestion.question_text), 200),
+      local: plainText(localHtml),
+      canvas: plainText(canvasQuestion.question_text),
       same:
         removeHtmlDetails(localHtml) ===
         removeHtmlDetails(canvasQuestion.question_text ?? ""),
@@ -330,6 +348,8 @@ export function checkQuizQuestions(
   questions: LocalQuizQuestion[],
   canvasQuestions: CanvasQuizQuestion[],
   settings: LocalCourseSettings,
+  /** For a student's attempt, which stores its own shuffle of the answers. */
+  { ignoreAnswerOrder = false } = {},
 ): SyncField[] {
   const localHtml = questions.map((question) =>
     markdownToHTMLSafe({
@@ -383,6 +403,7 @@ export function checkQuizQuestions(
       question,
       canvasQuestions[row.canvas],
       settings,
+      ignoreAnswerOrder,
     );
     if ("moved" in row && row.moved)
       aspects.unshift({
@@ -393,17 +414,57 @@ export function checkQuizQuestions(
       });
     const different = aspects.filter((a) => !a.same);
     const label = `Question ${number} · ${typeLabel(getQuestionTypeForCanvas(question))}`;
-    if (different.length === 0) {
-      const text = aspects.find((a) => a.name === "text")!.local;
-      return { ...base, label, local: text, canvas: text, same: true, message: "" };
-    }
     return {
       ...base,
       label,
-      local: different.map((a) => `${a.name}: ${a.local}`).join("\n"),
-      canvas: different.map((a) => `${a.name}: ${a.canvas}`).join("\n"),
-      same: false,
-      message: `question ${number} ${different.map((a) => a.name).join(", ")} different`,
+      local: wholeQuestion(aspects, "local"),
+      canvas: wholeQuestion(aspects, "canvas"),
+      same: different.length === 0,
+      message:
+        different.length === 0
+          ? ""
+          : `question ${number} ${different.map((a) => a.name).join(", ")} different`,
     };
   });
+}
+
+/**
+ * The whole question, one side of it: type and points, text, answers and
+ * feedback, with "≠ " before the lines of each part that differs.
+ */
+function wholeQuestion(aspects: Aspect[], side: "local" | "canvas") {
+  const part = (name: string) => aspects.find((a) => a.name === name)!;
+  const lines = (aspect: Aspect, value = aspect[side]) =>
+    value === UNSET
+      ? []
+      : value.split("\n").map((line) => (aspect.same ? line : `≠ ${line}`));
+  const type = part("type");
+  const points = part("points");
+  const header = `type: ${type[side]} · points: ${points[side]}`;
+  const position = aspects.find((a) => a.name === "position");
+  return [
+    ...(position ? [`≠ position: ${position[side]}`] : []),
+    type.same && points.same ? header : `≠ ${header}`,
+    ...lines(part("text")),
+    ...lines(part("answers")),
+    ...lines(part("feedback")),
+  ].join("\n");
+}
+
+/**
+ * Why updating would be wrong for students who already started, or
+ * undefined: their scores are out of the total they were given, so changing
+ * it needs a regrade, which the API can't do.
+ */
+export function pointTotalChangeError(
+  questions: LocalQuizQuestion[],
+  studentsGot: CanvasQuizQuestion[],
+): string | undefined {
+  const fileTotal = questions.reduce((sum, q) => sum + q.points, 0);
+  const studentsTotal = studentsGot.reduce(
+    (sum, q) => sum + (q.points_possible ?? 0),
+    0,
+  );
+  if (fileTotal === studentsTotal) return undefined;
+  return `Students who started were scored out of ${studentsTotal} points, and the file's questions total ${fileTotal}. Changing the total needs a regrade in Canvas, so the quiz was not updated.`;
 }

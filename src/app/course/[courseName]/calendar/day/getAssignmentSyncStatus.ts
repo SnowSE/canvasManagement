@@ -35,12 +35,14 @@ export interface RosterForStatus {
 }
 
 export type SyncSection =
+  | "modules"
   | "dates"
   | "grading"
   | "groups"
   | "schedule"
   | "rubric"
   | "questions"
+  | "options"
   | "description";
 
 /** One compared setting: what the file says, what Canvas has, and whether they agree. */
@@ -79,7 +81,7 @@ export type ItemSyncStatus = {
 export interface SyncReport extends ItemSyncStatus {
   /** Every compared field, matching or not, in display order. */
   fields: SyncField[];
-  /** Rendered file markdown vs the Canvas description; assignments and quizzes only. */
+  /** Rendered file markdown vs the Canvas description or page body. */
   description?: SyncDescription;
 }
 
@@ -620,6 +622,7 @@ function checkQuiz(
     settings,
   );
   if (group) fields.push(group);
+  fields.push(...checkQuizOptions(quiz, canvasQuiz));
   const description = checkDescription(
     () =>
       markdownToHTMLSafe({
@@ -631,6 +634,30 @@ function checkQuiz(
   );
   fields.push(description.field);
   return { fields, description: description.description };
+}
+
+/** The quiz settings Update in Canvas sends besides dates, group and description. */
+function checkQuizOptions(quiz: LocalQuiz, canvasQuiz: CanvasQuiz): SyncField[] {
+  const yesNo = (value?: boolean) => (value ? "yes" : "no");
+  const attempts = (value: number) => (value === -1 ? "unlimited" : String(value));
+  const options: [key: string, label: string, local: string, canvas: string][] = [
+    ["password", "Password", quiz.password || UNSET, canvasQuiz.access_code || UNSET],
+    ["shuffleAnswers", "Shuffle answers", yesNo(quiz.shuffleAnswers), yesNo(canvasQuiz.shuffle_answers)],
+    ["showCorrectAnswers", "Show correct answers", yesNo(quiz.showCorrectAnswers), yesNo(canvasQuiz.show_correct_answers)],
+    ["oneQuestionAtATime", "One question at a time", yesNo(quiz.oneQuestionAtATime), yesNo(canvasQuiz.one_question_at_a_time)],
+    ["allowedAttempts", "Allowed attempts", attempts(quiz.allowedAttempts), attempts(canvasQuiz.allowed_attempts)],
+  ];
+  return options.map(([key, label, local, canvas]) =>
+    field({
+      key,
+      label,
+      section: "options",
+      local,
+      canvas,
+      same: local === canvas,
+      message: `${label.toLowerCase()} different: ${local} vs ${canvas}`,
+    }),
+  );
 }
 
 function buildReport(
@@ -652,6 +679,26 @@ function buildReport(
 }
 
 /**
+ * The file's module folder against the Canvas modules holding the item: a
+ * file is in one folder, so Canvas should have the item in that module only.
+ */
+function checkModules(file: string, canvasModules: string[]): SyncField {
+  const canvas = [...new Set(canvasModules)].sort();
+  return field({
+    key: "modules",
+    label: "Modules",
+    section: "modules",
+    local: file,
+    canvas: canvas.join(", ") || UNSET,
+    same: canvas.length === 1 && canvas[0] === file,
+    message:
+      canvas.length > 0
+        ? `modules different: ${file} vs ${canvas.join(", ")}`
+        : "not in a module in canvas",
+  });
+}
+
+/**
  * Compares a local item with its Canvas copy field by field. `status` and
  * `message` drive the calendar border and tooltip; `fields` and `description`
  * feed the compare page.
@@ -664,6 +711,7 @@ export function getSyncReport({
   canvasLinkTargets,
   roster,
   canvasQuestions,
+  module,
 }: {
   item: LocalQuiz | LocalAssignment | LocalCoursePage;
   canvasItem: CanvasQuiz | CanvasAssignment | CanvasPage | undefined;
@@ -673,6 +721,8 @@ export function getSyncReport({
   roster?: RosterForStatus;
   /** A quiz's questions in Canvas; without them only its settings are compared. */
   canvasQuestions?: CanvasQuizQuestion[];
+  /** The file's module and the Canvas modules holding the item; without them the module is not compared. */
+  module?: { file: string; canvas: string[] };
 }): SyncReport {
   if (!canvasItem)
     return {
@@ -682,9 +732,24 @@ export function getSyncReport({
       fields: [],
     };
 
-  const fields: SyncField[] = [];
+  const fields: SyncField[] = module
+    ? [checkModules(module.file, module.canvas)]
+    : [];
 
-  if (type === "page") return buildReport(fields, canvasItem.published);
+  if (type === "page") {
+    const page = item as LocalCoursePage;
+    const description = checkDescription(
+      () =>
+        markdownToHTMLSafe({
+          markdownString: page.text,
+          settings,
+          canvasLinkTargets,
+        }),
+      (canvasItem as CanvasPage).body,
+    );
+    fields.push(description.field);
+    return buildReport(fields, canvasItem.published, description.description);
+  }
 
   const checked =
     type === "quiz"

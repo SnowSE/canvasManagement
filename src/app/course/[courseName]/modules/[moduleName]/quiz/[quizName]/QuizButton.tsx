@@ -2,6 +2,7 @@ import {
   EditorFooter,
   FooterAction,
 } from "@/app/course/[courseName]/EditorFooter";
+import { useCanvasModuleNames } from "@/features/canvas/hooks/canvasModuleHooks";
 import { getSyncReport } from "@/app/course/[courseName]/calendar/day/getAssignmentSyncStatus";
 import { TrashIcon } from "@/components/icons/ActionIcons";
 import { useCanvasAssignmentsQuery } from "@/features/canvas/hooks/canvasAssignmentHooks";
@@ -53,6 +54,7 @@ export function QuizButtons({
   );
 
   const quizInCanvas = canvasQuizzes?.find((c) => c.title === quizName);
+  const { names: canvasModules } = useCanvasModuleNames("quiz", quizInCanvas);
   const { data: canvasQuestions } = useCanvasQuizQuestionsQuery(
     quizInCanvas?.id,
   );
@@ -70,12 +72,15 @@ export function QuizButtons({
               quizzes: canvasQuizzes,
             },
             canvasQuestions,
+            module: canvasModules && { file: moduleName, canvas: canvasModules },
           }).differences
         : [],
     [
       canvasAssignments,
+      canvasModules,
       canvasQuestions,
       canvasQuizzes,
+      moduleName,
       quiz,
       quizInCanvas,
       settings,
@@ -128,9 +133,13 @@ export function QuizButtons({
       onAdd={() => addToCanvas.mutate({ quiz, moduleName })}
       onUpdate={() =>
         quizInCanvas &&
-        updateInCanvas.mutate({ quiz, canvasQuizId: quizInCanvas.id })
+        updateInCanvas.mutate({
+          quiz,
+          canvasQuizId: quizInCanvas.id,
+          moduleName,
+        })
       }
-      updateTitle="Pushes settings and replaces the questions in Canvas with the file's. On a published quiz, click Save it now in Canvas afterwards so students get them. Warns first if students have started."
+      updateTitle="Pushes settings, moves the quiz to this file's module and, if any question differs, replaces the questions in Canvas with the file's. If it replaced them on a published quiz, click Save it now in Canvas afterwards so students get them. Warns first if students have started."
       extraActions={extraActions}
       toggleHelp={toggleHelp}
       previousUrl={previousUrl}

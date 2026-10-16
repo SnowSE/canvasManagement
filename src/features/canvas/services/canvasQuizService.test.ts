@@ -487,7 +487,10 @@ describe("canvasQuizService", () => {
       ],
     } as unknown as LocalQuiz;
 
-    const updateWithCanvasPublished = async (published: boolean) => {
+    const updateWithCanvasPublished = async (
+      published: boolean,
+      questionsMatch = false,
+    ) => {
       const { axiosClient } = await import("@/services/axiosUtils");
       const { rateLimitAwarePost, rateLimitAwareDelete } = await import(
         "./canvasWebRequestUtils"
@@ -503,6 +506,7 @@ describe("canvasQuizService", () => {
 
       const summary = await canvasQuizService.update(42, 7, quiz, {} as never, {
         onStep: (step) => steps.push(step),
+        questionsMatch: () => questionsMatch,
       });
       return { summary, steps, axiosClient, rateLimitAwarePost, rateLimitAwareDelete };
     };
@@ -530,10 +534,30 @@ describe("canvasQuizService", () => {
 
       expect(vi.mocked(axiosClient.put).mock.calls).toHaveLength(1);
       expect(summary).toEqual({
+        questionsReplaced: true,
         questionsRemoved: 3,
         questionsAdded: 2,
         needsSaveInCanvas: true,
       });
+    });
+
+    it("leaves the questions alone when they already match the file", async () => {
+      const { summary, steps, rateLimitAwarePost, rateLimitAwareDelete } =
+        await updateWithCanvasPublished(true, true);
+
+      expect(rateLimitAwareDelete).not.toHaveBeenCalled();
+      expect(rateLimitAwarePost).not.toHaveBeenCalled();
+      // so a published quiz doesn't need Save it now after a settings change
+      expect(summary).toEqual({
+        questionsReplaced: false,
+        questionsRemoved: 0,
+        questionsAdded: 0,
+        needsSaveInCanvas: false,
+      });
+      expect(steps).toEqual([
+        "Updating quiz settings",
+        "Questions already match the file",
+      ]);
     });
 
     it("needs nothing more for an unpublished quiz", async () => {
@@ -553,17 +577,47 @@ describe("canvasQuizService", () => {
     });
   });
 
-  describe("countSubmissions", () => {
-    it("counts real attempts, not students who only have settings like extra time", async () => {
+  describe("getVersionsTaken", () => {
+    it("groups real attempts by quiz version, newest first, with one attempt to read", async () => {
       const { paginatedRequest } = await import("./canvasServiceUtils");
       vi.mocked(paginatedRequest).mockResolvedValue([
-        { quiz_submissions: [{ workflow_state: "complete" }, { workflow_state: "settings_only" }] },
-        { quiz_submissions: [{ workflow_state: "untaken" }] },
+        {
+          quiz_submissions: [
+            { id: 1, quiz_version: 2, workflow_state: "complete" },
+            { id: 2, quiz_version: 3, workflow_state: "untaken" },
+            { id: 3, quiz_version: 2, workflow_state: "complete" },
+            { id: 4, quiz_version: 4, workflow_state: "settings_only" },
+          ],
+        },
       ]);
 
-      expect(await canvasQuizService.countSubmissions(42, 7)).toBe(2);
+      expect(await canvasQuizService.getVersionsTaken(42, 7)).toEqual([
+        { version: 3, attempts: 1, attemptId: 2 },
+        { version: 2, attempts: 2, attemptId: 1 },
+      ]);
     });
   });
+
+  describe("getAttemptQuestions", () => {
+    it("returns the attempt's questions in quiz order", async () => {
+      const { axiosClient } = await import("@/services/axiosUtils");
+      vi.mocked(axiosClient.get).mockResolvedValue({
+        data: {
+          quiz_submission_questions: [
+            { id: 11, position: 2 },
+            { id: 10, position: 1 },
+          ],
+        },
+      });
+
+      const questions = await canvasQuizService.getAttemptQuestions(5);
+      expect(vi.mocked(axiosClient.get).mock.calls[0][0]).toBe(
+        "https://test.instructure.com/api/v1/quiz_submissions/5/questions",
+      );
+      expect(questions.map((q) => q.id)).toEqual([10, 11]);
+    });
+  });
+
 });
 
 const dropdownAnswersForCanvas = (question: LocalQuizQuestion) =>

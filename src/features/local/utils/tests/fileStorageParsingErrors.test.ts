@@ -7,16 +7,11 @@ import { createModuleFile } from "@/features/local/modules/moduleRouter";
 
 describe("FileStorageTests", () => {
   beforeEach(async () => {
-    const storageDirectory =
-      process.env.STORAGE_DIRECTORY ?? "/tmp/canvasManagerTests";
     process.env.GLOBAL_SETTINGS = `courses:
       - path: testCourse
         name: testCourse`;
-    // only clean this file's course folder, other test files share the storage root
-    try {
-      await fs.rm(`${storageDirectory}/testCourse`, { recursive: true });
-    } catch {}
-    await fs.mkdir(storageDirectory, { recursive: true });
+    await fs.rm(basePath, { recursive: true, force: true });
+    await fs.mkdir(basePath, { recursive: true });
   });
 
   it("invalid quizzes do not get loaded", async () => {
@@ -147,5 +142,51 @@ DueDateFo59:00
 
     expect(assignmentNames).include("validPage");
     expect(assignmentNames).not.includes("invalidPage");
+  });
+
+  it("only .md files are items", async () => {
+    const courseName = "testCourse";
+    const moduleName = "testModule";
+    await fileStorageService.createCourseFolderForTesting(courseName);
+    await createModuleFile(courseName, moduleName);
+    const pages = `${basePath}/${courseName}/${moduleName}/pages`;
+    await fs.mkdir(pages, { recursive: true });
+    await fs.writeFile(
+      `${pages}/validPage.md`,
+      "Name: validPage\nDueDateForOrdering: 08/31/2024 23:59:00\n---\n# Hi\n",
+    );
+    await fs.writeFile(`${pages}/validPage.md.tmp.123.abc`, "partial save");
+    await fs.writeFile(`${pages}/placeholder.txt`, "");
+
+    const names = (
+      await courseItemFileStorageService.getItems({
+        courseName,
+        moduleName,
+        type: "Page",
+      })
+    ).map((p) => p.name);
+    const invalid = await courseItemFileStorageService.getInvalidItems({
+      courseName,
+      moduleName,
+    });
+
+    expect(names).toEqual(["validPage"]);
+    expect(invalid).toEqual([]);
+  });
+
+  it("a missing folder lists no items and is not created", async () => {
+    const courseName = "testCourse";
+    await fileStorageService.createCourseFolderForTesting(courseName);
+
+    const items = await courseItemFileStorageService.getItems({
+      courseName,
+      moduleName: "renamedAway",
+      type: "Assignment",
+    });
+
+    expect(items).toEqual([]);
+    await expect(
+      fs.access(`${basePath}/${courseName}/renamedAway`),
+    ).rejects.toThrow();
   });
 });

@@ -91,7 +91,7 @@ export const useCourseQuizzesByModuleByDateQuery = () => {
   return quizzesByModuleByDate;
 };
 
-export const useCoursePagesByModuleByDateQuery = () => {
+export const useCoursePagesQuery = () => {
   const { courseName } = useCourseContext();
   const { data: moduleNames } = useModuleNamesQuery();
   const trpc = useTRPC();
@@ -100,12 +100,13 @@ export const useCoursePagesByModuleByDateQuery = () => {
       trpc.page.getAllPages.queryOptions({ courseName, moduleName }),
     ),
   });
-  const pages = pagesResults.map((result) => result.data ?? []);
-  const pagesAndModules = moduleNames.flatMap(
-    (moduleName: string, index: number) => {
-      return pages[index].map((page) => ({ moduleName, page }));
-    },
+  return moduleNames.flatMap((moduleName: string, index: number) =>
+    (pagesResults[index].data ?? []).map((page) => ({ moduleName, page })),
   );
+};
+
+export const useCoursePagesByModuleByDateQuery = () => {
+  const pagesAndModules = useCoursePagesQuery();
   const pagesByModuleByDate = pagesAndModules.reduce(
     (previous, { page, moduleName }) => {
       const dueDay = getDateOnlyMarkdownString(

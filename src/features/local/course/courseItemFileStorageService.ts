@@ -35,15 +35,14 @@ const getItemFileNames = async ({
   const courseDirectory = await getCoursePathByName(courseName);
   const folder = typeToFolder[type];
   const filePath = path.join(courseDirectory, moduleName, folder);
-  if (!(await directoryOrFileExists(filePath))) {
-    console.log(
-      `Error loading ${type}, ${folder} folder does not exist in ${filePath}`,
-    );
-    await fs.mkdir(filePath);
-  }
+  // a module may have no folder for this type, or may have just been renamed
+  if (!(await directoryOrFileExists(filePath))) return [];
 
+  // other files (temp files from an editor saving, placeholders) aren't items
   const itemFiles = await fs.readdir(filePath);
-  return itemFiles.map((f) => f.replace(/\.md$/, ""));
+  return itemFiles
+    .filter((f) => f.endsWith(".md"))
+    .map((f) => f.replace(/\.md$/, ""));
 };
 
 const getItem = async <T extends CourseItemType>({
