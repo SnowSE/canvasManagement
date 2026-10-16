@@ -11,12 +11,18 @@ export function textFragmentOf(url: string) {
   return start && decodeURIComponent(start);
 }
 
-/** The innermost element under `root` whose own text contains `text`. */
+/** Where `text` first appears under `root`, ignoring case. */
 export function findText(root: Element, text: string) {
   const wanted = text.toLowerCase();
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-  for (let node = walker.nextNode(); node; node = walker.nextNode())
-    if (node.textContent?.toLowerCase().includes(wanted)) return node.parentElement ?? undefined;
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const at = node.textContent?.toLowerCase().indexOf(wanted) ?? -1;
+    if (at < 0) continue;
+    const range = document.createRange();
+    range.setStart(node, at);
+    range.setEnd(node, at + text.length);
+    return range;
+  }
   return undefined;
 }
 
@@ -32,8 +38,20 @@ let pending =
 export function scrollToOpeningTextFragment(root: Element) {
   if (!pending || new URL(pending).pathname !== location.pathname) return;
   const text = textFragmentOf(pending);
-  const target = text && findText(root, text);
-  if (!target) return;
+  const found = text && findText(root, text);
+  if (!found) return;
   pending = undefined;
-  target.scrollIntoView({ block: "start" });
+  // the text can sit deep inside one long element (a whole code block), so
+  // scroll to a mark at the text itself rather than to its element
+  const mark = document.createElement("span");
+  found.insertNode(mark);
+  mark.scrollIntoView({ block: "center" });
+  mark.remove();
+  root.normalize();
+  const selection = getSelection();
+  const shown = findText(root, text);
+  if (selection && shown) {
+    selection.removeAllRanges();
+    selection.addRange(shown);
+  }
 }

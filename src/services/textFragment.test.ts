@@ -16,11 +16,21 @@ describe("textFragmentOf", () => {
 });
 
 describe("findText", () => {
-  it("finds the element holding the text, ignoring case", () => {
+  it("finds the text itself, ignoring case", () => {
     const root = document.createElement("div");
     root.innerHTML = "<h2>§4.3 Lists</h2><h2>§4.4 Maps</h2>";
 
-    expect(findText(root, "§4.4 maps")?.textContent).toBe("§4.4 Maps");
+    const found = findText(root, "§4.4 maps");
+    expect(found?.toString()).toBe("§4.4 Maps");
+    expect(found?.startContainer.parentElement?.tagName).toBe("H2");
+  });
+
+  it("finds it partway through one long element, like a code block", () => {
+    const root = document.createElement("div");
+    root.innerHTML = "<pre><code>// §1\nint x;\n// §4.4 foreach\n</code></pre>";
+
+    const found = findText(root, "§4.4");
+    expect(found?.startOffset).toBe("// §1\nint x;\n// ".length);
   });
 
   it("is undefined when the text isn't there", () => {
