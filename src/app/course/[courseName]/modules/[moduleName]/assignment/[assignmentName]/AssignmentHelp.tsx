@@ -16,6 +16,7 @@ import {
   ImagesHelp,
   MarkdownBasicsHelp,
   MathHelp,
+  ListTableHelp,
   MermaidHelp,
 } from "@/components/editor/help/MarkdownHelpSections";
 
@@ -237,6 +238,7 @@ Classroom50Slug: my-assignment-slug
 
       <ImagesHelp />
       <MathHelp />
+      <ListTableHelp />
       <MermaidHelp />
       <EncodedBlocksHelp />
 

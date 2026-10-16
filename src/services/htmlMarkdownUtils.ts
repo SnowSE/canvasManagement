@@ -5,6 +5,7 @@ import markedKatex from "marked-katex-extension";
 import pako from "pako";
 import { LocalCourseSettings } from "@/features/local/course/localCourseSettings";
 import { CanvasLinkTargets, resolveRelativeMdHrefsForCanvas } from "./urlUtils";
+import { listTableExtension } from "./listTable";
 
 // Deflated and base64url encoded, which is what mermaid.ink expects.
 export function pakoDeflateBase64Url(raw: string) {
@@ -68,7 +69,7 @@ marked.use(
   })
 );
 
-marked.use({ extensions: [mermaidExtension] });
+marked.use({ extensions: [mermaidExtension, listTableExtension] });
 
 // We use a custom renderer instead of a regex replace because regex is too aggressive.
 // It would add scope="col" to raw HTML tables (which we want to leave alone).
