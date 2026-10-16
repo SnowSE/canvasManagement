@@ -7,12 +7,16 @@ export interface LocalCoursePage extends IModuleItem {
   name: string;
   text: string;
   dueAt: string;
+  // on update, true puts the page on the course front page and false takes
+  // it off; left out, the front page isn't touched
+  addToHome?: boolean;
 }
 
 export const zodLocalCoursePage = z.object({
   name: z.string(),
   text: z.string().describe("Page content in markdown or HTML"),
   dueAt: z.string().describe("Date used for ordering the page"),
+  addToHome: z.boolean().optional(),
 });
 
 export const localPageMarkdownUtils = {
@@ -21,7 +25,10 @@ export const localPageMarkdownUtils = {
       page.dueAt,
       "page DueDateForOrdering",
     );
-    const settingsMarkdown = `DueDateForOrdering: ${printableDueDate}\n---\n`;
+    const settingsMarkdown =
+      `DueDateForOrdering: ${printableDueDate}\n` +
+      (page.addToHome === undefined ? "" : `AddToHome: ${page.addToHome}\n`) +
+      "---\n";
     return settingsMarkdown + page.text;
   },
 
@@ -35,10 +42,12 @@ export const localPageMarkdownUtils = {
     // delimiter -- everything else belongs to the body and must be kept.
     const text = pageMarkdown.split("---\n").slice(1).join("---\n");
 
+    const addToHome = extractLabelValue(rawSettings, "AddToHome");
     const page: LocalCoursePage = {
       name,
       dueAt,
       text,
+      ...(addToHome && { addToHome: addToHome === "true" }),
     };
     return page;
   },

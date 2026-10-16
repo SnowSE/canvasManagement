@@ -12,6 +12,7 @@ import {
   useCanvasPagesQuery,
   useCreateCanvasPageMutation,
   useDeleteCanvasPageMutation,
+  useUpdateCanvasPageMutation,
   canvasPageKeys,
 } from "@/features/canvas/hooks/canvasPageHooks";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
@@ -47,6 +48,7 @@ export const PageDayItemContextMenu: FC<{
   const deleteLocalMutation = useDeletePageMutation();
   const addToCanvasMutation = useCreateCanvasPageMutation();
   const deleteFromCanvasMutation = useDeleteCanvasPageMutation();
+  const updateInCanvasMutation = useUpdateCanvasPageMutation();
   const { data: canvasPages } = useCanvasPagesQuery();
   const { data: settings } = useLocalCourseSettingsQuery();
 
@@ -112,6 +114,19 @@ export const PageDayItemContextMenu: FC<{
       pageName: item.name,
     });
     handleClose();
+  };
+
+  const handleUpdateCanvas = () => {
+    if (pageInCanvas) {
+      updateInCanvasMutation.mutate({
+        page: item as LocalCoursePage,
+        canvasPage: pageInCanvas,
+        moduleName,
+      });
+      // the update puts Canvas's copy in the cache itself, so skip
+      // handleClose's repeated re-downloads of every page
+      modalControl.closeModal();
+    }
   };
 
   const handleDeleteFromCanvas = () => {
@@ -206,6 +221,13 @@ export const PageDayItemContextMenu: FC<{
                     >
                       View in Canvas
                     </a>
+                    <button
+                      onClick={handleUpdateCanvas}
+                      disabled={updateInCanvasMutation.isPending}
+                      className={`unstyled ${baseButtonClasses} ${normalButtonClass}`}
+                    >
+                      Update in Canvas
+                    </button>
                     <PublishInCanvasButton
                       type="page"
                       canvasItemId={pageInCanvas.page_id}

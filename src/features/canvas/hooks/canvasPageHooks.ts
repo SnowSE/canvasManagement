@@ -6,6 +6,7 @@ import {
 } from "./canvasModuleHooks";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import { canvasPageService } from "../services/canvasPageService";
+import { CanvasPage } from "../models/pages/canvasPageModel";
 import { useCanvasLinkTargets } from "./useCanvasLinkTargets";
 import { useCommitAfterPublish } from "@/features/local/git/gitHooks";
 import { usePrepareImagesForCanvas } from "./usePrepareImagesForCanvas";
@@ -85,7 +86,7 @@ export const useUpdateCanvasPageMutation = () => {
       canvasPage: { page_id: number; url: string };
       moduleName: string;
     }) => {
-      await canvasPageService.update(
+      const updated = await canvasPageService.update(
         settings.canvasId,
         canvasPage,
         page,
@@ -98,15 +99,23 @@ export const useUpdateCanvasPageMutation = () => {
         title: page.name,
         pageUrl: canvasPage.url,
       });
+      return updated;
     },
-    onSuccess: (_data, variables) => {
+    onSuccess: (updated, variables) => {
       commitAfterPublish(`page "${variables.page.name}"`);
-      queryClient.invalidateQueries({
-        queryKey: canvasPageKeys.pagesInCourse(settings.canvasId),
-      });
+      // Canvas answered with the pages as it stored them: put those in the
+      // cached list instead of downloading every page in the course again
+      queryClient.setQueryData<CanvasPage[]>(
+        canvasPageKeys.pagesInCourse(settings.canvasId),
+        (pages) => pages && withReplaced(pages, updated)
+      );
     },
   });
 };
+
+/** `pages` with each of `updated` in place of the page it replaces. */
+export const withReplaced = (pages: CanvasPage[], updated: CanvasPage[]) =>
+  pages.map((p) => updated.find((u) => u.page_id === p.page_id) ?? p);
 
 export const useDeleteCanvasPageMutation = () => {
   const { data: settings } = useLocalCourseSettingsQuery();

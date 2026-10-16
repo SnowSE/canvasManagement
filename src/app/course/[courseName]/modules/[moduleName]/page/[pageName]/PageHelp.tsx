@@ -21,7 +21,7 @@ export function PageHelp() {
     <HelpPanel>
       <HelpSection title="File layout">
         <P>
-          One setting, then a <C>---</C> line, then the page in markdown.{" "}
+          Settings, then a <C>---</C> line, then the page in markdown.{" "}
           <C>DueDateForOrdering</C> only decides where the page sits on the
           calendar and in its module.
         </P>
@@ -32,6 +32,18 @@ DueDateForOrdering: 08/26/2026 23:59:00
 # Course schedule
 
 What students should read, in markdown.
+`}</Example>
+        <P>
+          <C>AddToHome: true</C> (optional) puts the page on the course home
+          page each time you update it: in its marker{" "}
+          <C>{'<div id="embed-<page address>"></div>'}</C> if the home page
+          has one, otherwise at the end. <C>AddToHome: false</C> empties that
+          spot.
+        </P>
+        <Example>{`
+DueDateForOrdering: 08/26/2026 23:59:00
+AddToHome: true
+---
 `}</Example>
       </HelpSection>
 

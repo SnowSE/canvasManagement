@@ -22,6 +22,7 @@ const booleanKeys = new Set([
   "ShuffleAnswers",
   "ShowCorrectAnswers",
   "OneQuestionAtATime",
+  "AddToHome",
 ]);
 
 const commonUploadTypes = ["pdf", "jpg", "jpeg", "png", "zip", "docx", "txt", "md"];
@@ -57,6 +58,7 @@ const keySuggestions: Record<
   ],
   page: [
     { key: "DueDateForOrdering", insert: "DueDateForOrdering: ", opensList: false, detail: "" },
+    { key: "AddToHome", insert: "AddToHome: ", opensList: true, detail: "show it on the course home page" },
   ],
 };
 
