@@ -82,6 +82,84 @@ or pass them one command at a time:
 DOCKER_UID=$(id -u) DOCKER_GID=$(id -g) docker compose up
 ```
 
+### GitHub token (`GH_TOKEN`)
+
+A GitHub token is optional. You only need one for:
+
+- the Classroom 50 (GitHub Classroom) buttons in course settings, and
+- pulling and pushing a course repo that lives on GitHub (see [Git](#git)).
+
+These run `gh` and `git` on the server, inside the container, so the token has
+to be in the container's environment. Running `gh auth login` on your own
+machine does nothing for them.
+
+To get one:
+
+1. Open
+   [github.com/settings/tokens/new?scopes=admin:org,repo,workflow](https://github.com/settings/tokens/new?scopes=admin:org,repo,workflow&description=canvasManager%20classroom50).
+   This makes a classic personal access token with the scopes the app needs
+   already checked: `repo` for pulling and pushing, plus `admin:org` and
+   `workflow` for Classroom 50. If you only want git, `repo` is enough.
+2. Pick an expiration, click **Generate token** and copy it. GitHub shows it
+   only once.
+3. Put it in the same `.env` file as `CANVAS_TOKEN`, next to your
+   `docker-compose.yml`:
+
+   ```sh
+   # .env
+   CANVAS_TOKEN=paste-your-canvas-token-here
+   GH_TOKEN=ghp_...
+   ```
+
+4. Recreate the container. Environment variables are read only when the
+   container starts, so editing `.env` alone changes nothing:
+
+   ```sh
+   docker compose up -d --force-recreate
+   ```
+
+   (or run the [restart script](#restart-script) below).
+
+If the token expires or is revoked, the Classroom 50 settings page says GitHub
+rejected it; make a new one and repeat steps 3 and 4. Keep `.env` out of git:
+both tokens act as you.
+
+### Restart script
+
+A small script that waits for Docker, pulls the newest image and recreates the
+container saves typing, and is how you pick up an update when the
+[update banner](#update-indicator) appears or after you change `.env`. Save it
+as `restart.ps1` next to your `docker-compose.yml`:
+
+```powershell
+#!/usr/bin/env pwsh
+
+# Docker Desktop can take a while to start after a reboot or login
+Write-Host "Waiting for Docker..."
+while ($true) {
+    docker info *> $null
+    if ($LASTEXITCODE -eq 0) { break }
+    Write-Host "Docker not ready, retrying in 5s..."
+    Start-Sleep -Seconds 5
+}
+
+# run compose from the folder this script is in, wherever it is called from
+Set-Location $PSScriptRoot
+
+docker compose down
+docker compose pull
+docker compose up -d --remove-orphans
+```
+
+Run it with `./restart.ps1` (Linux or macOS with PowerShell 7 installed; run
+`chmod +x restart.ps1` once first) or `pwsh ./restart.ps1` on Windows. If
+Windows refuses to run scripts, use
+`powershell -ExecutionPolicy Bypass -File .\restart.ps1`.
+
+To start canvas manager automatically, run the script at login (Windows Task
+Scheduler, or a systemd user service on Linux), or add `restart: always` to the
+`canvas_manager` service in your compose file so Docker restarts it on its own.
+
 
 ## Enable Image Support
 
@@ -115,7 +193,8 @@ editor's footer menu has a File history page. The image has `git` installed.
 - Pull and push use the repository's remote. With `GH_TOKEN` set and no ssh
   key in the container's `~/.ssh`, GitHub remotes written as
   `git@github.com:...` are reached over https with that token through `gh`, so
-  the token needs write access to the repo.
+  the token needs write access to the repo. See
+  [GitHub token](#github-token-gh_token) for making one.
 - Pulls merge only when git can do it without a conflict; otherwise the merge
   is aborted and nothing changes. Nothing in the app rebases, resets or
   discards work.
@@ -141,8 +220,8 @@ Without `AI_BASE_URL` and `AI_MODEL` the button is disabled.
 
 The home page shows a banner when a newer image than the one you are running
 has been pushed to Docker Hub, with the list of commits that are in it. Nothing
-updates automatically; run your reset script (`docker compose pull && docker
-compose up -d`) when you want to pick it up.
+updates automatically; run your [restart script](#restart-script) (or
+`docker compose pull && docker compose up -d`) when you want to pick it up.
 
 How it works: `build.sh` bakes the git commit into the image (`GIT_SHA` env
 var and the `org.opencontainers.image.revision` label). Once an hour the server
