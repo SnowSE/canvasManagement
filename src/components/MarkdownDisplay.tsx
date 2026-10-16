@@ -8,6 +8,8 @@ import {
   resolveRelativeMdHrefsInHtml,
 } from "@/services/urlUtils";
 import { useCoursePagesQuery } from "@/features/local/modules/localCourseModuleHooks";
+import { scrollToOpeningTextFragment } from "@/services/textFragment";
+import { useEffect, useRef } from "react";
 
 export default function MarkdownDisplay({
   markdown,
@@ -72,8 +74,13 @@ function DangerousInnerMarkdown({
     settings.name,
     pages
   );
+  const preview = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (preview.current) scrollToOpeningTextFragment(preview.current);
+  }, [html]);
   return (
     <div
+      ref={preview}
       className={"markdownPreview " + className}
       dangerouslySetInnerHTML={{
         __html: resolveMdLinks
