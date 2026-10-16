@@ -26,7 +26,10 @@ const updateFrontPage = async (courseId: number, pageUrl: string, html?: string)
   const updated = html === undefined ? fillEmbed(body, pageUrl, "") : placeEmbed(body, pageUrl, html);
   if (updated === undefined || updated === body) return;
   console.log(`Updating ${pageUrl} on the front page`);
-  await axiosClient.put(frontPageUrl, { wiki_page: { body: updated } });
+  const { data } = await axiosClient.put<CanvasPage>(frontPageUrl, {
+    wiki_page: { body: updated },
+  });
+  return data;
 };
 
 export const canvasPageService = {
@@ -82,7 +85,7 @@ export const canvasPageService = {
     page: LocalCoursePage,
     settings: LocalCourseSettings,
     canvasLinkTargets?: CanvasLinkTargets
-  ): Promise<void> {
+  ): Promise<CanvasPage[]> {
     console.log(`Updating course page: ${page.name}`);
     const url = `${canvasApi}/courses/${courseId}/pages/${canvasPage.page_id}`;
     const html = markdownToHTMLSafe({
@@ -90,11 +93,14 @@ export const canvasPageService = {
       settings,
       canvasLinkTargets,
     });
-    await Promise.all([
-      axiosClient.put(url, { wiki_page: { title: page.name, body: html } }),
-      page.addToHome !== undefined &&
-        updateFrontPage(courseId, canvasPage.url, page.addToHome ? html : undefined),
+    const [{ data: updated }, frontPage] = await Promise.all([
+      axiosClient.put<CanvasPage>(url, { wiki_page: { title: page.name, body: html } }),
+      page.addToHome === undefined
+        ? undefined
+        : updateFrontPage(courseId, canvasPage.url, page.addToHome ? html : undefined),
     ]);
+    // the pages as Canvas stored them, so the cache can take them as they are
+    return frontPage ? [updated, frontPage] : [updated];
   },
 
   async publish(courseId: number, canvasPageId: number): Promise<void> {

@@ -36,7 +36,24 @@ const frontPageInCanvas = (front: { url: string; body: string } | "none") =>
 const putUrls = () => vi.mocked(axiosClient.put).mock.calls.map(([url]) => url);
 
 describe("updating a page", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(axiosClient.put).mockImplementation(async (url) => ({
+      data: { url, stored: true },
+    }));
+  });
+
+  it("returns the pages as Canvas stored them", async () => {
+    frontPageInCanvas({ url: "home", body: "<h2>Hi</h2>" });
+
+    expect(await canvasPageService.update(42, schedule, page, settings)).toEqual([
+      { url: `${api}/pages/7`, stored: true },
+    ]);
+    expect(await canvasPageService.update(42, schedule, embedded, settings)).toEqual([
+      { url: `${api}/pages/7`, stored: true },
+      { url: `${api}/front_page`, stored: true },
+    ]);
+  });
 
   it("fills its marker on the front page with AddToHome: true", async () => {
     frontPageInCanvas({ url: "home", body: '<h2>Hi</h2><div id="embed-course-schedule"></div>' });

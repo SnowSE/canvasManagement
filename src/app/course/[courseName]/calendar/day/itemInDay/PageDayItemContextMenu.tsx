@@ -123,7 +123,9 @@ export const PageDayItemContextMenu: FC<{
         canvasPage: pageInCanvas,
         moduleName,
       });
-      handleClose();
+      // the update puts Canvas's copy in the cache itself, so skip
+      // handleClose's repeated re-downloads of every page
+      modalControl.closeModal();
     }
   };
 
