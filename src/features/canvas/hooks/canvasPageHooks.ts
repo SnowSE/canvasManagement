@@ -86,19 +86,24 @@ export const useUpdateCanvasPageMutation = () => {
       canvasPage: { page_id: number; url: string };
       moduleName: string;
     }) => {
-      const updated = await canvasPageService.update(
-        settings.canvasId,
-        canvasPage,
-        page,
-        await prepareImages([page.text]),
-        canvasLinkTargets
-      );
-      await placeInModule(moduleName, {
-        type: "Page",
-        id: canvasPage.page_id,
-        title: page.name,
-        pageUrl: canvasPage.url,
-      });
+      const publishSettings = await prepareImages([page.text]);
+      // the module check doesn't depend on the page's content, so it runs
+      // while Canvas saves the page
+      const [updated] = await Promise.all([
+        canvasPageService.update(
+          settings.canvasId,
+          canvasPage,
+          page,
+          publishSettings,
+          canvasLinkTargets
+        ),
+        placeInModule(moduleName, {
+          type: "Page",
+          id: canvasPage.page_id,
+          title: page.name,
+          pageUrl: canvasPage.url,
+        }),
+      ]);
       return updated;
     },
     onSuccess: (updated, variables) => {
