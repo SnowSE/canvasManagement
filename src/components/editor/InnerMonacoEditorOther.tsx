@@ -18,6 +18,7 @@ import {
   LineContext,
 } from "./assist/frontmatterContext";
 import { DatePickerMode, EditorDatePicker } from "./EditorDatePicker";
+import { followPreviewClicks } from "./previewJump";
 import {
   dateToMarkdownString,
   getDateFromString,
@@ -159,6 +160,7 @@ export default function InnerMonacoEditorOther({
   ) {
     editorRef.current = ed;
     monacoRef.current = monaco;
+    followPreviewClicks(ed);
 
     if (!completionProviderRegistered) {
       completionProviderRegistered = true;

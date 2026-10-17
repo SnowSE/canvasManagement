@@ -71,6 +71,9 @@ export const ItemInDay: FC<{
         role="button"
         draggable="true"
         onDragStart={(e) => {
+          // the browser sends no mouseleave while dragging, so an open (or
+          // about to open) tooltip would sit over the days being dropped on
+          hideTooltip();
           const draggableItem: DraggableItem = {
             type,
             item,
