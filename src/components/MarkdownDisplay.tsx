@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import { SuspenseAndErrorHandling } from "./SuspenseAndErrorHandling";
 import { markdownToHTMLSafe } from "@/services/htmlMarkdownUtils";
@@ -10,6 +10,7 @@ import {
 } from "@/services/urlUtils";
 import { useCoursePagesQuery } from "@/features/local/modules/localCourseModuleHooks";
 import { useExplainBrokenImages } from "./useExplainBrokenImages";
+import { scrollToOpeningTextFragment } from "@/services/textFragment";
 
 export default function MarkdownDisplay({
   markdown,
@@ -82,6 +83,9 @@ function DangerousInnerMarkdown({
   const innerHtml = useMemo(() => ({ __html: finalHtml }), [finalHtml]);
   const ref = useRef<HTMLDivElement>(null);
   useExplainBrokenImages(ref, finalHtml);
+  useEffect(() => {
+    if (ref.current) scrollToOpeningTextFragment(ref.current);
+  }, [html]);
   return (
     <div
       ref={ref}

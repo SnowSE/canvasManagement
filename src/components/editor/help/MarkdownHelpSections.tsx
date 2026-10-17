@@ -72,6 +72,46 @@ $$
   );
 }
 
+// rendered by a test (listTable.test.ts), so it stays valid
+export const listTableExample = `
+<!-- table caption="Schedule" -->
+- Date: Wed 8/26
+  - Topic: Intro
+  - Due: —
+- Fri 8/28
+  - Scope and closures
+  - Lab 1
+- Mon 9/7
+  - Topic: *No class: Labor Day*
+`;
+
+export function ListTableHelp() {
+  return (
+    <HelpSection title="Tables from lists">
+      <P>
+        A bulleted list after <C>{"<!-- table -->"}</C> becomes a table that
+        fits any screen: on a wide one it is a table with the column names on
+        top; on a phone each row is a card with a name beside each value. A{" "}
+        <em>Show as a table</em> toggle above it holds a plain table either
+        way.
+      </P>
+      <Example>{listTableExample}</Example>
+      <P>
+        The first row names the columns: each of its values starts with a
+        label. Later rows give their values in the same order, without labels.
+        Start a value with a column&apos;s name to skip ahead to it, like{" "}
+        <C>Topic:</C> above. A value can be <C>—</C>, <C>-</C> or <C>n/a</C>{" "}
+        to leave it empty, and can run over several lines or hold its own
+        list.
+      </P>
+      <P>
+        <C>caption=</C> is optional and is the only setting. The look is built
+        in, so every table matches.
+      </P>
+    </HelpSection>
+  );
+}
+
 export function MermaidHelp() {
   return (
     <HelpSection title="Diagrams (Mermaid)">

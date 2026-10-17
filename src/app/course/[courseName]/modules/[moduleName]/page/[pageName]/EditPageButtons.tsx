@@ -30,9 +30,11 @@ import { useItemNavigation } from "../../../../hooks/useItemNavigation";
 export default function EditPageButtons({
   moduleName,
   pageName,
+  toggleHelp,
 }: {
   pageName: string;
   moduleName: string;
+  toggleHelp: () => void;
 }) {
   const navigate = useNavigate();
   const { courseName } = useCourseContext();
@@ -109,6 +111,7 @@ export default function EditPageButtons({
   return (
     <EditorFooter
       type="page"
+      toggleHelp={toggleHelp}
       name={pageName}
       moduleName={moduleName}
       canvasLoading={canvasPages === undefined}

@@ -19,6 +19,7 @@ import {
   ImagesHelp,
   MarkdownBasicsHelp,
   MathHelp,
+  ListTableHelp,
   MermaidHelp,
 } from "@/components/editor/help/MarkdownHelpSections";
 
@@ -332,6 +333,7 @@ b) An error
       <MarkdownBasicsHelp />
       <ImagesHelp />
       <MathHelp />
+      <ListTableHelp />
       <MermaidHelp />
       <EncodedBlocksHelp />
 

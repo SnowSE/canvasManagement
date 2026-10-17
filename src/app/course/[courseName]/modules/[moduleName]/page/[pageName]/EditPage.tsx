@@ -10,6 +10,7 @@ import { useAuthoritativeUpdates } from "@/app/course/[courseName]/utils/useAuth
 import EditPageHeader from "./EditPageHeader";
 import { UpdatePageName } from "./UpdatePageName";
 import { EditLayout } from "@/components/EditLayout";
+import { PageHelp } from "./PageHelp";
 import { localPageMarkdownUtils } from "@/features/local/pages/localCoursePageModels";
 import {
   usePageQuery,
@@ -39,6 +40,7 @@ export default function EditPage({
     });
 
   const [error, setError] = useState("");
+  const [showHelp, setShowHelp] = useState(false);
   const { data: settings } = useLocalCourseSettingsQuery();
 
   useEffect(() => {
@@ -103,6 +105,8 @@ export default function EditPage({
       HeaderActions={
         <UpdatePageName pageName={pageName} moduleName={moduleName} />
       }
+      Help={showHelp ? <PageHelp /> : undefined}
+      onCloseHelp={() => setShowHelp(false)}
       Editor={<MonacoEditor key={monacoKey} value={text} onChange={textUpdate} />}
       Preview={
         <div className="h-full flex flex-col overflow-hidden">
@@ -117,7 +121,11 @@ export default function EditPage({
         <>
           {settings.canvasId && (
             <ClientOnly>
-              <EditPageButtons pageName={pageName} moduleName={moduleName} />
+              <EditPageButtons
+                pageName={pageName}
+                moduleName={moduleName}
+                toggleHelp={() => setShowHelp((h) => !h)}
+              />
             </ClientOnly>
           )}
         </>

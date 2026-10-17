@@ -18,6 +18,14 @@ export const fillEmbed = (
   return frontPageHtml.slice(0, start) + content + frontPageHtml.slice(end);
 };
 
+/**
+ * The front page with `content` in the page's marker, adding the marker at
+ * the end when there is none yet.
+ */
+export const placeEmbed = (frontPageHtml: string, pageUrl: string, content: string) =>
+  fillEmbed(frontPageHtml, pageUrl, content) ??
+  `${frontPageHtml}<div id="embed-${pageUrl}">${content}</div>`;
+
 const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /** Where the `</div>` closing an already open div starts. */
