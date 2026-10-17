@@ -24,7 +24,14 @@ import { useDragStyleContext } from "../context/drag/dragStyleContext";
 import { useQuizzesQueries } from "@/features/local/quizzes/quizHooks";
 import { useAssignmentsQueries } from "@/features/local/assignments/assignmentHooks";
 import { useReorderCanvasModuleItemsMutation } from "@/features/canvas/hooks/canvasModuleHooks";
-import { useCanvasModulesQuery } from "@/features/canvas/hooks/canvasModuleHooks";
+import {
+  useCanvasModulesQuery,
+  useCanvasModulesWithItemsQuery,
+} from "@/features/canvas/hooks/canvasModuleHooks";
+import {
+  byOrderingDate,
+  canvasOrderDiffers,
+} from "@/features/local/modules/moduleItemOrder";
 import { Spinner } from "@/components/Spinner";
 import { ItemTypeIcon } from "../ItemTypeIcon";
 import { useInvalidItemsQuery } from "@/features/local/modules/rawItemHooks";
@@ -42,6 +49,7 @@ export default function ExpandableModule({
   const modal = useModal();
   const reorderMutation = useReorderCanvasModuleItemsMutation();
   const { data: canvasModules } = useCanvasModulesQuery();
+  const { data: canvasModulesWithItems } = useCanvasModulesWithItemsQuery();
   const { data: invalidItems } = useInvalidItemsQuery(moduleName);
 
   const moduleItems: {
@@ -61,16 +69,18 @@ export default function ExpandableModule({
     )
     .concat(quizzes.map((q) => ({ type: "quiz", item: q })))
     .concat(pages.map((p) => ({ type: "page", item: p })))
-    .sort(
-      (a, b) =>
-        getDateFromStringOrThrow(
-          a.item.dueAt,
-          "item due date in expandable module",
-        ).getTime() -
-        getDateFromStringOrThrow(
-          b.item.dueAt,
-          "item due date in expandable module",
-        ).getTime(),
+    .sort((a, b) => byOrderingDate(a.item, b.item));
+
+  const canvasModuleItems = canvasModulesWithItems?.find(
+    (m) => m.name === moduleName,
+  )?.items;
+  const canvasOutOfOrder =
+    !!canvasModuleItems &&
+    canvasOrderDiffers(
+      moduleItems.map((i) => i.item),
+      [...canvasModuleItems]
+        .sort((a, b) => a.position - b.position)
+        .map((i) => i.title),
     );
 
   const { data: settings } = useLocalCourseSettingsQuery();
@@ -157,7 +167,12 @@ export default function ExpandableModule({
             <>
               {!reorderMutation.isPending && (
                 <button
-                  className=" me-3"
+                  className={" me-3 " + (canvasOutOfOrder ? " text-amber-300 " : "")}
+                  title={
+                    canvasOutOfOrder
+                      ? "Canvas lists this module's items in a different order"
+                      : undefined
+                  }
                   onClick={() => {
                     const canvasModuleId = canvasModules?.find(
                       (m) => m.name === moduleName,
@@ -175,7 +190,7 @@ export default function ExpandableModule({
                     });
                   }}
                 >
-                  Sort by Due Date
+                  {canvasOutOfOrder ? "Sort in Canvas (order differs)" : "Sort by Date"}
                 </button>
               )}
               {reorderMutation.isPending && <Spinner />}

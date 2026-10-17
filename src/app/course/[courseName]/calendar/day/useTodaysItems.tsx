@@ -23,6 +23,7 @@ import {
 import { useCanvasModulesWithItemsQuery } from "@/features/canvas/hooks/canvasModuleHooks";
 import { canvasModuleNames } from "@/features/canvas/services/canvasModuleService";
 import { AssignmentScheduleEntry } from "@/features/local/assignments/models/localAssignment";
+import { byOrderingDate } from "@/features/local/modules/moduleItemOrder";
 import { useCalendarQuizQuestions } from "../../context/CalendarQuizQuestionsProvider";
 
 export type TodayItem = {
@@ -164,13 +165,10 @@ export function useTodaysItems(day: string) {
     ...scheduledAssignments,
     ...quizzes,
     ...pages,
-  ].sort((a, b) => {
-    const dateDiff =
-      getDateFromStringOrThrow(a.item.dueAt, "sorting today items").getTime() -
-      getDateFromStringOrThrow(b.item.dueAt, "sorting today items").getTime();
-    if (dateDiff !== 0) return dateDiff;
-    return a.item.name.localeCompare(b.item.name);
-  });
+  ].sort(
+    (a, b) =>
+      byOrderingDate(a.item, b.item) || a.item.name.localeCompare(b.item.name),
+  );
 
   return { todaysItems };
 }

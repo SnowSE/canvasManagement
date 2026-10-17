@@ -7,6 +7,7 @@ import {
 } from "../services/canvasModuleService";
 import { IModuleItem } from "@/features/local/modules/IModuleItem";
 import toast from "react-hot-toast";
+import { byOrderingDate } from "@/features/local/modules/moduleItemOrder";
 import { useMemo } from "react";
 
 export const canvasCourseModuleKeys = {
@@ -155,12 +156,7 @@ export const useReorderCanvasModuleItemsMutation = () => {
       }
       const canvasItems = canvasModule.items;
 
-      // Sort IModuleItems by dueAt
-      const sorted = [...items].sort((a, b) => {
-        const aDate = a.dueAt ? new Date(a.dueAt).getTime() : 0;
-        const bDate = b.dueAt ? new Date(b.dueAt).getTime() : 0;
-        return aDate - bDate;
-      });
+      const sorted = [...items].sort(byOrderingDate);
 
       // Map sorted IModuleItems to CanvasModuleItem ids by matching name/title
       const orderedIds = sorted
