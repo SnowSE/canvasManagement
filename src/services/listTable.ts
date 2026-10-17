@@ -182,60 +182,66 @@ function plainTable(t: ListTableToken, html: string[][], caption: string) {
 // than `fits`, and calc() clamps it to 0 when narrower; `off` is the reverse.
 // A height is switched through a child whose padding-top is a percentage of a
 // parent whose width is switched.
+//
+// Sizes follow the page's font, whatever it is: text widths are in ch (the
+// width of "0"), heights and padding in em. A character is taken as `CH` ch
+// wide, a little wider than most, so text never needs more room than given.
+const CH = 1.1;
+
 function responsiveTable(t: ListTableToken, html: string[][]) {
   const columns = t.columns.map((name, c) => {
     const values = t.plain.map((row) => row[c]);
     const lengths = values.map((v) => v.length).sort((a, b) => a - b);
     const typical = lengths[Math.floor(lengths.length * 0.75)] || 1;
     const longestWord = Math.max(
-      4,
+      1,
       ...values.flatMap((v) => v.split(/\s+/).map((w) => w.length))
     );
-    // its longest word (0.6em a character) plus 16px of padding
-    const wordRem = Math.ceil(longestWord * 0.6) + 1;
+    const longestNameWord = Math.max(...name.split(" ").map((w) => w.length));
+    // room for its longest word, or its heading's (.8em)
+    const wordCh = Math.ceil(Math.max(longestWord, longestNameWord * 0.8) * CH);
     return {
       name,
-      // a square root gives a long column more room without taking over
-      grow: Math.round(Math.sqrt(Math.max(typical, name.length * 0.6, 6)) * 10),
-      minRem: Math.min(10, Math.max(5, wordRem)),
+      // room in proportion to how much it usually holds, so a column of
+      // one-digit numbers stays narrow
+      grow: Math.max(typical, longestNameWord),
+      textCh: Math.min(16, wordCh),
       // Canvas drops overflow-wrap, so a word too long for any column
       // scrolls inside its cell rather than widening the page
-      scroll: wordRem > 10,
+      scroll: wordCh > 16,
     };
   });
-  // the width a row needs on one line
-  const fits = Math.ceil(columns.reduce((sum, c) => sum + c.minRem + 0.1, 0));
-  const on = `calc((100% - ${fits}rem) * 999)`;
-  const off = `calc((${fits}rem - 100%) * 999)`;
-  // wide enough for the longest word of any name (.85em, 0.6em a character,
-  // 20px of padding), so no name breaks inside a word
+  // the width a row needs on one line: each column's text, its 1em of
+  // padding and its 1px line
+  const fits = `${columns.reduce((sum, c) => sum + c.textCh, 0)}ch + ${columns.length * 1.1}em`;
+  const on = `calc((100% - (${fits})) * 999)`;
+  const off = `calc((${fits} - 100%) * 999)`;
+  // wide enough for the longest word of any name (.85em), so no name
+  // breaks inside a word, plus its padding
   const longestNameWord = Math.max(...t.columns.flatMap((c) => c.split(" ").map((w) => w.length)));
-  const labelRem = Math.min(8, Math.max(5, Math.ceil(longestNameWord * 0.6 * 0.85 + 1.25)));
+  const labelCh = Math.min(14, Math.max(8, Math.ceil(longestNameWord * 0.85 * CH)));
+  const labelWidth = `${labelCh}ch + 1.1em`;
   // Canvas drops box-sizing, so nothing whose width matters has padding (it
   // goes on an inner div) and the 1px borders are counted in.
   const flex = (c: (typeof columns)[number], basis: string) =>
-    `flex:${c.grow} 1 ${basis};min-width:${c.minRem}rem;`;
+    `flex:${c.grow} 1 ${basis};min-width:calc(${c.textCh}ch + 1em);`;
   // a zero-width item whose border is the line between columns in table mode
-  const separator = `<div style="flex:0 0 0;border-left:${look.line};"></div>`;
+  const separator = blank(`flex:0 0 0;border-left:${look.line};`);
 
-  // headings are .8em with 16px of padding; estimate wide so no browser
-  // wraps them onto more lines than there is room for
-  const headerRem =
-    Math.max(...columns.map((c) => linesOf(c.name, (c.minRem - 1) / (0.6 * 0.8)))) *
-      1.25 *
-      0.8 +
-    0.5;
-  const header = `<div style="overflow:hidden;"><div role="row" style="display:flex;height:${headerRem}rem;margin-bottom:-${headerRem}rem;background:${look.shade};">${columns
+  // headings are .8em with padding above; lines are 1.25 of their size
+  const headerEm =
+    Math.max(...columns.map((c) => linesOf(c.name, c.textCh / (0.8 * CH)))) * 0.8 * 1.25 + 0.5;
+  const header = `<div style="overflow:hidden;"><div role="row" style="display:flex;height:${headerEm}em;margin-bottom:-${headerEm}em;background:${look.shade};">${columns
     .map(
       (c) =>
-        `${separator}<div role="columnheader" style="${flex(c, "0")}"><div style="padding:4px 8px 0 8px;${look.heading}"><strong>${escapeHtml(c.name)}</strong></div></div>`
+        `${separator}<div role="columnheader" style="${flex(c, "0")}"><div style="padding:.3em .6em 0;${look.heading}"><strong>${escapeHtml(c.name)}</strong></div></div>`
     )
-    .join("")}${separator}</div>${heightSwitch(on, headerRem, 10)}</div>`;
+    .join("")}${separator}</div>${heightSwitch(on, headerEm, 10)}</div>`;
 
   const label = (name: string) => {
-    // .85em with 20px of padding, estimated wide like the headings
-    const h = linesOf(name, (labelRem - 1.25) / (0.6 * 0.85)) * 1.25 * 0.85 + 0.5;
-    return `<div aria-hidden="true" style="flex:0 0 ${labelRem}rem;max-width:${off};overflow:hidden;border-top:${look.softLine};border-left:${look.line};background:${look.shade};"><div style="height:${h}rem;margin-bottom:-${h}rem;padding:6px 8px 0 12px;${look.label}">${escapeHtml(name)}</div><div style="padding-top:${((h / labelRem) * 100).toFixed(2)}%;"></div></div>`;
+    // in em of the row: lines of .85em text, 1.25 apart, plus padding above
+    const h = linesOf(name, labelCh / (0.85 * CH)) * 0.85 * 1.25 + 0.6;
+    return `<div aria-hidden="true" style="flex:0 0 calc(${labelWidth});max-width:${off};overflow:hidden;border-top:${look.softLine};border-left:${look.line};background:${look.shade};"><div style="height:${h / 0.85}em;margin-bottom:-${h / 0.85}em;padding:.45em .5em 0 .8em;${look.label}">${escapeHtml(name)}</div>${heightSwitch("100%", h, 3)}</div>`;
   };
 
   const rows = html.map(
@@ -243,8 +249,10 @@ function responsiveTable(t: ListTableToken, html: string[][]) {
       `${heightSwitch(off, 0.8, 10)}<div role="row" style="border:${look.line};border-width:1px 1px 1px 0;display:flex;flex-wrap:wrap;margin-top:-1px;">${row
         .map((value, c) => {
           const column = columns[c];
-          if (!value) return `${separator}<div role="cell" style="${flex(column, off)}"></div>`;
-          return `${label(column.name)}<div role="cell" style="${flex(column, off)}max-width:calc(100% - ${labelRem}rem - 1px);${column.scroll ? "overflow-x:auto;" : ""}border-top:${look.softLine};"><div style="padding:6px 8px;">${c === 0 ? `<strong>${value}</strong>` : value}</div></div>`;
+          // an empty cell keeps its font, which its ch and em widths depend on
+          if (!value)
+            return `${separator}<div role="cell" style="${flex(column, off)}line-height:0;"><span style="font-size:0;">&nbsp;</span></div>`;
+          return `${label(column.name)}<div role="cell" style="${flex(column, off)}max-width:calc(100% - (${labelWidth}) - 1px);${column.scroll ? "overflow-x:auto;" : ""}border-top:${look.softLine};"><div style="padding:.4em .5em;">${c === 0 ? `<strong>${value}</strong>` : value}</div></div>`;
         })
         .join("")}</div>`
   );
@@ -252,10 +260,15 @@ function responsiveTable(t: ListTableToken, html: string[][]) {
   return `<div role="table" aria-label="${escapeHtml(t.captionText)}">${header}${rows.join("")}</div>`;
 }
 
-// Space `heightRem` tall while `width` is on, none while it is 0: padding-top
-// is a share of the width, which is capped at `widthRem`.
-const heightSwitch = (width: string, heightRem: number, widthRem: number) =>
-  `<div style="width:${width};max-width:${widthRem}rem;"><div style="padding-top:${((heightRem / widthRem) * 100).toFixed(2)}%;"></div></div>`;
+// Space `heightEm` tall while `width` is on, none while it is 0: padding-top
+// is a share of the width, which is capped at `widthEm`.
+const heightSwitch = (width: string, heightEm: number, widthEm: number) =>
+  `<div style="width:${width};max-width:${widthEm}em;">${blank(`padding-top:${((heightEm / widthEm) * 100).toFixed(2)}%;`)}</div>`;
+
+// A div with nothing to show. Canvas's editor deletes empty divs when a page
+// holding the table (a front page it's embedded in) is saved there, so it
+// holds a space too small to take up any room.
+const blank = (style: string) => `<div style="${style}font-size:0;">&nbsp;</div>`;
 
 // The lines `text` takes wrapped at `perLine` characters, breaking between words.
 const linesOf = (text: string, perLine: number) =>
