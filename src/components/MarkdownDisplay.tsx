@@ -1,4 +1,5 @@
 "use client";
+import { useMemo, useRef } from "react";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import { SuspenseAndErrorHandling } from "./SuspenseAndErrorHandling";
 import { markdownToHTMLSafe } from "@/services/htmlMarkdownUtils";
@@ -8,6 +9,7 @@ import {
   resolveRelativeMdHrefsInHtml,
 } from "@/services/urlUtils";
 import { useCoursePagesQuery } from "@/features/local/modules/localCourseModuleHooks";
+import { useExplainBrokenImages } from "./useExplainBrokenImages";
 
 export default function MarkdownDisplay({
   markdown,
@@ -72,14 +74,19 @@ function DangerousInnerMarkdown({
     settings.name,
     pages
   );
+  const finalHtml = resolveMdLinks
+    ? resolveRelativeMdHrefsInHtml(html, settings.name)
+    : html;
+  // React compares this object, not the string inside it, so a new object on
+  // every render would rewrite the preview (reloading its images) each time
+  const innerHtml = useMemo(() => ({ __html: finalHtml }), [finalHtml]);
+  const ref = useRef<HTMLDivElement>(null);
+  useExplainBrokenImages(ref, finalHtml);
   return (
     <div
+      ref={ref}
       className={"markdownPreview " + className}
-      dangerouslySetInnerHTML={{
-        __html: resolveMdLinks
-          ? resolveRelativeMdHrefsInHtml(html, settings.name)
-          : html,
-      }}
+      dangerouslySetInnerHTML={innerHtml}
     ></div>
   );
 }

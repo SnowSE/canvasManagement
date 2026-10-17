@@ -96,15 +96,22 @@ export function ImagesHelp() {
   return (
     <HelpSection title="Images">
       <P>
-        Images on the web can be linked directly. Files in a folder mounted
-        under <C>/app/public/images</C> are uploaded to the Canvas course when
+        Images on the web can be linked directly. A file in your faculty files
+        folder is written with <C>/images/facultyFiles/</C> in front of its
+        path in that folder. Letter case must match exactly, and a space is
+        written <C>%20</C>. Local images are uploaded to the Canvas course when
         you add or update the item in Canvas, and the link is pointed at the
-        uploaded copy. A changed file is uploaded again; a missing one stops
-        the publish with a message naming it.
+        uploaded copy. A changed file is uploaded again.
       </P>
       <Example>{`
 ![formulas](/images/facultyFiles/1405/lab-04-formulas.png)
+![diagram](/images/facultyFiles/1405/Lab%2004%20Diagram.png)
 `}</Example>
+      <P>
+        An image that won&apos;t load is replaced in the preview by a note
+        saying why, usually with the path to use instead, and publishing stops
+        with the same note.
+      </P>
     </HelpSection>
   );
 }

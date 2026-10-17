@@ -26,6 +26,56 @@ same commit or PR. See [CLAUDE.md](CLAUDE.md#keep-the-docs-current).
 
 ## Getting Started and Usage (v3)
 
+### Quick setup
+
+[`get-started.ps1`](get-started.ps1) walks you through a new install:
+
+1. Checks for Docker and git, and offers to install either one that is missing.
+2. Asks for a [GitHub token](#github-token-gh_token) (required) and checks it.
+3. Sets up three git repos side by side in one folder (`~/CanvasManager` by
+   default). For each, name an existing repo to clone, or press Enter and it
+   creates a private one on GitHub:
+   - `CanvasManagerConfig`, the app config: `docker-compose.yml`,
+     `globalSettings.yml` and [`restart.ps1`](#restart-script). Its `.env`
+     (tokens, port, uid) stays on the computer and is never committed.
+   - `CanvasCourses`, your courses.
+   - `FacultyFiles`, static files such as [images](#images).
+
+   The compose file mounts the other two as `../CanvasCourses` and
+   `../FacultyFiles`, so the config repo works on any computer.
+4. Asks for your Canvas token and checks it, a custom port if you want one
+   (3000 otherwise), your time zone, and optionally an
+   [AI endpoint](#error-list-and-ai-explanations).
+5. Writes the files, commits and pushes the config repo, starts the container
+   and opens the app.
+6. Offers to run `restart.ps1` after every reboot (a Startup-folder shortcut on
+   Windows, a LaunchAgent on macOS, a systemd service or cron on Linux).
+
+Run it again any time to change an answer. It finds your existing setup,
+offers the current answers as defaults and saves a `.bak` of any file it
+replaces. Repos it clones or creates over https get a git credential helper
+that reads `GH_TOKEN` from the config repo's `.env`, so pushing from your own
+terminal works too, and a new token in `.env` is all a renewal takes.
+
+Windows (PowerShell):
+
+```powershell
+irm https://raw.githubusercontent.com/SnowSE/canvasManagement/main/get-started.ps1 -OutFile get-started.ps1
+powershell -ExecutionPolicy Bypass -File .\get-started.ps1
+```
+
+Linux or macOS, which need [PowerShell 7](https://learn.microsoft.com/powershell/scripting/install/installing-powershell)
+first (`brew install --cask powershell`, or `sudo snap install powershell --classic`):
+
+```sh
+curl -fsSLO https://raw.githubusercontent.com/SnowSE/canvasManagement/main/get-started.ps1
+pwsh ./get-started.ps1
+```
+
+The rest of this section is what the script sets up, for doing it by hand.
+
+### By hand
+
 All class data files are stored in markdown files in a folder. I recommend making this folder a git repo. Here's an example docker compose:
 
 ```yml
@@ -84,7 +134,8 @@ DOCKER_UID=$(id -u) DOCKER_GID=$(id -g) docker compose up
 
 ### GitHub token (`GH_TOKEN`)
 
-A GitHub token is optional. You only need one for:
+[`get-started.ps1`](#quick-setup) requires a GitHub token, since it creates
+and clones your repos with it. Setting up by hand, you only need one for:
 
 - the Classroom 50 (GitHub Classroom) buttons in course settings, and
 - pulling and pushing a course repo that lives on GitHub (see [Git](#git)).
@@ -128,7 +179,8 @@ both tokens act as you.
 
 A small script that waits for Docker, pulls the newest image and recreates the
 container saves typing, and is how you pick up an update when the
-[update banner](#update-indicator) appears or after you change `.env`. Save it
+[update banner](#update-indicator) appears or after you change `.env`.
+[`get-started.ps1`](#quick-setup) writes this one for you; otherwise save it
 as `restart.ps1` next to your `docker-compose.yml`:
 
 ```powershell
@@ -156,30 +208,61 @@ Run it with `./restart.ps1` (Linux or macOS with PowerShell 7 installed; run
 Windows refuses to run scripts, use
 `powershell -ExecutionPolicy Bypass -File .\restart.ps1`.
 
-To start canvas manager automatically, run the script at login (Windows Task
-Scheduler, or a systemd user service on Linux), or add `restart: always` to the
-`canvas_manager` service in your compose file so Docker restarts it on its own.
+To start canvas manager after every reboot, let `get-started.ps1` set it up,
+or do the same by hand: put a shortcut to
+`powershell -WindowStyle Hidden -ExecutionPolicy Bypass -File <path>\restart.ps1`
+in your Startup folder (`shell:startup`) on Windows, or run it from a systemd
+service ordered after `docker.service` on Linux. Docker Desktop itself has to
+start at sign-in too (Settings > General). `restart: unless-stopped` in the
+compose file brings the container back whenever Docker starts, without
+pulling a newer image.
 
 
-## Enable Image Support
+## Images
 
-
-You must set the `NEXT_PUBLIC_ENABLE_FILE_SYNC` environment variable to true. Images need to be available in the `/app/public/` directory in the container so that they are served as static files. Images can also be set to public URL's on the web.
-
-When you add or update an assignment, quiz or page in Canvas, canvas manager uploads each local image it references to the Canvas course and keeps a lookup table (`assets` in the course's `settings.yml`) from the image's path to its Canvas URL and a hash of the file, so an image is uploaded once and again only when the file changes. A local image that can't be found stops the publish with an error naming it. Images on the web, including Mermaid diagrams, are left as links and never copied into Canvas files.
-
-For Snow College professors, images should be stored in a separate git repo from the `facultyFiles` git repo. Otherwise the `faculty` repository will become cluttered with duplicated large binary images. Set up your volume like this:
+Mount your faculty files folder at `/app/public/images/facultyFiles`
+(`get-started.ps1` does this for its `FacultyFiles` repo):
 
 ```yml
     volumes:
-      - ~/projects/facultyFiles:/app/public/images/facultyFiles
+      - ../FacultyFiles:/app/public/images/facultyFiles
 ```
 
-You can now embed an image in an assignment by adding something like this line.
+Keep images in their own repo, not in your course repo, or the course repo
+fills up with large binaries. In markdown, an image's path is its path inside
+that folder with `/images/facultyFiles/` in front. Letter case has to match
+exactly (the container is case-sensitive even when Windows and macOS are not),
+and a space is written `%20`:
 
 ```md
 ![formulas](/images/facultyFiles/1405/lab-04-simple-math-formulas.png)
+![diagram](/images/facultyFiles/1405/Lab%2004%20Diagram.png)
 ```
+
+Images on the web are written with their full `https://` address.
+
+When you add or update an assignment, quiz or page in Canvas, canvas manager
+uploads each local image it references to the Canvas course and keeps a lookup
+table (`assets` in the course's `settings.yml`) from the image's path to its
+Canvas URL and a hash of the file, so an image is uploaded once and again only
+when the file changes. Images on the web, including Mermaid diagrams, are left
+as links and never copied into Canvas files.
+
+**An image that won't show up is explained in the preview**, in its place:
+wrong letter case, a close file name, a path without `/images/facultyFiles/`,
+a space in the path, or a faculty files folder that isn't mounted, usually
+with the path to use instead. Publishing stops with the same explanation. The
+handout's
+[When an image won't show up](https://snowse.github.io/canvasManagement/getting-started.html#images-troubleshooting)
+goes through each message.
+
+How it works: the production server only serves files that were in `public/`
+when the image was built, so `src/routes/images.$.tsx` serves
+`/images/...` from the mounted folder at request time, and
+`src/features/canvas/services/files/publicImageFiles.ts` diagnoses a path that
+doesn't resolve. `NEXT_PUBLIC_ENABLE_FILE_SYNC` (the image upload on publish)
+is set when the Docker image is built; the line in the compose file is only
+read by the file-watching server.
 
 ## Git
 

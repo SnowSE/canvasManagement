@@ -1,23 +1,17 @@
 import fs from "fs/promises";
-import path from "path";
 import crypto from "crypto";
 import { TRPCError } from "@trpc/server";
 import { LocalCourseSettings } from "@/features/local/course/localCourseSettings";
 import { fileStorageService } from "@/features/local/utils/fileStorageService";
 import { isLocalImageSource } from "@/services/imageSources";
 import { uploadToCanvasPart1, uploadToCanvasPart2 } from "./canvasFileService";
+import {
+  describeMissingImage,
+  diagnoseImage,
+  localPathForImage,
+} from "./publicImageFiles";
 
-const fileStorageLocation = process.env.FILE_STORAGE_LOCATION ?? "/app/public";
-
-// "/images/a.png", "images/a.png" and "./images/a.png" all mean the same file
-// under the public directory. Anything that resolves outside it is treated as
-// missing rather than read.
-export const localPathForImage = (src: string, root = fileStorageLocation) => {
-  const relative = decodeURI(src.trim()).replace(/^\.?\/+/, "");
-  const resolved = path.resolve(root, relative);
-  const rootWithSlash = path.resolve(root) + path.sep;
-  return resolved.startsWith(rootWithSlash) ? resolved : undefined;
-};
+export { localPathForImage };
 
 const readImage = async (src: string) => {
   const localPath = localPathForImage(src);
@@ -96,11 +90,12 @@ export const ensureImagesUploaded = async (
     await fileStorageService.settings.updateCourseSettings(courseName, updated);
 
   if (missing.length > 0) {
+    const reasons = await Promise.all(
+      missing.map(async (m) => describeMissingImage(m, await diagnoseImage(m))),
+    );
     throw new TRPCError({
       code: "BAD_REQUEST",
-      message: `Not published: ${missing.length === 1 ? "this image was" : "these images were"} not found, so ${missing.length === 1 ? "it" : "they"} would be broken in Canvas: ${missing
-        .map((m) => `${m} (looked for ${localPathForImage(m) ?? "a path outside the public folder"})`)
-        .join(", ")}`,
+      message: `Not published: ${missing.length === 1 ? "this image was" : "these images were"} not found, so ${missing.length === 1 ? "it" : "they"} would be broken in Canvas. ${reasons.join(" ")}`,
     });
   }
   return updated;

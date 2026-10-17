@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ErrorsRouteImport } from './routes/errors'
 import { Route as ApiCoursesRouteImport } from './routes/api/courses'
 import { Route as CourseCourseNameRouteImport } from './routes/course/$courseName'
+import { Route as ImagesSplatRouteImport } from './routes/images.$'
 import { Route as ApiCanvasSplatRouteImport } from './routes/api.canvas.$'
 import { Route as ApiTrpcSplatRouteImport } from './routes/api.trpc.$'
 import { Route as CourseCourseNameIndexRouteImport } from './routes/course/$courseName/index'
@@ -47,6 +48,11 @@ const ApiCoursesRoute = ApiCoursesRouteImport.update({
 const CourseCourseNameRoute = CourseCourseNameRouteImport.update({
   id: '/course/$courseName',
   path: '/course/$courseName',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ImagesSplatRoute = ImagesSplatRouteImport.update({
+  id: '/images/$',
+  path: '/images/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiCanvasSplatRoute = ApiCanvasSplatRouteImport.update({
@@ -146,6 +152,7 @@ export interface FileRoutesByFullPath {
   '/errors': typeof ErrorsRoute
   '/api/courses': typeof ApiCoursesRoute
   '/course/$courseName': typeof CourseCourseNameRouteWithChildren
+  '/images/$': typeof ImagesSplatRoute
   '/api/canvas/$': typeof ApiCanvasSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
   '/course/$courseName/settings': typeof CourseCourseNameSettingsRoute
@@ -166,6 +173,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/errors': typeof ErrorsRoute
   '/api/courses': typeof ApiCoursesRoute
+  '/images/$': typeof ImagesSplatRoute
   '/api/canvas/$': typeof ApiCanvasSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
   '/course/$courseName/settings': typeof CourseCourseNameSettingsRoute
@@ -188,6 +196,7 @@ export interface FileRoutesById {
   '/errors': typeof ErrorsRoute
   '/api/courses': typeof ApiCoursesRoute
   '/course/$courseName': typeof CourseCourseNameRouteWithChildren
+  '/images/$': typeof ImagesSplatRoute
   '/api/canvas/$': typeof ApiCanvasSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
   '/course/$courseName/settings': typeof CourseCourseNameSettingsRoute
@@ -211,6 +220,7 @@ export interface FileRouteTypes {
     | '/errors'
     | '/api/courses'
     | '/course/$courseName'
+    | '/images/$'
     | '/api/canvas/$'
     | '/api/trpc/$'
     | '/course/$courseName/settings'
@@ -231,6 +241,7 @@ export interface FileRouteTypes {
     | '/'
     | '/errors'
     | '/api/courses'
+    | '/images/$'
     | '/api/canvas/$'
     | '/api/trpc/$'
     | '/course/$courseName/settings'
@@ -252,6 +263,7 @@ export interface FileRouteTypes {
     | '/errors'
     | '/api/courses'
     | '/course/$courseName'
+    | '/images/$'
     | '/api/canvas/$'
     | '/api/trpc/$'
     | '/course/$courseName/settings'
@@ -274,6 +286,7 @@ export interface RootRouteChildren {
   ErrorsRoute: typeof ErrorsRoute
   ApiCoursesRoute: typeof ApiCoursesRoute
   CourseCourseNameRoute: typeof CourseCourseNameRouteWithChildren
+  ImagesSplatRoute: typeof ImagesSplatRoute
   ApiCanvasSplatRoute: typeof ApiCanvasSplatRoute
   ApiTrpcSplatRoute: typeof ApiTrpcSplatRoute
 }
@@ -306,6 +319,13 @@ declare module '@tanstack/react-router' {
       path: '/course/$courseName'
       fullPath: '/course/$courseName'
       preLoaderRoute: typeof CourseCourseNameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/images/$': {
+      id: '/images/$'
+      path: '/images/$'
+      fullPath: '/images/$'
+      preLoaderRoute: typeof ImagesSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/canvas/$': {
@@ -467,6 +487,7 @@ const rootRouteChildren: RootRouteChildren = {
   ErrorsRoute: ErrorsRoute,
   ApiCoursesRoute: ApiCoursesRoute,
   CourseCourseNameRoute: CourseCourseNameRouteWithChildren,
+  ImagesSplatRoute: ImagesSplatRoute,
   ApiCanvasSplatRoute: ApiCanvasSplatRoute,
   ApiTrpcSplatRoute: ApiTrpcSplatRoute,
 }
