@@ -160,6 +160,14 @@ describe("list tables", () => {
     expect(html).toMatch(/style="[^"]*#8887/);
   });
 
+  it("has no empty divs, which Canvas's editor would delete", () => {
+    const doc = render(schedule);
+
+    expect(
+      [...doc.querySelectorAll("div")].filter((d) => d.innerHTML === "")
+    ).toHaveLength(0);
+  });
+
   it("warns about an option it doesn't know and still renders", () => {
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
 
