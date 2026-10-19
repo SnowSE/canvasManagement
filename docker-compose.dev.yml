@@ -10,6 +10,8 @@ services:
     env_file:
       - .env
     environment:
+      # where the port above is published, for the app's network warning
+      - CANVAS_MANAGER_ADDRESS=127.0.0.1
       - storageDirectory=/app/storage
       - TZ=America/Denver
       # a uid other than 1000 has no passwd entry in the node image, so HOME

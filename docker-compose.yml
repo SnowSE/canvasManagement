@@ -7,10 +7,16 @@ services:
     user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
     container_name: canvas-manager
     ports:
-      - 3000:3000
+      # only this computer can open it; anyone who can reach it acts in Canvas
+      # as you. To open it from other machines, set CANVAS_MANAGER_ADDRESS=0.0.0.0
+      - "${CANVAS_MANAGER_ADDRESS:-127.0.0.1}:${CANVAS_MANAGER_PORT:-3000}:3000"
     env_file:
       - .env # needs CANVAS_TOKEN, and GH_TOKEN for the Classroom 50 buttons
     environment:
+      # tells the app where its port is published (the ports line above), so
+      # it can warn while other machines can open it
+      - CANVAS_MANAGER_ADDRESS=${CANVAS_MANAGER_ADDRESS:-127.0.0.1}
+      - CANVAS_MANAGER_PORT=${CANVAS_MANAGER_PORT:-3000}
       - storageDirectory=/app/storage
       - TZ=America/Denver
       - NEXT_PUBLIC_ENABLE_FILE_SYNC=true

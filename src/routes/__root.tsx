@@ -16,6 +16,7 @@ import { MyToaster } from "@/app/MyToaster";
 import { ClientCacheInvalidation } from "@/components/realtime/ClientCacheInvalidation";
 import ClientOnly from "@/components/ClientOnly";
 import { ErrorLogPill } from "@/app/errors/ErrorLogPill";
+import { NetworkBanner } from "@/app/network/NetworkBanner";
 import { SuspenseAndErrorHandling } from "@/components/SuspenseAndErrorHandling";
 import TrpcProvider from "@/services/serverFunctions/TrpcProvider";
 import { getQueryClient } from "@/app/providersQueryClientUtils";
@@ -165,14 +166,20 @@ function RootComponent() {
         <HeadContent />
       </head>
       <body className="flex justify-center h-screen" suppressHydrationWarning>
-        <div className="bg-gray-950 h-screen text-slate-300 w-screen sm:p-1">
+        <div className="bg-gray-950 h-screen text-slate-300 w-screen sm:p-1 flex flex-col">
           <MyToaster />
           <SuspenseAndErrorHandling>
             <QueryClientProvider client={queryClient}>
               <TrpcProvider>
                 <HydrationBoundary state={dehydratedState}>
                   <ClientCacheInvalidation />
-                  <Outlet />
+                  <ClientOnly>
+                    <NetworkBanner />
+                  </ClientOnly>
+                  {/* the page gets the height the banner leaves */}
+                  <div className="flex-1 min-h-0">
+                    <Outlet />
+                  </div>
                   <ClientOnly>
                     <ErrorLogPill />
                   </ClientOnly>

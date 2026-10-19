@@ -158,10 +158,14 @@ AI_MODEL=gpt-4o-mini</code></pre>
     user: "1000:1000"
     container_name: canvas-manager
     ports:
-      - 3000:3000
+      # only this computer can open it (anyone who can reach it acts as you)
+      - "${CANVAS_MANAGER_ADDRESS:-127.0.0.1}:${CANVAS_MANAGER_PORT:-3000}:3000"
     env_file:
       - .env
     environment:
+      # where the port is published, so the app can warn if it's open
+      - CANVAS_MANAGER_ADDRESS=${CANVAS_MANAGER_ADDRESS:-127.0.0.1}
+      - CANVAS_MANAGER_PORT=${CANVAS_MANAGER_PORT:-3000}
       - storageDirectory=/app/storage
       - TZ=America/Denver
       - NEXT_PUBLIC_ENABLE_FILE_SYNC=true
@@ -169,6 +173,7 @@ AI_MODEL=gpt-4o-mini</code></pre>
       - ./globalSettings.yml:/app/globalSettings.yml
       - ~/projects/faculty:/app/storage
       - ~/projects/facultyFiles:/app/public/images/facultyFiles</code></pre>
+<div class="note warn" id="setup-local-only"><p><b>Only this computer can reach it.</b> CanvasManager runs a small server on your computer that sends requests to Canvas with your token and reads and writes your course files, so it should only answer requests from its own pages on this computer. <code>127.0.0.1</code> in <code>ports</code> keeps other machines out, and the app refuses requests that a website you visit tries to send it. To open it from another machine anyway, on a network you trust, set <code>CANVAS_MANAGER_ADDRESS=0.0.0.0</code> in <code>.env</code> and restart. While other machines may be able to open it, an amber <em>Open to your network</em> bar shows across the top of every page; click it for how to close it. If your <code>docker-compose.yml</code> is from before October 2026, it doesn&rsquo;t pass <code>CANVAS_MANAGER_ADDRESS</code>, so it shows <em>Possibly open to your network</em> there until its <code>ports</code> and <code>environment</code> lines are updated as above (or <code>get-started.ps1</code> writes a new one). If you open it by a domain name rather than an IP address or a local machine name, also list that name in <code>CANVAS_MANAGER_HOSTS</code>.</p></div>
 <div class="tw"><table>
 <tr><th>Line</th><th>Why</th></tr>
 <tr><td><code>user: "1000:1000"</code></td><td>Files the app writes are owned by you, not root. Use your own uid if it differs (<code>id -u</code>).</td></tr>
@@ -452,6 +457,7 @@ AddToHome: true
 <h2 id="changes">Recent changes</h2>
 <div class="tw"><table>
 <tr><th>When</th><th>What changed</th></tr>
+<tr><td style="white-space:nowrap">Oct 2026</td><td><b>Security:</b> <a href="#setup-local-only">only this computer can open CanvasManager</a> in new setups, and it refuses requests a website tries to send it, including to its live file-change updates. If your <code>docker-compose.yml</code> is from before this, it listens on every network the computer is on, and the app now says so with an amber bar across the top of every page: run <code>get-started.ps1</code> again and let it write a new <code>docker-compose.yml</code>, or use the <code>ports</code> and <code>environment</code> lines in the <a href="#setup-compose">compose example</a> (the bar shows them with your port).</td></tr>
 <tr><td style="white-space:nowrap">Oct 2026</td><td><a href="#list-tables">Tables from lists</a> keep their column lines after the page holding them is saved in Canvas&rsquo;s editor (a home page they are added to, say), size each column by what it holds so short columns stay narrow, and follow the page&rsquo;s own font.</td></tr>
 <tr><td style="white-space:nowrap">Oct 2026</td><td>Clicking text in an <a href="#editing">editor</a>&rsquo;s preview moves the editor to that spot in the file.</td></tr>
 <tr><td style="white-space:nowrap">Oct 2026</td><td>Dragging an item on the <a href="#calendar">calendar</a> closes its hover preview, so the preview no longer covers the day you want to drop it on.</td></tr>
