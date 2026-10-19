@@ -36,6 +36,7 @@ const keySuggestions: Record<
     { key: "UnlockAt", insert: "UnlockAt: ", opensList: false, detail: "when students can see it" },
     { key: "LockAt", insert: "LockAt: ", opensList: false, detail: "when submissions close" },
     { key: "DueAt", insert: "DueAt: ", opensList: false, detail: "due date and time" },
+    { key: "DateForOrdering", insert: "DateForOrdering: ", opensList: false, detail: "orders it ahead of its other dates" },
     { key: "AssignmentGroupName", insert: "AssignmentGroupName: ", opensList: true, detail: "grading category" },
     { key: "GroupSet", insert: "GroupSet: ", opensList: true, detail: "student groups (group assignment)" },
     { key: "GradeIndividually", insert: "GradeIndividually: ", opensList: true, detail: "each group member graded separately" },
@@ -48,6 +49,7 @@ const keySuggestions: Record<
     { key: "UnlockAt", insert: "UnlockAt: ", opensList: false, detail: "" },
     { key: "LockAt", insert: "LockAt: ", opensList: false, detail: "" },
     { key: "DueAt", insert: "DueAt: ", opensList: false, detail: "" },
+    { key: "DateForOrdering", insert: "DateForOrdering: ", opensList: false, detail: "orders it ahead of its other dates" },
     { key: "Password", insert: "Password: ", opensList: false, detail: "" },
     { key: "ShuffleAnswers", insert: "ShuffleAnswers: ", opensList: true, detail: "" },
     { key: "ShowCorrectAnswers", insert: "ShowCorrectAnswers: ", opensList: true, detail: "" },
@@ -57,7 +59,7 @@ const keySuggestions: Record<
     { key: "Description", insert: "Description: ", opensList: false, detail: "" },
   ],
   page: [
-    { key: "DueDateForOrdering", insert: "DueDateForOrdering: ", opensList: false, detail: "" },
+    { key: "DateForOrdering", insert: "DateForOrdering: ", opensList: false, detail: "" },
     { key: "AddToHome", insert: "AddToHome: ", opensList: true, detail: "show it on the course home page" },
   ],
 };

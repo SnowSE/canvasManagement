@@ -15,6 +15,8 @@ export const zodLocalQuiz = z.object({
     .describe("Date and time when the quiz becomes available (MM/DD/YYYY HH:MM:SS)"),
   lockAt: z.string().optional(),
   dueAt: z.string(),
+  // orders it in its module and day instead of UnlockAt/DueAt
+  dateForOrdering: z.string().optional(),
   shuffleAnswers: z.boolean(),
   showCorrectAnswers: z
     .boolean()

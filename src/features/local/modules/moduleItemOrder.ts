@@ -1,15 +1,20 @@
 import { getDateFromString } from "../utils/timeUtils";
 
-// A module's items are listed by date: an item's available date when it has
-// one, else its due date (a page's due date is its DueDateForOrdering).
+// A module's items are listed by date: an item's DateForOrdering when it has
+// one, else when it becomes available, else when it's due, else when it
+// closes. (A page's DateForOrdering is read into its dueAt.)
 interface Dated {
   name: string;
   dueAt: string;
   unlockAt?: string;
+  lockAt?: string;
+  dateForOrdering?: string;
 }
 
 const orderingTime = (item: Dated) =>
-  getDateFromString(item.unlockAt || item.dueAt)?.getTime() ?? 0;
+  getDateFromString(
+    item.dateForOrdering || item.unlockAt || item.dueAt || item.lockAt || ""
+  )?.getTime() ?? 0;
 
 export const byOrderingDate = (a: Dated, b: Dated) => orderingTime(a) - orderingTime(b);
 

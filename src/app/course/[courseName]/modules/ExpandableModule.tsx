@@ -167,7 +167,7 @@ export default function ExpandableModule({
             <>
               {!reorderMutation.isPending && (
                 <button
-                  className={" me-3 " + (canvasOutOfOrder ? " text-amber-300 " : "")}
+                  className={" me-3 " + (canvasOutOfOrder ? " text-amber-300! " : "")}
                   title={
                     canvasOutOfOrder
                       ? "Canvas lists this module's items in a different order"

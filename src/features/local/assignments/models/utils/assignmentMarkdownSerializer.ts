@@ -62,6 +62,9 @@ const settingsToMarkdown = (assignment: LocalAssignment) => {
     `UnlockAt: ${printableUnlockAt}`,
     `LockAt: ${printableLockAt}`,
     `DueAt: ${printableDueDate}`,
+    ...(assignment.dateForOrdering
+      ? [`DateForOrdering: ${assignment.dateForOrdering}`]
+      : []),
     `AssignmentGroupName: ${assignment.localAssignmentGroupName}`,
     ...groupLines,
     ...scheduleLines,

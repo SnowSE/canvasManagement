@@ -1,7 +1,10 @@
 import { IModuleItem } from "@/features/local/modules/IModuleItem";
 import { verifyDateOrThrow } from "@/features/local/utils/timeUtils";
 import { z } from "zod";
-import { extractLabelValue } from "../assignments/models/utils/markdownUtils";
+import {
+  extractDateForOrdering,
+  extractLabelValue,
+} from "../assignments/models/utils/markdownUtils";
 
 export interface LocalCoursePage extends IModuleItem {
   name: string;
@@ -23,10 +26,10 @@ export const localPageMarkdownUtils = {
   toMarkdown: (page: LocalCoursePage) => {
     const printableDueDate = verifyDateOrThrow(
       page.dueAt,
-      "page DueDateForOrdering",
+      "page DateForOrdering",
     );
     const settingsMarkdown =
-      `DueDateForOrdering: ${printableDueDate}\n` +
+      `DateForOrdering: ${printableDueDate}\n` +
       (page.addToHome === undefined ? "" : `AddToHome: ${page.addToHome}\n`) +
       "---\n";
     return settingsMarkdown + page.text;
@@ -34,8 +37,8 @@ export const localPageMarkdownUtils = {
 
   parseMarkdown: (pageMarkdown: string, name: string) => {
     const rawSettings = pageMarkdown.split("---\n")[0];
-    const rawDate = extractLabelValue(rawSettings, "DueDateForOrdering");
-    const dueAt = verifyDateOrThrow(rawDate, "page DueDateForOrdering");
+    const rawDate = extractDateForOrdering(rawSettings);
+    const dueAt = verifyDateOrThrow(rawDate, "page DateForOrdering");
 
     // A page's body can itself contain "---" lines (e.g. a v2-syntax quiz's
     // question separators), so only the first "---\n" is the frontmatter
