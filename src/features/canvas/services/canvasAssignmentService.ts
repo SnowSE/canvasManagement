@@ -23,8 +23,11 @@ export interface CanvasAssignmentPublishOptions {
 
 export const canvasAssignmentService = {
   async getAll(courseId: number): Promise<CanvasAssignment[]> {
-    // overrides ride along so the calendar can check scheduled students
-    const url = `${canvasApi}/courses/${courseId}/assignments?include[]=overrides`;
+    // overrides ride along so the calendar can check scheduled students.
+    // Canvas otherwise reports dates with the overrides applied (for a
+    // teacher, the latest of them), so ask for the assignment's own dates,
+    // the ones its file sets.
+    const url = `${canvasApi}/courses/${courseId}/assignments?include[]=overrides&override_assignment_dates=false`;
     const assignments = await paginatedRequest<CanvasAssignment[]>({ url });
     return assignments.map((a) => ({
       ...a,
@@ -87,7 +90,7 @@ export const canvasAssignmentService = {
     await syncStudentOverrides(
       canvasCourseId,
       canvasAssignment,
-      publishOptions?.overrides ?? []
+      publishOptions?.overrides
     );
 
     return canvasAssignment;
@@ -144,7 +147,7 @@ export const canvasAssignmentService = {
     await syncStudentOverrides(
       courseId,
       canvasAssignment,
-      publishOptions?.overrides ?? []
+      publishOptions?.overrides
     );
     return canvasAssignment;
   },
@@ -187,12 +190,15 @@ const groupFields = (options?: CanvasAssignmentPublishOptions) => ({
 });
 
 // Replace the assignment's per-student overrides with the scheduled ones.
-// Section overrides (no student_ids) are left alone.
+// Section overrides (no student_ids) are left alone, and so is everything
+// when the file has no Schedule (`wanted` undefined): those overrides are
+// set in Canvas, like an extension for one student.
 const syncStudentOverrides = async (
   courseId: number,
   canvasAssignment: CanvasAssignment,
-  wanted: OverrideSpec[]
+  wanted: OverrideSpec[] | undefined
 ) => {
+  if (!wanted) return;
   if (wanted.length === 0 && !canvasAssignment.has_overrides) return;
 
   const existing = await canvasAssignmentService.getOverrides(

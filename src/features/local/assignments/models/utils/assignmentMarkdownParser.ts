@@ -39,11 +39,13 @@ const parseFileUploadExtensions = (input: string) => {
 //     - Okafor, Daniel
 //     - Brennan, Owen
 // Dates are keys indented under Schedule, students are list items indented
-// further. The block ends at the first line that is not indented.
-const parseSchedule = (input: string): AssignmentScheduleEntry[] => {
+// further. The block ends at the first line that is not indented. Without a
+// Schedule: line there is no schedule; an empty one is a schedule with no
+// dates, which still says the file sets the per-student dates.
+const parseSchedule = (input: string): AssignmentScheduleEntry[] | undefined => {
   const lines = input.split("\n");
   const start = lines.findIndex((line) => /^Schedule:\s*$/.test(line));
-  if (start === -1) return [];
+  if (start === -1) return undefined;
 
   const entries: AssignmentScheduleEntry[] = [];
   for (const line of lines.slice(start + 1)) {
@@ -259,7 +261,7 @@ export const assignmentMarkdownParser = {
     if (gradeIndividually !== undefined) {
       assignment.gradeIndividually = gradeIndividually;
     }
-    if (schedule.length > 0) {
+    if (schedule) {
       assignment.schedule = schedule;
     }
     return assignment;
