@@ -5,8 +5,6 @@ import { CalendarMonth } from "./CalendarMonth";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import { useMemo } from "react";
 import { usePersistedScroll } from "@/components/usePersistedScroll";
-import CalendarItemsContextProvider from "../context/CalendarItemsContextProvider";
-import CalendarQuizQuestionsProvider from "../context/CalendarQuizQuestionsProvider";
 
 export default function CourseCalendar() {
   const { data: settings } = useLocalCourseSettingsQuery();
@@ -45,13 +43,9 @@ export default function CourseCalendar() {
         onScroll={scroll.onScroll}
         ref={scroll.ref}
       >
-        <CalendarItemsContextProvider>
-          <CalendarQuizQuestionsProvider>
-            {months.map((month) => (
-              <CalendarMonth key={month.month + "" + month.year} month={month} />
-            ))}
-          </CalendarQuizQuestionsProvider>
-        </CalendarItemsContextProvider>
+        {months.map((month) => (
+          <CalendarMonth key={month.month + "" + month.year} month={month} />
+        ))}
       </div>
     </div>
   );
