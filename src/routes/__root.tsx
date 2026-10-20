@@ -21,6 +21,9 @@ import { SuspenseAndErrorHandling } from "@/components/SuspenseAndErrorHandling"
 import TrpcProvider from "@/services/serverFunctions/TrpcProvider";
 import { getQueryClient } from "@/app/providersQueryClientUtils";
 import appCss from "@/app/globals.css?url";
+import { useEffect } from "react";
+import { watchForNewBuild } from "@/app/staleBuild/staleBuildReload";
+import { courseInPath } from "@/app/initialData/courseInPath";
 
 type InitialData = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -31,10 +34,14 @@ type InitialData = {
   startupError?: string;
 };
 
-const fetchInitialData = createServerFn({ method: "GET" }).handler(
-  async (): Promise<InitialData> => {
+// Only the course being opened is read and embedded in the page: embedding
+// every course made each page several megabytes and slow to arrive. Other
+// courses load their data when they're opened.
+const fetchInitialData = createServerFn({ method: "GET" })
+  .inputValidator((courseName: string | undefined) => courseName)
+  .handler(async ({ data: courseName }): Promise<InitialData> => {
     try {
-      return { dehydratedState: await prefetchAllCourseData() };
+      return { dehydratedState: await prefetchCourseData(courseName) };
     } catch (e) {
       console.error("Canvas Manager failed to load initial data:", e);
       return { startupError: e instanceof Error ? e.message : String(e) };
@@ -42,7 +49,7 @@ const fetchInitialData = createServerFn({ method: "GET" }).handler(
   },
 );
 
-const prefetchAllCourseData = async () => {
+const prefetchCourseData = async (courseName: string | undefined) => {
   const { trpcAppRouter } =
     await import("@/services/serverFunctions/appRouter");
   const { createTrpcContext } =
@@ -60,7 +67,9 @@ const prefetchAllCourseData = async () => {
     },
   });
 
-  const allSettings = await fileStorageService.settings.getAllCoursesSettings();
+  const allSettings = (
+    await fileStorageService.settings.getAllCoursesSettings()
+  ).filter((settings) => settings.name === courseName);
 
   await Promise.all(
     allSettings.map(async (settings) => {
@@ -106,8 +115,8 @@ export const Route = createRootRoute({
       { rel: "icon", href: "/favicon.ico" },
     ],
   }),
-  loader: async (): Promise<InitialData> => {
-    return await fetchInitialData();
+  loader: async ({ location }): Promise<InitialData> => {
+    return await fetchInitialData({ data: courseInPath(location.pathname) });
   },
   component: RootComponent,
   errorComponent: ({ error }) => (
@@ -150,6 +159,7 @@ function ErrorShell({ title, message }: { title: string; message: string }) {
 function RootComponent() {
   const { dehydratedState, startupError } = Route.useLoaderData();
   const queryClient = getQueryClient();
+  useEffect(watchForNewBuild, []);
 
   if (startupError !== undefined) {
     return (
