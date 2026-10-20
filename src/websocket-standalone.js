@@ -17,6 +17,9 @@ const watcher = chokidar.watch(folderToWatch, {
   persistent: true,
   usePolling,
 });
+// it shares a process with the web server, so a watcher error only stops
+// the live updates
+watcher.on("error", (error) => console.error("file watcher error:", error));
 
 // Only the app's own pages (and programs that aren't browsers) may listen for
 // file changes; a website open in the same browser may not. The app's proxy in
