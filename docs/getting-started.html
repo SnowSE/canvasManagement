@@ -324,7 +324,7 @@ Next week you&#x27;ll implement primary-backup replication...
 <li>The first row names the columns: each of its values starts with a label. Later rows give their values in the same order, without labels.</li>
 <li>Start a value with a column&rsquo;s name to skip ahead to it, like <code>Topic:</code> on Labor Day. A label that isn&rsquo;t a column name, like <code>Final Exam: Noon</code>, stays part of the value.</li>
 <li><code>&mdash;</code>, <code>-</code>, <code>&ndash;</code> or <code>n/a</code> leaves a value empty. A value can run over several lines, hold its own list, or use reference links defined anywhere in the file.</li>
-<li><code>caption=</code> is optional and is the only setting. The look is built in (neutral greys in the page&rsquo;s own font), so every table matches and nothing needs adjusting.</li>
+<li><code>group="Week"</code> (or several, <code>group="Week, Module"</code>) takes those columns out of the rows and puts a shaded row with their values before each run of rows that share them, so the table has fewer columns; leave a grouped value empty to keep the one above. <code>caption=</code> and <code>group=</code> are the only settings. The look is built in (neutral greys in the page&rsquo;s own font), so every table matches and nothing needs adjusting.</li>
 </ul>
 
 <h3 id="embed">Embed page content into the course home page</h3>
@@ -458,6 +458,7 @@ AddToHome: true
 <h2 id="changes">Recent changes</h2>
 <div class="tw"><table>
 <tr><th>When</th><th>What changed</th></tr>
+<tr><td style="white-space:nowrap">Oct 2026</td><td><a href="#list-tables">Tables from lists</a> can group rows: <code>group="Week"</code> takes the column out of the rows and puts a shaded row with its value wherever it changes.</td></tr>
 <tr><td style="white-space:nowrap">Oct 2026</td><td><a href="#calendar">Modules and calendar days</a> list items by <code>DateForOrdering</code>, then their available, due and lock dates, and a module whose order in Canvas differs is flagged on its <em>Sort by Date</em> button. Assignments and quizzes can set <code>DateForOrdering</code> too (pages&rsquo; <code>DueDateForOrdering</code> is now written <code>DateForOrdering</code>), and dragging an item to another day keeps its times and the gaps between its dates.</td></tr>
 <tr><td style="white-space:nowrap">Oct 2026</td><td><a href="#calendar">Modules and calendar days</a> list items by their available date, then their due date, and a module whose order in Canvas differs is flagged on its <em>Sort by Date</em> button.</td></tr>
 <tr><td style="white-space:nowrap">Oct 2026</td><td><b>Security:</b> <a href="#setup-local-only">only this computer can open CanvasManager</a> in new setups, and it refuses requests a website tries to send it, including to its live file-change updates. If your <code>docker-compose.yml</code> is from before this, it listens on every network the computer is on, and the app now says so with an amber bar across the top of every page: run <code>get-started.ps1</code> again and let it write a new <code>docker-compose.yml</code>, or use the <code>ports</code> and <code>environment</code> lines in the <a href="#setup-compose">compose example</a> (the bar shows them with your port).</td></tr>
