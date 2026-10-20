@@ -334,7 +334,7 @@ Next week you&#x27;ll implement primary-backup replication...
 <pre><code>DateForOrdering: 08/26/2026 23:59:00
 AddToHome: true
 ---</code></pre></li>
-<li>Click <a href="#publishing">Update in Canvas</a> on that page. The first time, the page is added at the end of the home page. After that, each update replaces it there.</li>
+<li>Click <a href="#publishing">Update in Canvas</a> on that page. The first time, the page is added at the end of the home page. After that, each update replaces it there. To see it there, choose <strong>View home in Canvas</strong> in the page footer&rsquo;s &#8943; menu.</li>
 </ol>
 <p>To choose where on the home page it goes, put its marker there yourself, named after the page&rsquo;s Canvas address (the end of its URL, e.g. <code>courseschedule</code> in <code>&hellip;/courses/1234/pages/courseschedule</code>). In Canvas, edit the home page, switch to the HTML view with the <strong>&lt;/&gt;</strong> button at the bottom right of the editor, and add the marker on its own line (not inside a paragraph):</p>
 <pre><code>&lt;div id="embed-courseschedule"&gt;&lt;/div&gt;</code></pre>
@@ -458,6 +458,7 @@ AddToHome: true
 <h2 id="changes">Recent changes</h2>
 <div class="tw"><table>
 <tr><th>When</th><th>What changed</th></tr>
+<tr><td style="white-space:nowrap">Oct 2026</td><td>A page with <a href="#embed"><code>AddToHome: true</code></a> has <strong>View home in Canvas</strong> in its footer&rsquo;s &#8943; menu, to see the page on the course home page.</td></tr>
 <tr><td style="white-space:nowrap">Oct 2026</td><td>Updates download about an eighth as much (37 MB instead of 287 MB) and unpack about ten times faster: the image no longer carries a package manager or a copy of every package, only the built app.</td></tr>
 <tr><td style="white-space:nowrap">Oct 2026</td><td>CanvasManager works again behind a proxy that rewrites the address it forwards to (like nginx&rsquo;s plain <code>proxy_pass</code>). Opened by a domain name it doesn&rsquo;t know, it now says which line to add to <code>.env</code> instead of failing silently (<a href="#setup-local-only">why</a>), and the amber bar&rsquo;s steps for updating <code>docker-compose.yml</code> keep its port as it is.</td></tr>
 <tr><td style="white-space:nowrap">Oct 2026</td><td><a href="#list-tables">Tables from lists</a> can group rows: <code>group="Week"</code> takes the column out of the rows and puts a shaded row with its value wherever it changes.</td></tr>

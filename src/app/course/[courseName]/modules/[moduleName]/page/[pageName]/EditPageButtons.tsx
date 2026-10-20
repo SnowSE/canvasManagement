@@ -2,7 +2,7 @@ import {
   EditorFooter,
   FooterAction,
 } from "@/app/course/[courseName]/EditorFooter";
-import { TrashIcon } from "@/components/icons/ActionIcons";
+import { ExternalLinkIcon, TrashIcon } from "@/components/icons/ActionIcons";
 import { useCourseContext } from "@/app/course/[courseName]/context/courseContext";
 import Modal, { useModal } from "@/components/Modal";
 import { Spinner } from "@/components/Spinner";
@@ -22,7 +22,11 @@ import { useCanvasAssignmentsQuery } from "@/features/canvas/hooks/canvasAssignm
 import { useCanvasQuizzesQuery } from "@/features/canvas/hooks/canvasQuizHooks";
 import { useCanvasModuleNames } from "@/features/canvas/hooks/canvasModuleHooks";
 import { getSyncReport } from "@/app/course/[courseName]/calendar/day/getAssignmentSyncStatus";
-import { getCompareUrl, getCourseUrl } from "@/services/urlUtils";
+import {
+  getCanvasHomeUrlFor,
+  getCompareUrl,
+  getCourseUrl,
+} from "@/services/urlUtils";
 import { useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useItemNavigation } from "../../../../hooks/useItemNavigation";
@@ -88,25 +92,28 @@ export default function EditPageButtons({
     updatePageInCanvas.isPending ||
     deletePageInCanvas.isPending;
 
-  const extraActions: FooterAction[] = pageInCanvas
+  const deleteAction: FooterAction = pageInCanvas
+    ? {
+        label: "Delete from Canvas",
+        icon: <TrashIcon />,
+        danger: true,
+        disabled: requestIsPending,
+        onClick: () => deletePageInCanvas.mutate(pageInCanvas.page_id),
+      }
+    : {
+        label: "Delete locally",
+        icon: <TrashIcon />,
+        danger: true,
+        onClick: () => modal.openModal(),
+        opensDialog: true,
+      };
+  const homeUrl = getCanvasHomeUrlFor(page, settings.canvasId);
+  const extraActions: FooterAction[] = homeUrl
     ? [
-        {
-          label: "Delete from Canvas",
-          icon: <TrashIcon />,
-          danger: true,
-          disabled: requestIsPending,
-          onClick: () => deletePageInCanvas.mutate(pageInCanvas.page_id),
-        },
+        { label: "View home in Canvas", icon: <ExternalLinkIcon />, href: homeUrl },
+        deleteAction,
       ]
-    : [
-        {
-          label: "Delete locally",
-          icon: <TrashIcon />,
-          danger: true,
-          onClick: () => modal.openModal(),
-          opensDialog: true,
-        },
-      ];
+    : [deleteAction];
 
   return (
     <EditorFooter
