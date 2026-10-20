@@ -578,3 +578,41 @@ describe("getSyncReport - module", () => {
     expect(report(undefined).fields.map((f) => f.key)).not.toContain("modules");
   });
 });
+
+describe("getSyncReport - student overrides", () => {
+  const roster = {
+    students: {
+      students: [
+        { id: 100202, name: "Priya Anand", sortableName: "Anand, Priya", email: "priya.anand@example.edu" },
+        { id: 100203, name: "Owen Brennan", sortableName: "Brennan, Owen", email: "owen.brennan@example.edu" },
+      ],
+      syncedAt: "",
+    },
+  };
+  // an extension given to one student in Canvas
+  const extension = {
+    id: 9,
+    assignment_id: 1,
+    course_section_id: 0,
+    title: "Extension",
+    student_ids: [100202],
+    due_at: "2023-08-25T05:59:00Z",
+  };
+  const canvasItem = { ...baseCanvasAssignment, has_overrides: true, overrides: [extension] };
+  const otherOverrides = (item: LocalAssignment) =>
+    getSyncReport({ item, canvasItem, type: "assignment", settings: baseSettings, roster })
+      .differences.filter((d) => d.key === "schedule:extra");
+
+  it("doesn't count overrides set in Canvas when the file has no Schedule", () => {
+    expect(otherOverrides(baseLocalAssignment)).toEqual([]);
+  });
+
+  it("counts them with an empty Schedule:, whose Update removes them", () => {
+    expect(otherOverrides({ ...baseLocalAssignment, schedule: [] })).toHaveLength(1);
+  });
+
+  it("counts an override the Schedule doesn't list, which Update would replace", () => {
+    const scheduled = { ...baseLocalAssignment, schedule: [{ date: "08/23/2023", students: ["100203"] }] };
+    expect(otherOverrides(scheduled)).toHaveLength(1);
+  });
+});

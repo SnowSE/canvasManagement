@@ -157,7 +157,7 @@ footer{margin-top:64px;color:var(--faint);font-size:13px;border-top:1px solid va
 <li>Each date becomes one Canvas assignment override for those students, due on that date at the assignment's usual time of day.</li>
 <li>If the assignment has a <code>LockAt</code>, each override locks the same distance after its due date that the assignment's own lock sits after <code>DueAt</code>. <code>UnlockAt</code> is carried over unchanged.</li>
 <li>Students not in the schedule keep the assignment's <code>DueAt</code>, so the assignment is still visible to everyone.</li>
-<li>Updating replaces the assignment's per-student overrides with what the file says. Section-level overrides you made in Canvas are left alone.</li>
+<li>Updating an assignment that has a <code>Schedule</code> replaces its per-student overrides with what the file says; an empty <code>Schedule:</code> with no dates removes them. Without a <code>Schedule</code>, updating leaves the per-student dates you set in Canvas (like an extension for one student) alone, and they don&rsquo;t count as a difference. Section-level overrides are always left alone.</li>
 <li>The calendar's sync check now compares overrides too. A batch whose override is missing or on a different date shows the red border, and the hover card says why.</li>
 </ul>
 

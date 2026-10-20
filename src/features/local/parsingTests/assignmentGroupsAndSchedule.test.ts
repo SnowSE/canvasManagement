@@ -45,6 +45,7 @@ describe("group set and schedule frontmatter", () => {
   });
 
   it("leaves files without the new fields unchanged", () => {
+    // (an empty Schedule: is different, see below)
     const markdown = assignmentMarkdownSerializer.toMarkdown(base);
     expect(markdown).not.toContain("GroupSet");
     expect(markdown).not.toContain("GradeIndividually");
@@ -53,6 +54,14 @@ describe("group set and schedule frontmatter", () => {
     expect(parsed.groupSet).toBeUndefined();
     expect(parsed.gradeIndividually).toBeUndefined();
     expect(parsed.schedule).toBeUndefined();
+  });
+
+  it("keeps an empty Schedule:, which says the file sets the per-student dates (none)", () => {
+    const assignment: LocalAssignment = { ...base, schedule: [] };
+    const markdown = assignmentMarkdownSerializer.toMarkdown(assignment);
+    expect(markdown).toMatch(/^Schedule:$/m);
+    const parsed = assignmentMarkdownParser.parseMarkdown(markdown, base.name);
+    expect(parsed.schedule).toEqual([]);
   });
 
   it("parses a hand-written schedule with loose dates and blank lines", () => {

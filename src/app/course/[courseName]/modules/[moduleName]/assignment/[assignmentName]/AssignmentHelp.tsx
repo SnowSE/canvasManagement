@@ -156,7 +156,11 @@ GradeIndividually: false
       <HelpSection title="Per-student due dates (Schedule)">
         <P>
           Give some students a different due date (published as Canvas
-          overrides). Students not listed keep <C>DueAt</C>.
+          overrides). Students not listed keep <C>DueAt</C>. With a{" "}
+          <C>Schedule</C>, Update replaces the assignment&apos;s per-student
+          overrides with it (an empty <C>Schedule:</C> removes them); without
+          one, Update leaves per-student dates set in Canvas (like an
+          extension) alone.
         </P>
         <Example>{`
 Schedule:

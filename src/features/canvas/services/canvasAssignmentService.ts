@@ -87,7 +87,7 @@ export const canvasAssignmentService = {
     await syncStudentOverrides(
       canvasCourseId,
       canvasAssignment,
-      publishOptions?.overrides ?? []
+      publishOptions?.overrides
     );
 
     return canvasAssignment;
@@ -144,7 +144,7 @@ export const canvasAssignmentService = {
     await syncStudentOverrides(
       courseId,
       canvasAssignment,
-      publishOptions?.overrides ?? []
+      publishOptions?.overrides
     );
     return canvasAssignment;
   },
@@ -187,12 +187,15 @@ const groupFields = (options?: CanvasAssignmentPublishOptions) => ({
 });
 
 // Replace the assignment's per-student overrides with the scheduled ones.
-// Section overrides (no student_ids) are left alone.
+// Section overrides (no student_ids) are left alone, and so is everything
+// when the file has no Schedule (`wanted` undefined): those overrides are
+// set in Canvas, like an extension for one student.
 const syncStudentOverrides = async (
   courseId: number,
   canvasAssignment: CanvasAssignment,
-  wanted: OverrideSpec[]
+  wanted: OverrideSpec[] | undefined
 ) => {
+  if (!wanted) return;
   if (wanted.length === 0 && !canvasAssignment.has_overrides) return;
 
   const existing = await canvasAssignmentService.getOverrides(

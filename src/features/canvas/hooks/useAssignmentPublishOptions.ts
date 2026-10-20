@@ -37,6 +37,9 @@ export const useAssignmentPublishOptions = () => {
         options.gradeIndividually = assignment.gradeIndividually ?? false;
       }
 
+      // a Schedule, even an empty one, sets the per-student dates, replacing
+      // the ones in Canvas; without one, Canvas's are kept
+      if (assignment.schedule) options.overrides = [];
       if (assignment.schedule && assignment.schedule.length > 0) {
         if (!roster)
           throw new Error(
