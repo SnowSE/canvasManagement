@@ -39,21 +39,6 @@ RUN CGO_ENABLED=0 go build -o gh-teacher .
 
 FROM node:22-alpine AS production
 
-# Build identity, passed in by build.sh / the deploy workflow. The app reads the
-# env vars to know what it is running, and the update checker reads the labels
-# off the published image on Docker Hub to see whether something newer exists.
-ARG GIT_SHA=""
-ARG BUILD_DATE=""
-ARG IMAGE_REPO="snowcollege/canvas_management"
-ARG IMAGE_TAG=""
-ENV GIT_SHA=$GIT_SHA \
-    BUILD_DATE=$BUILD_DATE \
-    UPDATE_CHECK_IMAGE=$IMAGE_REPO \
-    UPDATE_CHECK_TAG=$IMAGE_TAG
-LABEL org.opencontainers.image.revision=$GIT_SHA \
-      org.opencontainers.image.created=$BUILD_DATE \
-      org.opencontainers.image.source="https://github.com/SnowSE/canvasManagement"
-
 WORKDIR /app
 
 ARG PNPM_VERSION
@@ -91,5 +76,21 @@ RUN chown -R node:node /app \
 # tree is world-readable and gh only reads it -- GH_TOKEN supplies the auth.
 # Set after the installs above so the build itself is unaffected.
 ENV HOME=/home/node
+
+# Build identity, passed in by build.sh / the deploy workflow. The app reads the
+# env vars to know what it is running, and the update checker reads the labels
+# off the published image on Docker Hub to see whether something newer exists.
+# Last, since it changes on every build: the layers above stay the same.
+ARG GIT_SHA=""
+ARG BUILD_DATE=""
+ARG IMAGE_REPO="snowcollege/canvas_management"
+ARG IMAGE_TAG=""
+ENV GIT_SHA=$GIT_SHA \
+    BUILD_DATE=$BUILD_DATE \
+    UPDATE_CHECK_IMAGE=$IMAGE_REPO \
+    UPDATE_CHECK_TAG=$IMAGE_TAG
+LABEL org.opencontainers.image.revision=$GIT_SHA \
+      org.opencontainers.image.created=$BUILD_DATE \
+      org.opencontainers.image.source="https://github.com/SnowSE/canvasManagement"
 
 CMD [ "pnpm", "run", "start" ]
