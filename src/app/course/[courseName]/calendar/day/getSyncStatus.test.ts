@@ -525,6 +525,16 @@ describe("getSyncReport - quiz options", () => {
     ]);
   });
 
+  it("compares the time limit, no limit included", () => {
+    const differing = (canvas: Partial<CanvasQuiz>, local: Partial<LocalQuiz>) =>
+      report(canvas, local).fields.filter((f) => !f.same).map((f) => `${f.label}: ${f.local} vs ${f.canvas}`);
+    expect(differing({ time_limit: 5 }, { timeLimit: 5 })).toEqual([]);
+    expect(differing({ time_limit: null }, {})).toEqual([]);
+    expect(differing({ time_limit: 10 }, { timeLimit: 5 })).toEqual(["Time limit: 5 minutes vs 10 minutes"]);
+    // a limit set by hand in Canvas shows up before an update would clear it
+    expect(differing({ time_limit: 5 }, {})).toEqual(["Time limit: none vs 5 minutes"]);
+  });
+
   it("treats no password and an empty one as the same", () => {
     expect(
       report({ access_code: undefined }, { password: undefined }).fields.filter((f) => !f.same),

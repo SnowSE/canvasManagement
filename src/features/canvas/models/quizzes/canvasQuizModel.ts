@@ -10,7 +10,7 @@ export interface CanvasQuiz {
   description: string;
   quiz_type: string;
   assignment_group_id?: number;
-  time_limit?: number;
+  time_limit?: number | null; // minutes; null for no limit
   shuffle_answers?: boolean;
   hide_results?: string;
   show_correct_answers?: boolean;

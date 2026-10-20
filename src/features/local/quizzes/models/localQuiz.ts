@@ -24,6 +24,12 @@ export const zodLocalQuiz = z.object({
   allowedAttempts: z
     .number()
     .describe("Number of allowed attempts (-1 for unlimited)"),
+  timeLimit: z
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .describe("Minutes a student has once they start an attempt; no limit when absent"),
   questions: zodLocalQuizQuestion.array(),
 });
 

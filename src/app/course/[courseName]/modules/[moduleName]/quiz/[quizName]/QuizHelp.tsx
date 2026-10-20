@@ -133,6 +133,19 @@ essay
               ),
             },
             {
+              name: "TimeLimit",
+              children: (
+                <>
+                  Optional. Minutes a student has once they start, like{" "}
+                  <C>TimeLimit: 5</C>. The timer starts when each student
+                  begins, so the quiz can be open for days. An attempt still
+                  ends at <C>LockAt</C>, so someone who starts two minutes
+                  before it gets two minutes. Put it above <C>Description</C>, and
+                  leave the line out for no limit.
+                </>
+              ),
+            },
+            {
               name: "Description",
               children:
                 "Shown above the questions. Markdown, and it can run over several lines up to the first ---.",

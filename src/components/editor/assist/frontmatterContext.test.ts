@@ -82,3 +82,21 @@ describe("frontmatter line context", () => {
     expect(itemTypeFromFrontmatter(["no frontmatter"])).toBe("unknown");
   });
 });
+
+describe("quiz Description", () => {
+  const quiz = `ShuffleAnswers: true
+AllowedAttempts: 1
+
+Description: Read lab 3 first.
+
+---
+What is 2+3?`.split("\n");
+
+  it("offers settings on a blank line above Description", () => {
+    expect(getLineContext(quiz, 2)).toEqual({ kind: "blankKey" });
+  });
+
+  it("offers none below it, where a setting would join the description", () => {
+    expect(getLineContext(quiz, 4)).toBeNull();
+  });
+});

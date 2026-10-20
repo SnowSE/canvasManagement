@@ -640,12 +640,14 @@ function checkQuiz(
 function checkQuizOptions(quiz: LocalQuiz, canvasQuiz: CanvasQuiz): SyncField[] {
   const yesNo = (value?: boolean) => (value ? "yes" : "no");
   const attempts = (value: number) => (value === -1 ? "unlimited" : String(value));
+  const minutes = (value?: number | null) => (value ? `${value} minutes` : "none");
   const options: [key: string, label: string, local: string, canvas: string][] = [
     ["password", "Password", quiz.password || UNSET, canvasQuiz.access_code || UNSET],
     ["shuffleAnswers", "Shuffle answers", yesNo(quiz.shuffleAnswers), yesNo(canvasQuiz.shuffle_answers)],
     ["showCorrectAnswers", "Show correct answers", yesNo(quiz.showCorrectAnswers), yesNo(canvasQuiz.show_correct_answers)],
     ["oneQuestionAtATime", "One question at a time", yesNo(quiz.oneQuestionAtATime), yesNo(canvasQuiz.one_question_at_a_time)],
     ["allowedAttempts", "Allowed attempts", attempts(quiz.allowedAttempts), attempts(canvasQuiz.allowed_attempts)],
+    ["timeLimit", "Time limit", minutes(quiz.timeLimit), minutes(canvasQuiz.time_limit)],
   ];
   return options.map(([key, label, local, canvas]) =>
     field({

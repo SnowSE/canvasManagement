@@ -42,6 +42,16 @@ const parseNumberOrThrow = (value: string, label: string): number => {
   }
   return parsed;
 };
+// minutes; a blank or missing TimeLimit line means no limit
+const parseTimeLimit = (value: string): number | undefined => {
+  if (value === "") return undefined;
+  if (!/^\d+$/.test(value) || parseInt(value, 10) === 0)
+    throw new Error(
+      `Error with TimeLimit: ${value} (minutes, a whole number like 5; leave the line out for no limit)`
+    );
+  return parseInt(value, 10);
+};
+
 const getQuizWithOnlySettings = (settings: string, name: string): LocalQuiz => {
   const rawShuffleAnswers = extractLabelValue(settings, "ShuffleAnswers");
   const shuffleAnswers = parseBooleanOrThrow(
@@ -76,6 +86,8 @@ const getQuizWithOnlySettings = (settings: string, name: string): LocalQuiz => {
     "AllowedAttempts"
   );
 
+  const timeLimit = parseTimeLimit(extractLabelValue(settings, "TimeLimit"));
+
   const rawDueAt = extractLabelValue(settings, "DueAt");
   const dueAt = verifyDateOrThrow(rawDueAt, "DueAt");
 
@@ -103,6 +115,7 @@ const getQuizWithOnlySettings = (settings: string, name: string): LocalQuiz => {
     oneQuestionAtATime,
     localAssignmentGroupName,
     allowedAttempts,
+    ...(timeLimit !== undefined && { timeLimit }),
     questions: [],
   };
   return quiz;
@@ -135,7 +148,7 @@ ShowCorrectAnswers: ${quiz.showCorrectAnswers.toString().toLowerCase()}
 OneQuestionAtATime: ${quiz.oneQuestionAtATime.toString().toLowerCase()}
 AssignmentGroup: ${quiz.localAssignmentGroupName}
 AllowedAttempts: ${quiz.allowedAttempts}
-Description: ${quiz.description}
+${quiz.timeLimit ? `TimeLimit: ${quiz.timeLimit}\n` : ""}Description: ${quiz.description}
 ---
 ${questionMarkdown}`;
   },

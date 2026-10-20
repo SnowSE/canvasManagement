@@ -326,3 +326,43 @@ b) false
   });
 
 });
+
+describe("quiz TimeLimit", () => {
+  const settings = (extra: string) => `
+ShuffleAnswers: true
+OneQuestionAtATime: false
+DueAt: 08/21/2023 23:59:00
+AssignmentGroup: Assignments
+AllowedAttempts: 1
+${extra}Description: Read lab 3 first.
+---
+`;
+
+  it("reads the time limit in minutes", () => {
+    const quiz = quizMarkdownUtils.parseMarkdown(settings("TimeLimit: 5\n"), "Pre-lab");
+    expect(quiz.timeLimit).toBe(5);
+  });
+
+  it("has no time limit when the line is missing or blank", () => {
+    expect(quizMarkdownUtils.parseMarkdown(settings(""), "Pre-lab").timeLimit).toBeUndefined();
+    expect(quizMarkdownUtils.parseMarkdown(settings("TimeLimit:\n"), "Pre-lab").timeLimit).toBeUndefined();
+  });
+
+  it("writes the line only when there is a limit, above Description", () => {
+    const withLimit = quizMarkdownUtils.parseMarkdown(settings("TimeLimit: 5\n"), "Pre-lab");
+    expect(quizMarkdownUtils.toMarkdown(withLimit)).toContain(
+      "AllowedAttempts: 1\nTimeLimit: 5\nDescription: Read lab 3 first."
+    );
+    expect(() => quizMarkdownUtils.assertCanRoundTrip(withLimit)).not.toThrow();
+
+    const without = quizMarkdownUtils.parseMarkdown(settings(""), "Pre-lab");
+    expect(quizMarkdownUtils.toMarkdown(without)).not.toContain("TimeLimit");
+  });
+
+  it("refuses a limit that is not a whole number of minutes", () => {
+    for (const value of ["5 min", "0", "-1", "2.5"])
+      expect(() =>
+        quizMarkdownUtils.parseMarkdown(settings(`TimeLimit: ${value}\n`), "Pre-lab")
+      ).toThrow(/TimeLimit/);
+  });
+});

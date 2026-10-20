@@ -121,7 +121,13 @@ export function getLineContext(lines: string[], lineIndex: number): LineContext 
     };
   }
 
-  if (line.length === 0) return { kind: "blankKey" };
+  if (line.length === 0) {
+    // a quiz's Description runs to the "---", so a setting typed below it
+    // would only become part of the description
+    if (lines.slice(0, lineIndex).some((l) => l.startsWith("Description:")))
+      return null;
+    return { kind: "blankKey" };
+  }
 
   const date = dateKey.exec(line);
   if (date) {

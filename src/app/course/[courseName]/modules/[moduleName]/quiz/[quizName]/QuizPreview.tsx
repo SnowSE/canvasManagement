@@ -47,6 +47,12 @@ export default function QuizPreview({
         <div className="text-end">Allowed Attempts</div>
         <div>{quiz.allowedAttempts}</div>
       </div>
+      {quiz.timeLimit && (
+        <div className="columns-2">
+          <div className="text-end">Time Limit</div>
+          <div>{quiz.timeLimit} minutes</div>
+        </div>
+      )}
       <div className="columns-2">
         <div className="text-end">One Question at a Time</div>
         <div>{quiz.oneQuestionAtATime}</div>

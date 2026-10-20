@@ -54,6 +54,7 @@ const keySuggestions: Record<
     { key: "OneQuestionAtATime", insert: "OneQuestionAtATime: ", opensList: true, detail: "" },
     { key: "AssignmentGroup", insert: "AssignmentGroup: ", opensList: true, detail: "grading category" },
     { key: "AllowedAttempts", insert: "AllowedAttempts: ", opensList: false, detail: "-1 for unlimited" },
+    { key: "TimeLimit", insert: "TimeLimit: ", opensList: false, detail: "minutes per attempt" },
     { key: "Description", insert: "Description: ", opensList: false, detail: "" },
   ],
   page: [

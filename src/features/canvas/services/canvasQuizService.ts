@@ -338,6 +338,8 @@ const quizSettingsForCanvas = (
   access_code: localQuiz.password,
   show_correct_answers: localQuiz.showCorrectAnswers,
   allowed_attempts: localQuiz.allowedAttempts,
+  // null clears a limit in Canvas, so the file decides either way
+  time_limit: localQuiz.timeLimit ?? null,
   one_question_at_a_time: localQuiz.oneQuestionAtATime,
   cant_go_back: false,
   due_at: localQuiz.dueAt

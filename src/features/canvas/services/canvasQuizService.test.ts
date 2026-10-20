@@ -321,6 +321,34 @@ describe("canvasQuizService", () => {
       );
     });
 
+    it("sends the time limit, and null for none so Canvas clears it", async () => {
+      const { rateLimitAwarePost } = await import("./canvasWebRequestUtils");
+      vi.spyOn(canvasQuizService, "getQuizQuestions").mockResolvedValue([]);
+      vi.mocked(rateLimitAwarePost).mockClear();
+      vi.mocked(rateLimitAwarePost).mockImplementation(async () => ({
+        data: { id: 1 },
+      }) as never);
+      const quiz = {
+        name: "Pre-lab",
+        description: "",
+        dueAt: "2023-12-01T23:59:00Z",
+        shuffleAnswers: false,
+        showCorrectAnswers: true,
+        oneQuestionAtATime: false,
+        allowedAttempts: 1,
+        questions: [],
+      } as LocalQuiz;
+      const sentTimeLimits = () =>
+        vi
+          .mocked(rateLimitAwarePost)
+          .mock.calls.filter(([url]) => url.endsWith("/quizzes"))
+          .map(([, body]) => (body as { quiz: { time_limit: number | null } }).quiz.time_limit);
+
+      await canvasQuizService.create(42, { ...quiz, timeLimit: 5 }, {} as never);
+      await canvasQuizService.create(42, quiz, {} as never);
+      expect(sentTimeLimits()).toEqual([5, null]);
+    });
+
     it("sends a multiple dropdowns question with one [blank] per prompt", async () => {
       const { rateLimitAwarePost } = await import("./canvasWebRequestUtils");
 
