@@ -84,6 +84,11 @@ What students should do, in markdown.
               children: "When submissions close. Blank = never.",
             },
             {
+              name: "DateForOrdering",
+              children:
+                "Optional. Where it sits in its module and its day, instead of UnlockAt, then DueAt.",
+            },
+            {
               name: "AssignmentGroupName",
               children: (
                 <>

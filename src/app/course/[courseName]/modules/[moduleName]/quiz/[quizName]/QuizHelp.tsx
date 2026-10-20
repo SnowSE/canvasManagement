@@ -81,6 +81,11 @@ essay
           items={[
             { name: "UnlockAt", children: "When it opens. Blank = right away." },
             { name: "DueAt", children: "Due date and time. Required." },
+            {
+              name: "DateForOrdering",
+              children:
+                "Optional. Where it sits in its module and its day, instead of UnlockAt, then DueAt.",
+            },
             { name: "LockAt", children: "When it closes. Blank = never." },
             {
               name: "Password",

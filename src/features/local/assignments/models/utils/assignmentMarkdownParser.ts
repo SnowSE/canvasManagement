@@ -6,7 +6,7 @@ import {
 import { AssignmentSubmissionType } from "../assignmentSubmissionType";
 import { AssignmentScheduleEntry, LocalAssignment } from "../localAssignment";
 import { RubricItem, RubricRating } from "../rubricItem";
-import { extractLabelValue } from "./markdownUtils";
+import { extractDateForOrdering, extractLabelValue } from "./markdownUtils";
 import { getDateOnlyMarkdownString } from "../../../utils/timeUtils";
 
 const parseFileUploadExtensions = (input: string) => {
@@ -112,6 +112,9 @@ const parseSettings = (input: string) => {
   const rawUnlockAt = extractLabelValue(input, "UnlockAt");
   const rawLockAt = extractLabelValue(input, "LockAt");
   const rawDueAt = extractLabelValue(input, "DueAt");
+  const dateForOrdering = verifyDateStringOrUndefined(
+    extractDateForOrdering(input)
+  );
   const assignmentGroupName = extractLabelValue(input, "AssignmentGroupName");
   const submissionTypes = parseSubmissionTypes(input);
   const fileUploadExtensions = parseFileUploadExtensions(input);
@@ -134,6 +137,7 @@ const parseSettings = (input: string) => {
     dueAt,
     unlockAt,
     lockAt,
+    dateForOrdering,
     classroom50Slug,
     groupSet,
     gradeIndividually,
@@ -217,6 +221,7 @@ export const assignmentMarkdownParser = {
       dueAt,
       unlockAt,
       lockAt,
+      dateForOrdering,
       classroom50Slug,
       groupSet,
       gradeIndividually,
@@ -244,6 +249,7 @@ export const assignmentMarkdownParser = {
       rubric: rubric,
       description: description,
     };
+    if (dateForOrdering) assignment.dateForOrdering = dateForOrdering;
     if (classroom50Slug) {
       assignment.classroom50Slug = classroom50Slug;
     }

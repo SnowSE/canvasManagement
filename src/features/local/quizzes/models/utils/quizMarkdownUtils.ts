@@ -5,6 +5,7 @@ import {
 import { LocalQuiz } from "../localQuiz";
 import { quizQuestionMarkdownUtils } from "./quizQuestionMarkdownUtils";
 import { FeedbackDelimiters } from "./quizFeedbackMarkdownUtils";
+import { extractDateForOrdering } from "@/features/local/assignments/models/utils/markdownUtils";
 
 const extractLabelValue = (input: string, label: string): string => {
   // anchored to line start so "LockAt" cannot match inside "UnlockAt"
@@ -85,6 +86,10 @@ const getQuizWithOnlySettings = (settings: string, name: string): LocalQuiz => {
   const rawUnlockAt = extractLabelValue(settings, "UnlockAt");
   const unlockAt = verifyDateStringOrUndefined(rawUnlockAt);
 
+  const dateForOrdering = verifyDateStringOrUndefined(
+    extractDateForOrdering(settings)
+  );
+
   const description = extractDescription(settings);
   const localAssignmentGroupName = extractLabelValue(
     settings,
@@ -98,6 +103,7 @@ const getQuizWithOnlySettings = (settings: string, name: string): LocalQuiz => {
     unlockAt,
     lockAt,
     dueAt,
+    ...(dateForOrdering && { dateForOrdering }),
     shuffleAnswers,
     showCorrectAnswers,
     oneQuestionAtATime,
@@ -129,7 +135,7 @@ export const quizMarkdownUtils = {
     return `UnlockAt: ${quiz.unlockAt ?? ""}
 LockAt: ${quiz.lockAt ?? ""}
 DueAt: ${quiz.dueAt}
-Password: ${quiz.password ?? ""}
+${quiz.dateForOrdering ? `DateForOrdering: ${quiz.dateForOrdering}\n` : ""}Password: ${quiz.password ?? ""}
 ShuffleAnswers: ${quiz.shuffleAnswers.toString().toLowerCase()}
 ShowCorrectAnswers: ${quiz.showCorrectAnswers.toString().toLowerCase()}
 OneQuestionAtATime: ${quiz.oneQuestionAtATime.toString().toLowerCase()}

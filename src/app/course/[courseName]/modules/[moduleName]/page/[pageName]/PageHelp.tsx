@@ -22,11 +22,11 @@ export function PageHelp() {
       <HelpSection title="File layout">
         <P>
           Settings, then a <C>---</C> line, then the page in markdown.{" "}
-          <C>DueDateForOrdering</C> only decides where the page sits on the
-          calendar and in its module.
+          <C>DateForOrdering</C> (or its older name <C>DueDateForOrdering</C>)
+          only decides where the page sits on the calendar and in its module.
         </P>
         <Example>{`
-DueDateForOrdering: 08/26/2026 23:59:00
+DateForOrdering: 08/26/2026 23:59:00
 ---
 
 # Course schedule
@@ -41,7 +41,7 @@ What students should read, in markdown.
           spot.
         </P>
         <Example>{`
-DueDateForOrdering: 08/26/2026 23:59:00
+DateForOrdering: 08/26/2026 23:59:00
 AddToHome: true
 ---
 `}</Example>

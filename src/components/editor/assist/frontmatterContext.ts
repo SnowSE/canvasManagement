@@ -33,7 +33,13 @@ export type LineContext =
   | { kind: "scheduleDateKey"; indent: string; date?: string }
   | null;
 
-export const DATE_KEYS = ["DueAt", "LockAt", "UnlockAt", "DueDateForOrdering"];
+export const DATE_KEYS = [
+  "DueAt",
+  "LockAt",
+  "UnlockAt",
+  "DateForOrdering",
+  "DueDateForOrdering",
+];
 
 const keyWithValue = /^([A-Za-z][A-Za-z0-9]*):(\s*)(.*)$/;
 const bareKey = /^([A-Za-z][A-Za-z0-9]*):\s*$/;
@@ -61,7 +67,12 @@ export function presentKeys(lines: string[]): Set<string> {
 
 export function itemTypeFromFrontmatter(lines: string[]): FrontmatterItemType {
   const keys = presentKeys(lines);
-  if (keys.has("DueDateForOrdering")) return "page";
+  // assignments and quizzes can have it too, but only pages lack DueAt
+  if (
+    (keys.has("DateForOrdering") || keys.has("DueDateForOrdering")) &&
+    !keys.has("DueAt")
+  )
+    return "page";
   if (keys.has("ShuffleAnswers") || keys.has("AssignmentGroup")) return "quiz";
   if (
     keys.has("SubmissionTypes") ||
