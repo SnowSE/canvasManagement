@@ -46,9 +46,8 @@ RUN npm install -g pnpm@$PNPM_VERSION
 
 # gh + the gh-teacher extension; authenticated via the GH_TOKEN env var at runtime
 RUN apk add --no-cache github-cli git
-COPY --from=gh-teacher-builder /classroom50/cli/gh-teacher/gh-teacher \
+COPY --chown=node:node --from=gh-teacher-builder /classroom50/cli/gh-teacher/gh-teacher \
   /home/node/.local/share/gh/extensions/gh-teacher/gh-teacher
-RUN chown -R node:node /home/node/.local
 
 COPY --from=builder /app/pnpm-lock.yaml ./
 COPY --from=builder /app/package.json ./
