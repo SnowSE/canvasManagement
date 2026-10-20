@@ -38,6 +38,8 @@ interface ListTableToken {
   caption: Token[];
   captionText: string;
   columns: string[];
+  // group= columns, by index: shown in a row of their own when they change
+  group: number[];
   // per row, per column: the value's tokens, or undefined when empty
   rows: (Token[] | undefined)[][];
   // per row, per column: the value as plain text, for sizing the columns
@@ -121,8 +123,8 @@ export const listTableExtension = {
     const options = Object.fromEntries(
       [...open[1].matchAll(OPTION)].map((m) => [m[1], m[2] ?? ""])
     );
-    for (const name of Object.keys(options).filter((o) => o !== "caption"))
-      console.log(`<!-- table --> has no ${name} option (the only one is caption=)`);
+    for (const name of Object.keys(options).filter((o) => o !== "caption" && o !== "group"))
+      console.log(`<!-- table --> has no ${name} option (its options are caption= and group=)`);
 
     const table = arrange(list.items.map(valuesOf));
     if (!table) {
@@ -132,6 +134,22 @@ export const listTableExtension = {
       return undefined;
     }
 
+    const group = (options.group ?? "")
+      .split(",")
+      .map((name) => name.trim())
+      .filter(Boolean)
+      .flatMap((name) => {
+        const column = table.columns.indexOf(name);
+        if (column < 0) console.log(`<!-- table --> group="${name}" isn't one of its columns`);
+        return column < 0 ? [] : [column];
+      });
+    // an empty group value is the same as the row before's, so it's only
+    // written when it changes
+    table.rows.forEach((row, r) => {
+      for (const c of group)
+        if (r > 0 && EMPTY.test(row[c].trim())) row[c] = table.rows[r - 1][c];
+    });
+
     const caption = options.caption ?? "";
     return {
       type: "listTable",
@@ -139,6 +157,7 @@ export const listTableExtension = {
       caption: this.lexer.inline(caption),
       captionText: plainText(caption),
       columns: table.columns,
+      group,
       rows: table.rows.map((row) =>
         row.map((value) =>
           EMPTY.test(value.trim()) ? undefined : this.lexer.blockTokens(value, [])
@@ -158,22 +177,52 @@ export const listTableExtension = {
     };
     const html = t.rows.map((row) => row.map(cell));
     const caption = this.parser.parseInline(t.caption);
+
+    // the group columns aren't shown in the rows; a row of their own starts
+    // each run of rows that share their values
+    const shown = t.columns.map((_, c) => c).filter((c) => !t.group.includes(c));
+    const view = {
+      ...t,
+      columns: shown.map((c) => t.columns[c]),
+      plain: t.plain.map((row) => shown.map((c) => row[c])),
+    };
+    const shownHtml = html.map((row) => shown.map((c) => row[c]));
+    // (a group with no values at all, like rows before the first one, gets none)
+    const groupLabels = t.plain.map((row, r) =>
+      t.group.some((c) => t.rows[r][c]) &&
+      (r === 0 || t.group.some((c) => row[c] !== t.plain[r - 1][c]))
+        ? t.group
+            .map((c) => `<strong>${escapeHtml(t.columns[c])}:</strong> ${html[r][c]}`)
+            .join(" · ")
+        : undefined
+    );
+
     return (
       (caption ? `<p style="margin:0 0 4px 0;"><strong>${caption}</strong></p>` : "") +
-      plainTable(t, html, caption) +
-      responsiveTable(t, html)
+      plainTable(view, shownHtml, caption, groupLabels) +
+      responsiveTable(view, shownHtml, groupLabels)
     );
   },
 };
 
-function plainTable(t: ListTableToken, html: string[][], caption: string) {
+function plainTable(
+  t: ListTableToken,
+  html: string[][],
+  caption: string,
+  groupLabels: (string | undefined)[]
+) {
   const td = `border:${look.line};padding:4px 8px;`;
   return `<details><summary>Show as a table</summary><div style="overflow-x:auto;"><table style="border-collapse:collapse;">${
     caption ? `<caption>${caption}</caption>` : ""
   }<thead><tr>${t.columns
     .map((c) => `<th scope="col" style="${td}text-align:left;">${escapeHtml(c)}</th>`)
     .join("")}</tr></thead><tbody style="vertical-align:top;">${html
-    .map((row) => `<tr>${row.map((v) => `<td style="${td}">${v}</td>`).join("")}</tr>`)
+    .map(
+      (row, r) =>
+        (groupLabels[r]
+          ? `<tr><th scope="colgroup" colspan="${t.columns.length}" style="${td}text-align:left;font-weight:normal;background:${look.shade};">${groupLabels[r]}</th></tr>`
+          : "") + `<tr>${row.map((v) => `<td style="${td}">${v}</td>`).join("")}</tr>`
+    )
     .join("")}</tbody></table></div></details>`;
 }
 
@@ -188,7 +237,11 @@ function plainTable(t: ListTableToken, html: string[][], caption: string) {
 // wide, a little wider than most, so text never needs more room than given.
 const CH = 1.1;
 
-function responsiveTable(t: ListTableToken, html: string[][]) {
+function responsiveTable(
+  t: ListTableToken,
+  html: string[][],
+  groupLabels: (string | undefined)[]
+) {
   const columns = t.columns.map((name, c) => {
     const values = t.plain.map((row) => row[c]);
     const lengths = values.map((v) => v.length).sort((a, b) => a - b);
@@ -244,9 +297,13 @@ function responsiveTable(t: ListTableToken, html: string[][]) {
     return `<div aria-hidden="true" style="flex:0 0 calc(${labelWidth});max-width:${off};overflow:hidden;border-top:${look.softLine};border-left:${look.line};background:${look.shade};"><div style="height:${h / 0.85}em;margin-bottom:-${h / 0.85}em;padding:.45em .5em 0 .8em;${look.label}">${escapeHtml(name)}</div>${heightSwitch("100%", h, 3)}</div>`;
   };
 
+  // a shaded band across the table, or a heading above the cards
+  const groupRow = (label: string) =>
+    `<div role="row" style="border:${look.line};margin-top:-1px;background:${look.shade};"><div role="rowheader" style="padding:.3em .6em;font-size:.9em;">${label}</div></div>`;
+
   const rows = html.map(
-    (row) =>
-      `${heightSwitch(off, 0.8, 10)}<div role="row" style="border:${look.line};border-width:1px 1px 1px 0;display:flex;flex-wrap:wrap;margin-top:-1px;">${row
+    (row, r) =>
+      `${heightSwitch(off, 0.8, 10)}${groupLabels[r] ? groupRow(groupLabels[r]) : ""}<div role="row" style="border:${look.line};border-width:1px 1px 1px 0;display:flex;flex-wrap:wrap;margin-top:-1px;">${row
         .map((value, c) => {
           const column = columns[c];
           // an empty cell keeps its font, which its ch and em widths depend on
