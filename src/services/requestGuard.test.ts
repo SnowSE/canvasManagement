@@ -53,6 +53,12 @@ describe("isAllowedRequest", () => {
     expect(allowed({ host, origin: `https://${host}` })).toBe(false);
     expect(allowed({ host, origin: `https://${host}` }, [host])).toBe(true);
   });
+
+  it("trusts Sec-Fetch-Site over Origin, so a proxy that rewrites Host keeps working", () => {
+    const behindProxy = { host: "localhost:3000", origin: "https://canvas.example.edu" };
+    expect(allowed({ ...behindProxy, "sec-fetch-site": "same-origin" })).toBe(true);
+    expect(allowed({ ...behindProxy, "sec-fetch-site": "cross-site" })).toBe(false);
+  });
 });
 
 describe("refusal", () => {

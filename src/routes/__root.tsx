@@ -168,14 +168,16 @@ function RootComponent() {
       <body className="flex justify-center h-screen" suppressHydrationWarning>
         <div className="bg-gray-950 h-screen text-slate-300 w-screen sm:p-1 flex flex-col">
           <MyToaster />
-          <SuspenseAndErrorHandling>
-            <QueryClientProvider client={queryClient}>
-              <TrpcProvider>
-                <HydrationBoundary state={dehydratedState}>
+          <QueryClientProvider client={queryClient}>
+            <TrpcProvider>
+              <HydrationBoundary state={dehydratedState}>
+                {/* outside the error handling, so a page that fails to load
+                    (like one the server refuses) leaves it up to say why */}
+                <ClientOnly>
+                  <NetworkBanner />
+                </ClientOnly>
+                <SuspenseAndErrorHandling>
                   <ClientCacheInvalidation />
-                  <ClientOnly>
-                    <NetworkBanner />
-                  </ClientOnly>
                   {/* the page gets the height the banner leaves */}
                   <div className="flex-1 min-h-0">
                     <Outlet />
@@ -183,10 +185,10 @@ function RootComponent() {
                   <ClientOnly>
                     <ErrorLogPill />
                   </ClientOnly>
-                </HydrationBoundary>
-              </TrpcProvider>
-            </QueryClientProvider>
-          </SuspenseAndErrorHandling>
+                </SuspenseAndErrorHandling>
+              </HydrationBoundary>
+            </TrpcProvider>
+          </QueryClientProvider>
         </div>
         <Scripts />
       </body>
