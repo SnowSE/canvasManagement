@@ -23,8 +23,11 @@ export interface CanvasAssignmentPublishOptions {
 
 export const canvasAssignmentService = {
   async getAll(courseId: number): Promise<CanvasAssignment[]> {
-    // overrides ride along so the calendar can check scheduled students
-    const url = `${canvasApi}/courses/${courseId}/assignments?include[]=overrides`;
+    // overrides ride along so the calendar can check scheduled students.
+    // Canvas otherwise reports dates with the overrides applied (for a
+    // teacher, the latest of them), so ask for the assignment's own dates,
+    // the ones its file sets.
+    const url = `${canvasApi}/courses/${courseId}/assignments?include[]=overrides&override_assignment_dates=false`;
     const assignments = await paginatedRequest<CanvasAssignment[]>({ url });
     return assignments.map((a) => ({
       ...a,

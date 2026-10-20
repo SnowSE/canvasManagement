@@ -66,3 +66,15 @@ describe("canvasAssignmentService.update", () => {
     );
   });
 });
+
+describe("canvasAssignmentService.getAll", () => {
+  it("reads each assignment's own dates, not the ones its overrides give students", async () => {
+    vi.mocked(paginatedRequest).mockResolvedValue([]);
+
+    await canvasAssignmentService.getAll(42);
+
+    const { url } = vi.mocked(paginatedRequest).mock.calls[0][0] as { url: string };
+    expect(new URL(url).searchParams.get("override_assignment_dates")).toBe("false");
+    expect(new URL(url).searchParams.getAll("include[]")).toContain("overrides");
+  });
+});
