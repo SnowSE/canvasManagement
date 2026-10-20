@@ -12,15 +12,11 @@ import NewItemForm from "./NewItemForm";
 import { ModuleCanvasStatus } from "./ModuleCanvasStatus";
 import ClientOnly from "@/components/ClientOnly";
 import ExpandIcon from "../../../../components/icons/ExpandIcon";
-import {
-  DraggableItem,
-  useDraggingContext,
-} from "../context/drag/draggingContext";
+import { useDraggingContext } from "../context/drag/draggingContext";
 import { Link } from "@tanstack/react-router";
 import { getModuleItemUrl } from "@/services/urlUtils";
 import { useCourseContext } from "../context/courseContext";
 import { Expandable } from "../../../../components/Expandable";
-import { useDragStyleContext } from "../context/drag/dragStyleContext";
 import { useQuizzesQueries } from "@/features/local/quizzes/quizHooks";
 import { useAssignmentsQueries } from "@/features/local/assignments/assignmentHooks";
 import { useReorderCanvasModuleItemsMutation } from "@/features/canvas/hooks/canvasModuleHooks";
@@ -35,6 +31,8 @@ import {
 import { Spinner } from "@/components/Spinner";
 import { ItemTypeIcon } from "../ItemTypeIcon";
 import { useInvalidItemsQuery } from "@/features/local/modules/rawItemHooks";
+import { ItemInDay } from "../calendar/day/itemInDay/ItemInDay";
+import { useItemSyncStatus } from "../calendar/day/useItemSyncStatus";
 
 export default function ExpandableModule({
   moduleName,
@@ -51,6 +49,7 @@ export default function ExpandableModule({
   const { data: canvasModules } = useCanvasModulesQuery();
   const { data: canvasModulesWithItems } = useCanvasModulesWithItemsQuery();
   const { data: invalidItems } = useInvalidItemsQuery(moduleName);
+  const { statusOf } = useItemSyncStatus();
 
   const moduleItems: {
     type: "assignment" | "quiz" | "page";
@@ -250,11 +249,12 @@ export default function ExpandableModule({
                       {weekLabel}
                     </div>
                     {items.map(({ type, item }) => (
-                      <ExpandableModuleItem
+                      <ItemInDay
                         key={item.name + type}
                         type={type}
                         item={item}
                         moduleName={moduleName}
+                        {...statusOf(type, item, moduleName)}
                       />
                     ))}
                   </div>
@@ -264,46 +264,6 @@ export default function ExpandableModule({
           </Expandable>
         </div>
       </div>
-    </div>
-  );
-}
-
-function ExpandableModuleItem({
-  type,
-  item,
-  moduleName,
-}: {
-  type: "assignment" | "quiz" | "page";
-  item: IModuleItem;
-  moduleName: string;
-}) {
-  const { courseName } = useCourseContext();
-  const { setIsDragging } = useDragStyleContext();
-
-  return (
-    <div className="flex items-start ps-3">
-      <div className="w-6 p-1 flex-none">
-        <ItemTypeIcon type={type} />
-      </div>
-      <Link
-        to={getModuleItemUrl(courseName, moduleName, type, item.name)}
-        className="transition-all hover:text-slate-50 hover:scale-105 ps-1"
-        draggable="true"
-        onDragStart={(e) => {
-          const draggableItem: DraggableItem = {
-            type,
-            item,
-            sourceModuleName: moduleName,
-          };
-          e.dataTransfer.setData(
-            "draggableItem",
-            JSON.stringify(draggableItem),
-          );
-          setIsDragging(true);
-        }}
-      >
-        {item.name}
-      </Link>
     </div>
   );
 }

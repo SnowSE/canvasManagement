@@ -6,25 +6,11 @@ import {
 } from "@/features/local/utils/timeUtils";
 import { ReactNode } from "react";
 import { useCalendarItemsContext } from "../../context/calendarItemsContext";
-import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
-import { useCanvasAssignmentsQuery } from "@/features/canvas/hooks/canvasAssignmentHooks";
-import { useCanvasPagesQuery } from "@/features/canvas/hooks/canvasPageHooks";
-import { useCanvasQuizzesQuery } from "@/features/canvas/hooks/canvasQuizHooks";
 import { IModuleItem } from "@/features/local/modules/IModuleItem";
-import {
-  useRosterGroupSetsQuery,
-  useRosterStudentsQuery,
-} from "@/features/canvas/roster/rosterHooks";
-import {
-  getScheduleEntryStatus,
-  getSyncStatus,
-  SyncField,
-} from "./getAssignmentSyncStatus";
-import { useCanvasModulesWithItemsQuery } from "@/features/canvas/hooks/canvasModuleHooks";
-import { canvasModuleNames } from "@/features/canvas/services/canvasModuleService";
+import { SyncField } from "./getAssignmentSyncStatus";
 import { AssignmentScheduleEntry } from "@/features/local/assignments/models/localAssignment";
 import { byOrderingDate } from "@/features/local/modules/moduleItemOrder";
-import { useCalendarQuizQuestions } from "../../context/CalendarQuizQuestionsProvider";
+import { useItemSyncStatus } from "./useItemSyncStatus";
 
 export type TodayItem = {
   type: "assignment" | "quiz" | "page";
@@ -41,131 +27,42 @@ export type TodayItem = {
 };
 
 export function useTodaysItems(day: string) {
-  const { data: settings } = useLocalCourseSettingsQuery();
   const dayAsDate = getDateFromStringOrThrow(
     day,
     "calculating same month in day items",
   );
   const itemsContext = useCalendarItemsContext();
   const dateKey = getDateOnlyMarkdownString(dayAsDate);
-  const todaysModules = itemsContext[dateKey];
+  const todaysModules = itemsContext[dateKey] ?? {};
+  const { statusOf, scheduleStatusOf } = useItemSyncStatus();
 
-  const { data: canvasAssignments } = useCanvasAssignmentsQuery();
-  const { data: canvasQuizzes } = useCanvasQuizzesQuery();
-  const { data: canvasPages } = useCanvasPagesQuery();
-  const { data: rosterStudents } = useRosterStudentsQuery();
-  const { data: rosterGroupSets } = useRosterGroupSetsQuery();
-  const roster = { students: rosterStudents, groupSets: rosterGroupSets };
-  // filled in the background for this week's and the next three weeks' quizzes
-  const quizQuestions = useCalendarQuizQuestions();
-  const { data: canvasModules } = useCanvasModulesWithItemsQuery();
-  const module = (
-    file: string,
-    type: TodayItem["type"],
-    canvasItem: { id?: number; url?: string } | undefined,
-  ) =>
-    canvasModules && canvasItem
-      ? { file, canvas: canvasModuleNames(canvasModules, type, canvasItem) }
-      : undefined;
+  const items: TodayItem[] = Object.entries(todaysModules).flatMap(
+    ([moduleName, { assignments, quizzes, pages }]) =>
+      [
+        ...assignments.map((item) => ({ type: "assignment" as const, item })),
+        ...quizzes.map((item) => ({ type: "quiz" as const, item })),
+        ...pages.map((item) => ({ type: "page" as const, item })),
+      ].map(({ type, item }) => ({
+        type,
+        item,
+        moduleName,
+        ...statusOf(type, item, moduleName),
+      })),
+  );
 
-  const assignments: TodayItem[] = todaysModules
-    ? Object.keys(todaysModules).flatMap((moduleName) =>
-        todaysModules[moduleName].assignments.map((assignment) => {
-          const canvasAssignment = canvasAssignments?.find(
-            (c) => c.name === assignment.name,
-          );
-          return {
-            type: "assignment" as const,
-            item: assignment,
-            moduleName,
-            ...getSyncStatus({
-              item: assignment,
-              canvasItem: canvasAssignment,
-              type: "assignment",
-              settings,
-              canvasLinkTargets: {
-                assignments: canvasAssignments,
-                quizzes: canvasQuizzes,
-              },
-              roster,
-              module: module(moduleName, "assignment", canvasAssignment),
-            }),
-          };
-        }),
-      )
-    : [];
+  const scheduledAssignments: TodayItem[] = Object.entries(
+    todaysModules,
+  ).flatMap(([moduleName, { scheduledAssignments }]) =>
+    (scheduledAssignments ?? []).map(({ assignment, entry }) => ({
+      type: "assignment" as const,
+      item: assignment,
+      moduleName,
+      scheduleEntry: entry,
+      ...scheduleStatusOf(assignment, entry),
+    })),
+  );
 
-  const scheduledAssignments: TodayItem[] = todaysModules
-    ? Object.keys(todaysModules).flatMap((moduleName) =>
-        (todaysModules[moduleName].scheduledAssignments ?? []).map(
-          ({ assignment, entry }) => {
-            const canvasAssignment = canvasAssignments?.find(
-              (c) => c.name === assignment.name,
-            );
-            return {
-              type: "assignment" as const,
-              item: assignment,
-              moduleName,
-              scheduleEntry: entry,
-              ...getScheduleEntryStatus(
-                assignment,
-                entry,
-                canvasAssignment,
-                roster,
-              ),
-            };
-          },
-        ),
-      )
-    : [];
-
-  const quizzes: TodayItem[] = todaysModules
-    ? Object.keys(todaysModules).flatMap((moduleName) =>
-        todaysModules[moduleName].quizzes.map((quiz) => {
-          const canvasQuiz = canvasQuizzes?.find((q) => q.title === quiz.name);
-          return {
-            type: "quiz" as const,
-            item: quiz,
-            moduleName,
-            ...getSyncStatus({
-              item: quiz,
-              canvasItem: canvasQuiz,
-              type: "quiz",
-              settings,
-              canvasQuestions: quizQuestions[quiz.name],
-              module: module(moduleName, "quiz", canvasQuiz),
-            }),
-          };
-        }),
-      )
-    : [];
-
-  const pages: TodayItem[] = todaysModules
-    ? Object.keys(todaysModules).flatMap((moduleName) =>
-        todaysModules[moduleName].pages.map((page) => {
-          const canvasPage = canvasPages?.find((p) => p.title === page.name);
-          return {
-            type: "page" as const,
-            item: page,
-            moduleName,
-            ...getSyncStatus({
-              item: page,
-              canvasItem: canvasPage,
-              type: "page",
-              settings,
-              module: module(moduleName, "page", canvasPage),
-            }),
-          };
-        }),
-      )
-    : [];
-
-  const todaysItems = [
-    ...assignments,
-    ...scheduledAssignments,
-    ...quizzes,
-    ...pages,
-  ].sort(
+  const todaysItems = [...items, ...scheduledAssignments].sort(
     (a, b) =>
       byOrderingDate(a.item, b.item) || a.item.name.localeCompare(b.item.name),
   );
