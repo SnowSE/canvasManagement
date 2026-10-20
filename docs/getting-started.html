@@ -208,7 +208,7 @@ docker compose up -d</code></pre>
 <tr><td>Classroom 50</td><td>Optional GitHub Classroom integration. Skip it unless you use Classroom 50.</td></tr>
 <tr><td>Default submission types and upload types</td><td>What new assignments start with.</td></tr>
 <tr><td>Default due time and lock offset</td><td>The time of day dragged items get, and how many hours after due an assignment locks.</td></tr>
-<tr><td>Assignment groups</td><td>Canvas grading categories and their weights. <em>Update Assignment Groups In Canvas</em> pushes them; do that once at the start of a semester.</td></tr>
+<tr><td>Assignment groups</td><td>Canvas grading categories and their weights. <em>Pull Assignment Groups and Weights From Canvas</em> brings in the groups Canvas has, with their ids, and takes Canvas&rsquo;s weights; groups only listed here stay. <em>Update Assignment Groups In Canvas</em> pushes them; do that once at the start of a semester. Pull first: the push deletes any Canvas group that isn&rsquo;t listed here, and Canvas deletes the assignments in it.</td></tr>
 <tr><td>Students and Groups</td><td>Read-only views of the Canvas roster and group sets, used by the editor. See the <em>Group Assignments &amp; Student Schedules</em> guide.</td></tr>
 <tr><td>Holidays</td><td>Days with no class. They are labeled on the calendar and struck through in the date picker.</td></tr>
 </table></div>
@@ -460,6 +460,7 @@ AddToHome: true
 <h2 id="changes">Recent changes</h2>
 <div class="tw"><table>
 <tr><th>When</th><th>What changed</th></tr>
+<tr><td style="white-space:nowrap">Oct 2026</td><td>Course settings can pull the assignment groups from Canvas: the groups Canvas has are added with their ids, and Canvas&rsquo;s weights replace the ones here.</td></tr>
 <tr><td style="white-space:nowrap">Oct 2026</td><td>Updating a quiz students have started only asks first when its questions would actually be replaced, not when they already match the file.</td></tr>
 <tr><td style="white-space:nowrap">Oct 2026</td><td>The list of differences on a red item&rsquo;s hover card shows both values when they&rsquo;re short, like <em>Assignment group: local Labs vs Canvas Homework</em>, instead of only saying it&rsquo;s different.</td></tr>
 <tr><td style="white-space:nowrap">Oct 2026</td><td>Work on several items at once from the module list: filter it to what&rsquo;s not in Canvas, needs sync or is unpublished, check items (or everything shown), then right-click a checked one to add/update them all in Canvas after reviewing what differs, or to remove the unpublished ones.</td></tr>

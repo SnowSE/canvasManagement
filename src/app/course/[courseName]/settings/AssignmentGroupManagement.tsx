@@ -13,12 +13,16 @@ import MeatballIcon from "./MeatballIcon";
 import { useSetAssignmentGroupsMutation } from "@/features/canvas/hooks/canvasCourseHooks";
 import { baseCanvasUrl } from "@/features/canvas/services/canvasServiceUtils";
 import Modal, { useModal } from "@/components/Modal";
+import { canvasAssignmentGroupService } from "@/features/canvas/services/canvasAssignmentGroupService";
+import { showErrorToast } from "@/app/MyToaster";
+import { mergeCanvasAssignmentGroups } from "./mergeCanvasAssignmentGroups";
 
 export default function AssignmentGroupManagement() {
   const { data: settings, isPending } = useLocalCourseSettingsQuery();
   const updateSettings = useUpdateLocalCourseSettingsMutation();
   const applyInCanvas = useSetAssignmentGroupsMutation(settings.canvasId);
   const modal = useModal();
+  const [pulling, setPulling] = useState(false);
 
   const [assignmentGroups, setAssignmentGroups] = useState<
     LocalAssignmentGroup[]
@@ -100,6 +104,25 @@ export default function AssignmentGroupManagement() {
           }}
         >
           Add Assignment Group
+        </button>
+        <button
+          disabled={pulling}
+          title="Adds the groups Canvas has and replaces these weights with Canvas's; keeps groups only these settings have"
+          onClick={async () => {
+            setPulling(true);
+            try {
+              const canvasGroups = await canvasAssignmentGroupService.getAll(settings.canvasId);
+              setAssignmentGroups((groups) =>
+                mergeCanvasAssignmentGroups(groups, canvasGroups, () => crypto.randomUUID()),
+              );
+            } catch (e) {
+              showErrorToast(`Couldn't read the assignment groups from Canvas: ${(e as Error).message}`);
+            } finally {
+              setPulling(false);
+            }
+          }}
+        >
+          Pull Assignment Groups and Weights From Canvas
         </button>
       </div>
       <br />
