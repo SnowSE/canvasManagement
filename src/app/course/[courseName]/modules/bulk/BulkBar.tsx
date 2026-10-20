@@ -3,10 +3,9 @@ import { ReactNode, useState } from "react";
 import Modal, { ModalControl, useModal } from "@/components/Modal";
 import { showErrorToast } from "@/app/MyToaster";
 import { useItemSyncStatus } from "../../calendar/day/useItemSyncStatus";
-import { kinds } from "./filters";
+import { kinds, updateEach } from "./rules";
 import { keyOf, ModuleItemRef, useModuleSelection } from "./moduleSelection";
 import { useAddOrUpdateInCanvas, useRemoveUnpublishedFromCanvas } from "./canvasActions";
-import { updateEach } from "./updateEach";
 import { ReviewDialog } from "./ReviewDialog";
 
 const BarButton = (props: { onClick: () => void; children: ReactNode }) => (
@@ -18,8 +17,7 @@ const danger = `${menuButton} bg-rose-900/30 hover:bg-rose-950 text-rose-50 bord
 
 /**
  * Above the module list: select everything shown, filter what is shown,
- * expand or collapse every module, and the right-click menu for the checked
- * items.
+ * and the right-click menu for the checked items.
  */
 export function BulkBar() {
   const selection = useModuleSelection();
@@ -78,8 +76,6 @@ export function BulkBar() {
           {label}
         </button>
       ))}
-      <BarButton onClick={selection.requestExpand}>Expand all</BarButton>
-      <BarButton onClick={selection.requestCollapse}>Collapse all</BarButton>
       {progress ? (
         <span className="text-slate-300">{progress}</span>
       ) : (

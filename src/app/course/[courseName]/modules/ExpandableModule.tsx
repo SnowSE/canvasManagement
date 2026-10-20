@@ -35,7 +35,7 @@ import { useInvalidItemsQuery } from "@/features/local/modules/rawItemHooks";
 import { ItemInDay } from "../calendar/day/itemInDay/ItemInDay";
 import { useItemSyncStatus } from "../calendar/day/useItemSyncStatus";
 import { useModuleSelection } from "./bulk/moduleSelection";
-import { kindsOf, shown } from "./bulk/filters";
+import { kindsOf, shown } from "./bulk/rules";
 
 export default function ExpandableModule({
   moduleName,
@@ -154,7 +154,6 @@ export default function ExpandableModule({
           <Expandable
             storageKey={`moduleExpanded-${courseName}-${moduleName}`}
             openRequests={selection.expandRequests}
-            closeRequests={selection.collapseRequests}
             ExpandableElement={({ setIsExpanded, isExpanded }) => (
               <div
                 className="font-bold flex flex-row justify-between cursor-pointer "
