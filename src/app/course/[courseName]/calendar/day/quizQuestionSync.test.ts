@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { checkQuizQuestions, pointTotalChangeError } from "./quizQuestionSync";
+import { checkQuizQuestions, pointTotalChangeError, questionsMatchCanvas } from "./quizQuestionSync";
 import { CanvasQuizQuestion } from "@/features/canvas/models/quizzes/canvasQuizQuestionModel";
 import {
   DayOfWeek,
@@ -68,6 +68,18 @@ const canvasMultipleChoice = canvasQuestion({
     { id: 1, text: "Bound the blast radius", html: themed("<p>Bound the blast radius</p>"), weight: 100 },
     { id: 2, text: "Save bandwidth", html: themed("<p>Save bandwidth</p>"), weight: 0 },
   ],
+});
+
+describe("questionsMatchCanvas", () => {
+  it("is true when Canvas has the file's questions, so updating leaves them alone", () => {
+    expect(questionsMatchCanvas(questionsOf(multipleChoice), [canvasMultipleChoice], settings)).toBe(true);
+  });
+
+  it("is false when a question differs, or one is missing", () => {
+    const changed = canvasQuestion({ ...canvasMultipleChoice, correct_comments: "Wrong." });
+    expect(questionsMatchCanvas(questionsOf(multipleChoice), [changed], settings)).toBe(false);
+    expect(questionsMatchCanvas(questionsOf(multipleChoice), [], settings)).toBe(false);
+  });
 });
 
 describe("checkQuizQuestions", () => {

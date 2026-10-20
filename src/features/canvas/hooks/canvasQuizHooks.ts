@@ -16,8 +16,8 @@ import toast from "react-hot-toast";
 import { showActionNeededToast, showErrorToast } from "@/app/MyToaster";
 import { baseCanvasUrl } from "../services/canvasServiceUtils";
 import {
-  checkQuizQuestions,
   pointTotalChangeError,
+  questionsMatchCanvas,
 } from "@/app/course/[courseName]/calendar/day/quizQuestionSync";
 
 export const canvasQuizKeys = {
@@ -126,7 +126,8 @@ Update anyway?`;
 
 /**
  * Makes an existing Canvas quiz match the file, settings and questions,
- * showing each step in a toast. Asks first if students have already started,
+ * showing each step in a toast. Asks first if students have already started
+ * and its questions would be replaced,
  * and ends by saying if Canvas still needs "Save it now" (see
  * canvasQuizService.update for why the app can't do that itself).
  */
@@ -153,14 +154,25 @@ export const useUpdateQuizInCanvasMutation = () => {
         settings.canvasId,
         canvasQuizId
       );
+      const publishSettings = await prepareImages(quizMarkdownParts(quiz));
       if (versions.length > 0) {
         const studentsGot = await canvasQuizService.getAttemptQuestions(
           versions[0].attemptId
         );
         const pointsError = pointTotalChangeError(quiz.questions, studentsGot);
         if (pointsError) throw new Error(pointsError);
+        // the warning is about replacing the questions, which the update
+        // skips when they already match the file
+        const canvasQuestions = await canvasQuizService.getQuizQuestions(
+          settings.canvasId,
+          canvasQuizId
+        );
         const submissions = versions.reduce((sum, v) => sum + v.attempts, 0);
-        if (!window.confirm(submissionWarning(submissions))) return false;
+        if (
+          !questionsMatchCanvas(quiz.questions, canvasQuestions, publishSettings) &&
+          !window.confirm(submissionWarning(submissions))
+        )
+          return false;
       }
 
       const progress = toast.loading("Updating quiz in Canvas");
@@ -168,7 +180,6 @@ export const useUpdateQuizInCanvasMutation = () => {
         const assignmentGroup = settings.assignmentGroups.find(
           (g) => g.name === quiz.localAssignmentGroupName
         );
-        const publishSettings = await prepareImages(quizMarkdownParts(quiz));
         const summary = await canvasQuizService.update(
           settings.canvasId,
           canvasQuizId,
@@ -179,11 +190,7 @@ export const useUpdateQuizInCanvasMutation = () => {
             canvasLinkTargets,
             onStep: (step) => toast.loading(`${step}…`, { id: progress }),
             questionsMatch: (canvasQuestions) =>
-              checkQuizQuestions(
-                quiz.questions,
-                canvasQuestions,
-                publishSettings,
-              ).every((q) => q.same),
+              questionsMatchCanvas(quiz.questions, canvasQuestions, publishSettings),
           }
         );
         await placeInModule(moduleName, {
