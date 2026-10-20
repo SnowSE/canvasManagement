@@ -1,18 +1,19 @@
-.next/
 node_modules/
+.pnpm-store/
 storage/
 temp/
+.tanstack/
 .env
 build.sh
 run.sh
 README.md
 docker-compose.yml
 Dockerfile
-.next/
-.pnpm-store/
-
-
-cavnas-data.md
-.tanstack/
-temp/
-storage/
+# the build doesn't use these: history (build.sh passes the commit as
+# GIT_SHA), a build output left by the host, the handouts, and dev tooling
+.git/
+.output/
+docs/
+.claude/
+requests/
+canvas-development/
