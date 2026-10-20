@@ -344,6 +344,13 @@ export function alignQuestions(
  * Canvas has. Rows follow the file's order, with a question that is only in
  * Canvas (deleted from the file) shown where it sits in Canvas.
  */
+/** Whether Canvas already has the file's questions, so updating leaves them alone. */
+export const questionsMatchCanvas = (
+  questions: LocalQuizQuestion[],
+  canvasQuestions: CanvasQuizQuestion[],
+  settings: LocalCourseSettings,
+) => checkQuizQuestions(questions, canvasQuestions, settings).every((q) => q.same);
+
 export function checkQuizQuestions(
   questions: LocalQuizQuestion[],
   canvasQuestions: CanvasQuizQuestion[],

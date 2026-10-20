@@ -93,7 +93,8 @@ export default function CollapsableSidebar({
         </div>
       </div>
       <div
-        className={`${widthClass} flex-1 sm:p-3 overflow-y-auto transition-all ${visibilityClass}`}
+        // never sideways: collapsed, it's 0 wide but its content isn't
+        className={`${widthClass} flex-1 sm:p-3 overflow-y-auto overflow-x-hidden transition-all ${visibilityClass}`}
         ref={scroll.ref}
         onScroll={scroll.onScroll}
       >
