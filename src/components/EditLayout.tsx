@@ -1,6 +1,7 @@
 "use client";
 import { FC, ReactNode, useEffect, useRef, useState } from "react";
 import { MobileActionsMenu } from "./MobileActionsMenu";
+import { jumpToClickedText } from "./editor/previewJump";
 
 const helpSplitStorageKey = "editorHelpSplit";
 const helpWidthStorageKey = "editorHelpWidth";
@@ -202,6 +203,8 @@ export const EditLayout: FC<{
             "flex-1 md:flex-[var(--preview-fr,1)_1_0%] h-full min-w-0 max-md:overflow-y-auto " +
             (mobileView === "preview" ? "" : "max-md:hidden")
           }
+          // clicking text in the preview moves the editor to it
+          onClick={(e) => jumpToClickedText(e.currentTarget, e.nativeEvent)}
         >
           {Preview}
         </div>

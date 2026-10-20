@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { markdownToHtmlNoImages } from "./htmlMarkdownUtils";
 import { listTableExample } from "@/components/editor/help/MarkdownHelpSections";
@@ -160,6 +161,14 @@ describe("list tables", () => {
     expect(html).toMatch(/style="[^"]*#8887/);
   });
 
+  it("has no empty divs, which Canvas's editor would delete", () => {
+    const doc = render(schedule);
+
+    expect(
+      [...doc.querySelectorAll("div")].filter((d) => d.innerHTML === "")
+    ).toHaveLength(0);
+  });
+
   it("warns about an option it doesn't know and still renders", () => {
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
 
@@ -210,5 +219,82 @@ describe("list tables", () => {
       ["Fri 8/28", "Scope and closures", "Lab 1"],
       ["Mon 9/7", "No class: Labor Day", ""],
     ]);
+  });
+
+  describe("group=", () => {
+    const grouped = `<!-- table group="Week" -->
+- Date: Mon 8/24
+  - Week: 1
+  - Topic: Intro
+- Wed 8/26
+  - 1
+  - Scope
+- Mon 8/31
+  - 2
+  - Closures
+- Wed 9/2
+  - —
+  - Macros
+`;
+    const groupRows = (doc: Document) =>
+      texts(doc.querySelectorAll('[role="table"] [role="rowheader"]'));
+
+    it("leaves the group column out of the rows", () => {
+      const doc = render(grouped);
+
+      expect(texts(doc.querySelectorAll('[role="columnheader"]'))).toEqual(["Date", "Topic"]);
+      expect(rowsOf(doc)).toEqual([
+        ["Mon 8/24", "Intro"],
+        ["Wed 8/26", "Scope"],
+        ["Mon 8/31", "Closures"],
+        ["Wed 9/2", "Macros"],
+      ]);
+    });
+
+    it("adds a group row whenever the group's value changes, and an empty value keeps the last", () => {
+      expect(groupRows(render(grouped))).toEqual(["Week: 1", "Week: 2"]);
+    });
+
+    it("groups by several columns, starting a group when any of them changes", () => {
+      const doc = render(`<!-- table group="Week, Module" -->
+- Date: Mon
+  - Week: 1
+  - Module: Lisp
+  - Topic: a
+- Wed
+  - 1
+  - Lisp
+  - b
+- Fri
+  - 1
+  - Datalog
+  - c
+`);
+
+      expect(groupRows(doc)).toEqual(["Week: 1 · Module: Lisp", "Week: 1 · Module: Datalog"]);
+    });
+
+    it("adds no group row while the group has no value yet", () => {
+      const doc = render(grouped.replace("  - Week: 1\n  - Topic: Intro", "  - Week: —\n  - Topic: Intro"));
+
+      expect(groupRows(doc)).toEqual(["Week: 1", "Week: 2"]);
+    });
+
+    it("puts the same group rows in the plain table, across all its columns", () => {
+      const table = render(grouped).querySelector("details table")!;
+      const headers = [...table.querySelectorAll('tbody th[scope="colgroup"]')];
+
+      expect(texts(headers)).toEqual(["Week: 1", "Week: 2"]);
+      expect(headers[0].getAttribute("colspan")).toBe("2");
+    });
+
+    it("warns about a group that isn't a column and ignores it", () => {
+      const log = vi.spyOn(console, "log").mockImplementation(() => {});
+
+      const doc = render(grouped.replace('group="Week"', 'group="Weak"'));
+
+      expect(groupRows(doc)).toEqual([]);
+      expect(log).toHaveBeenCalledWith(expect.stringContaining("Weak"));
+    });
   });
 });

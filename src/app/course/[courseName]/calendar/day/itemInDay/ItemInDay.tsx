@@ -71,6 +71,9 @@ export const ItemInDay: FC<{
         role="button"
         draggable="true"
         onDragStart={(e) => {
+          // the browser sends no mouseleave while dragging, so an open (or
+          // about to open) tooltip would sit over the days being dropped on
+          hideTooltip();
           const draggableItem: DraggableItem = {
             type,
             item,
@@ -90,7 +93,7 @@ export const ItemInDay: FC<{
       >
         {/* floated so a long title wraps under the icon instead of beside it */}
         <div className="flow-root">
-          <div className="float-right w-6 py-0.5 ps-1">
+          <div className="float-left w-6 py-0.5 pe-1">
             <ItemTypeIcon type={type} />
           </div>
           {scheduleEntry && (

@@ -77,6 +77,10 @@ describe("frontmatter line context", () => {
 
   it("detects quizzes and pages", () => {
     expect(itemTypeFromFrontmatter(["DueDateForOrdering: 1/1/2026", "---"])).toBe("page");
+    expect(itemTypeFromFrontmatter(["DateForOrdering: 1/1/2026", "---"])).toBe("page");
+    expect(
+      itemTypeFromFrontmatter(["DueAt: 1/1/2026", "DueDateForOrdering: 1/1/2026", "---"])
+    ).toBe("assignment");
     expect(itemTypeFromFrontmatter(["DueAt: 1/1/2026", "ShuffleAnswers: true", "---"])).toBe("quiz");
     expect(itemTypeFromFrontmatter(["Name: Lecture", "---"])).toBe("lecture");
     expect(itemTypeFromFrontmatter(["no frontmatter"])).toBe("unknown");

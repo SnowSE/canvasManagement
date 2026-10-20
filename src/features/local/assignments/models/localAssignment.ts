@@ -14,6 +14,8 @@ export interface LocalAssignment extends IModuleItem {
   unlockAt?: string; // 08/21/2023 23:59:00
   lockAt?: string; // 08/21/2023 23:59:00
   dueAt: string; // 08/21/2023 23:59:00
+  // orders it in its module and day instead of UnlockAt/DueAt
+  dateForOrdering?: string;
   localAssignmentGroupName?: string;
   submissionTypes: AssignmentSubmissionType[];
   allowedFileUploadExtensions: string[];
@@ -52,6 +54,7 @@ export const zodLocalAssignment = z.object({
     .optional()
     .describe("Date and time when the assignment locks (MM/DD/YYYY HH:MM:SS)"),
   dueAt: z.string().describe("Due date and time (MM/DD/YYYY HH:MM:SS)"),
+  dateForOrdering: z.string().optional(),
   localAssignmentGroupName: z.string().optional(),
   submissionTypes: zodAssignmentSubmissionType.array(),
   allowedFileUploadExtensions: z.string().array(),

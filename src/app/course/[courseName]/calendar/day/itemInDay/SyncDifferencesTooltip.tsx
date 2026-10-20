@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { getCompareUrl } from "@/services/urlUtils";
 import { useCourseContext } from "../../../context/courseContext";
 import { SyncField } from "../getAssignmentSyncStatus";
+import { differenceText } from "./differenceText";
 
 const MAX_LISTED = 5;
 
@@ -19,6 +20,8 @@ export const SyncDifferencesTooltip: FC<{
   message: ReactNode;
   differences: SyncField[];
   unpublished?: boolean;
+  /** Off where the card isn't on the item itself (no menu to right-click). */
+  rightClickHint?: boolean;
 }> = ({
   type,
   moduleName,
@@ -27,6 +30,7 @@ export const SyncDifferencesTooltip: FC<{
   message,
   differences,
   unpublished,
+  rightClickHint = true,
 }) => {
   const { courseName } = useCourseContext();
   if (status !== "incomplete" || differences.length === 0)
@@ -45,7 +49,7 @@ export const SyncDifferencesTooltip: FC<{
       </div>
       <ul className="list-disc ps-5 text-rose-300">
         {shown.map((d) => (
-          <li key={d.key}>{d.message}</li>
+          <li key={d.key}>{differenceText(d)}</li>
         ))}
       </ul>
       {hidden > 0 && (
@@ -63,7 +67,9 @@ export const SyncDifferencesTooltip: FC<{
         >
           Compare with Canvas →
         </Link>
-        <span className="text-slate-500">right-click for more</span>
+        {rightClickHint && (
+          <span className="text-slate-500">right-click for more</span>
+        )}
       </div>
     </div>
   );

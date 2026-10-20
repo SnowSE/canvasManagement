@@ -511,7 +511,10 @@ function checkSchedule(
   canvasAssignment: CanvasAssignment,
   roster?: RosterForStatus,
 ): SyncField[] {
-  const entries = assignment.schedule ?? [];
+  // without a Schedule, Update leaves Canvas's student overrides alone (like
+  // an extension for one student), so they aren't a difference
+  if (!assignment.schedule) return [];
+  const entries = assignment.schedule;
   const students = roster?.students?.students;
   if (!students) return [];
   const fields = entries.map((entry) =>
@@ -525,21 +528,20 @@ function checkSchedule(
       o.student_ids.length > 0 &&
       !wanted.some((w) => overrideMatches(o, w)),
   );
-  if (extra.length > 0 || entries.length > 0)
-    fields.push(
-      field({
-        key: "schedule:extra",
-        label: "Other student overrides",
-        section: "schedule",
-        local: "none",
-        canvas:
-          extra.length === 0
-            ? "none"
-            : `${extra.length} override${extra.length === 1 ? "" : "s"}`,
-        same: extra.length === 0,
-        message: `canvas has ${extra.length} student override(s) not in the schedule`,
-      }),
-    );
+  fields.push(
+    field({
+      key: "schedule:extra",
+      label: "Other student overrides",
+      section: "schedule",
+      local: "none",
+      canvas:
+        extra.length === 0
+          ? "none"
+          : `${extra.length} override${extra.length === 1 ? "" : "s"}`,
+      same: extra.length === 0,
+      message: `canvas has ${extra.length} student override(s) not in the schedule`,
+    }),
+  );
   return fields;
 }
 

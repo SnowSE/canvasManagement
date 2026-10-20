@@ -1,3 +1,8 @@
+/** DateForOrdering, or its older name DueDateForOrdering. */
+export const extractDateForOrdering = (input: string) =>
+  extractLabelValue(input, "DateForOrdering") ||
+  extractLabelValue(input, "DueDateForOrdering");
+
 export const extractLabelValue = (input: string, label: string) => {
   // anchored to line start so "LockAt" cannot match inside "UnlockAt"
   const pattern = new RegExp(`^${label}: (.*?)\n`, "m");

@@ -14,7 +14,10 @@ import {
 import { localPageMarkdownUtils } from "@/features/local/pages/localCoursePageModels";
 import { quizMarkdownUtils } from "../quizzes/models/utils/quizMarkdownUtils";
 import { getFeedbackDelimitersFromSettings } from "../globalSettings/globalSettingsUtils";
-import { extractLabelValue } from "../assignments/models/utils/markdownUtils";
+import {
+  extractDateForOrdering,
+  extractLabelValue,
+} from "../assignments/models/utils/markdownUtils";
 import { getDateFromString } from "../utils/timeUtils";
 import {
   errorMessageOf,
@@ -150,13 +153,13 @@ export interface InvalidCourseItem {
   dueAt?: string;
 }
 
-/** DueAt (DueDateForOrdering for a page) read straight off the file, or undefined. */
+/** DueAt (DateForOrdering for a page) read straight off the file, or undefined. */
 export const looseDueDate = (type: CourseItemType, rawFile: string) => {
   const settings = rawFile.split("---\n")[0] + "\n";
-  const value = extractLabelValue(
-    settings,
-    type === "Page" ? "DueDateForOrdering" : "DueAt",
-  );
+  const value =
+    type === "Page"
+      ? extractDateForOrdering(settings)
+      : extractLabelValue(settings, "DueAt");
   return value && getDateFromString(value) ? value : undefined;
 };
 

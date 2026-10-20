@@ -154,7 +154,7 @@ function RawItemHelp({ type }: { type: CourseItemType }) {
     );
   return (
     <div className="p-3 text-slate-300">
-      A page file is a settings line, <code>DueDateForOrdering: MM/DD/YYYY</code>
+      A page file is a settings line, <code>DateForOrdering: MM/DD/YYYY</code>
       (and optionally <code>AddToHome: true</code>), then a line with only{" "}
       <code>---</code>, then the page content in markdown.
     </div>

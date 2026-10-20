@@ -6,7 +6,7 @@ import {
 import { AssignmentSubmissionType } from "../assignmentSubmissionType";
 import { AssignmentScheduleEntry, LocalAssignment } from "../localAssignment";
 import { RubricItem, RubricRating } from "../rubricItem";
-import { extractLabelValue } from "./markdownUtils";
+import { extractDateForOrdering, extractLabelValue } from "./markdownUtils";
 import { getDateOnlyMarkdownString } from "../../../utils/timeUtils";
 
 const parseFileUploadExtensions = (input: string) => {
@@ -39,11 +39,13 @@ const parseFileUploadExtensions = (input: string) => {
 //     - Okafor, Daniel
 //     - Brennan, Owen
 // Dates are keys indented under Schedule, students are list items indented
-// further. The block ends at the first line that is not indented.
-const parseSchedule = (input: string): AssignmentScheduleEntry[] => {
+// further. The block ends at the first line that is not indented. Without a
+// Schedule: line there is no schedule; an empty one is a schedule with no
+// dates, which still says the file sets the per-student dates.
+const parseSchedule = (input: string): AssignmentScheduleEntry[] | undefined => {
   const lines = input.split("\n");
   const start = lines.findIndex((line) => /^Schedule:\s*$/.test(line));
-  if (start === -1) return [];
+  if (start === -1) return undefined;
 
   const entries: AssignmentScheduleEntry[] = [];
   for (const line of lines.slice(start + 1)) {
@@ -112,6 +114,9 @@ const parseSettings = (input: string) => {
   const rawUnlockAt = extractLabelValue(input, "UnlockAt");
   const rawLockAt = extractLabelValue(input, "LockAt");
   const rawDueAt = extractLabelValue(input, "DueAt");
+  const dateForOrdering = verifyDateStringOrUndefined(
+    extractDateForOrdering(input)
+  );
   const assignmentGroupName = extractLabelValue(input, "AssignmentGroupName");
   const submissionTypes = parseSubmissionTypes(input);
   const fileUploadExtensions = parseFileUploadExtensions(input);
@@ -134,6 +139,7 @@ const parseSettings = (input: string) => {
     dueAt,
     unlockAt,
     lockAt,
+    dateForOrdering,
     classroom50Slug,
     groupSet,
     gradeIndividually,
@@ -217,6 +223,7 @@ export const assignmentMarkdownParser = {
       dueAt,
       unlockAt,
       lockAt,
+      dateForOrdering,
       classroom50Slug,
       groupSet,
       gradeIndividually,
@@ -244,6 +251,7 @@ export const assignmentMarkdownParser = {
       rubric: rubric,
       description: description,
     };
+    if (dateForOrdering) assignment.dateForOrdering = dateForOrdering;
     if (classroom50Slug) {
       assignment.classroom50Slug = classroom50Slug;
     }
@@ -253,7 +261,7 @@ export const assignmentMarkdownParser = {
     if (gradeIndividually !== undefined) {
       assignment.gradeIndividually = gradeIndividually;
     }
-    if (schedule.length > 0) {
+    if (schedule) {
       assignment.schedule = schedule;
     }
     return assignment;

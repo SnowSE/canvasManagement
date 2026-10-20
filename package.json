@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "pnpm install --config.confirmModulesPurge=false && pnpm generate:openapi && concurrently \"vite dev\" \"node src/websocket-standalone.js\"",
     "generate:openapi": "node scripts/generate-openapi.mjs",
-    "build": "vite build",
-    "start": "concurrently \"node .output/server/index.mjs\" \"node src/websocket-standalone.js\"",
+    "build": "vite build && vite build --config vite.websocket.config.ts",
+    "start": "node --import ./.output/websocket/websocket-standalone.js .output/server/index.mjs",
     "lint": "eslint . --config eslint.config.mjs && tsc",
     "test": "vitest"
   },

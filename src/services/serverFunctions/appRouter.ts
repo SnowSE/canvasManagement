@@ -15,6 +15,7 @@ import { versionRouter } from "@/features/local/version/versionRouter";
 import { rosterRouter } from "@/features/canvas/roster/rosterRouter";
 import { errorLogRouter } from "@/features/local/errorLog/errorLogRouter";
 import { gitRouter } from "@/features/local/git/gitRouter";
+import { networkRouter } from "@/features/local/network/networkExposure";
 
 export const trpcAppRouter = router({
   course: courseRouter,
@@ -32,6 +33,7 @@ export const trpcAppRouter = router({
   roster: rosterRouter,
   errorLog: errorLogRouter,
   git: gitRouter,
+  network: networkRouter,
 });
 
 export const createCaller = createCallerFactory(trpcAppRouter);

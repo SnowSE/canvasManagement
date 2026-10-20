@@ -10,7 +10,7 @@ export default defineConfig({
     },
   },
   test: {
-    environment: "jsdom",
+    environment: "node",
     pool: "forks",
     execArgv: ["--max-old-space-size=4096"],
     exclude: [

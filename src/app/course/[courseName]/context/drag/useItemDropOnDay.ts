@@ -11,11 +11,10 @@ import { getLectureForDay } from "@/features/local/utils/lectureUtils";
 import {
   getDateFromStringOrThrow,
   getDateOnlyMarkdownString,
-  dateToMarkdownString,
 } from "@/features/local/utils/timeUtils";
 import { Dispatch, SetStateAction, useCallback, DragEvent } from "react";
 import { DraggableItem } from "./draggingContext";
-import { getNewLockDate } from "./getNewLockDate";
+import { daysUntil, shiftDays } from "./shiftDays";
 import { useUpdateQuizMutation } from "@/features/local/quizzes/quizHooks";
 import { useCourseContext } from "../courseContext";
 import { useUpdateAssignmentMutation } from "@/features/local/assignments/assignmentHooks";
@@ -52,11 +51,11 @@ export function useItemDropOnDay({
       if (itemBeingDragged) {
         const dayAsDate = getDateWithDefaultDueTime();
         if (itemBeingDragged.type === "quiz") {
-          updateQuiz(dayAsDate);
+          updateQuiz();
         } else if (itemBeingDragged.type === "assignment") {
           updateAssignment(dayAsDate);
         } else if (itemBeingDragged.type === "page") {
-          updatePage(dayAsDate);
+          updatePage();
         } else if (itemBeingDragged.type === "lecture") {
           updateLecture(dayAsDate);
         }
@@ -118,7 +117,7 @@ export function useItemDropOnDay({
           });
         }
       }
-      function updateQuiz(dayAsDate: Date) {
+      function updateQuiz() {
         const previousQuiz = itemBeingDragged.item as LocalQuiz;
         if (!itemBeingDragged.sourceModuleName) {
           console.error(
@@ -127,19 +126,13 @@ export function useItemDropOnDay({
           return;
         }
 
+        const days = daysUntil(previousQuiz.dueAt, day);
         const quiz: LocalQuiz = {
           ...previousQuiz,
-          dueAt: dateToMarkdownString(dayAsDate),
-          lockAt: getNewLockDate(
-            previousQuiz.dueAt,
-            previousQuiz.lockAt,
-            dayAsDate
-          ),
-          unlockAt: getNewLockDate(
-            previousQuiz.dueAt,
-            previousQuiz.unlockAt,
-            dayAsDate
-          ),
+          dueAt: shiftDays(previousQuiz.dueAt, days),
+          lockAt: shiftDays(previousQuiz.lockAt, days),
+          unlockAt: shiftDays(previousQuiz.unlockAt, days),
+          dateForOrdering: shiftDays(previousQuiz.dateForOrdering, days),
         };
         updateQuizMutation.mutate({
           quiz,
@@ -150,7 +143,7 @@ export function useItemDropOnDay({
           courseName: settings.name,
         });
       }
-      function updatePage(dayAsDate: Date) {
+      function updatePage() {
         const previousPage = itemBeingDragged.item as LocalCoursePage;
         if (!itemBeingDragged.sourceModuleName) {
           console.error(
@@ -160,7 +153,7 @@ export function useItemDropOnDay({
         }
         const page: LocalCoursePage = {
           ...previousPage,
-          dueAt: dateToMarkdownString(dayAsDate),
+          dueAt: shiftDays(previousPage.dueAt, daysUntil(previousPage.dueAt, day)),
         };
         updatePageMutation.mutate({
           page,
@@ -196,19 +189,13 @@ export function useItemDropOnDay({
           });
           return;
         }
+        const days = daysUntil(previousAssignment.dueAt, day);
         const assignment: LocalAssignment = {
           ...previousAssignment,
-          dueAt: dateToMarkdownString(dayAsDate),
-          lockAt: getNewLockDate(
-            previousAssignment.dueAt,
-            previousAssignment.lockAt,
-            dayAsDate
-          ),
-          unlockAt: getNewLockDate(
-            previousAssignment.dueAt,
-            previousAssignment.unlockAt,
-            dayAsDate
-          ),
+          dueAt: shiftDays(previousAssignment.dueAt, days),
+          lockAt: shiftDays(previousAssignment.lockAt, days),
+          unlockAt: shiftDays(previousAssignment.unlockAt, days),
+          dateForOrdering: shiftDays(previousAssignment.dateForOrdering, days),
         };
         updateAssignmentMutation.mutate({
           assignment,

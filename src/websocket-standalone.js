@@ -17,10 +17,28 @@ const watcher = chokidar.watch(folderToWatch, {
   persistent: true,
   usePolling,
 });
+// it shares a process with the web server, so a watcher error only stops
+// the live updates
+watcher.on("error", (error) => console.error("file watcher error:", error));
+
+// Only the app's own pages (and programs that aren't browsers) may listen for
+// file changes; a website open in the same browser may not. The app's proxy in
+// front of this server rewrites Host, so the Origin can't be compared with it
+// as in src/services/requestGuard.ts. Instead, the app's client always opens
+// with a same-origin request (polling, then upgrading), which browsers mark
+// Sec-Fetch-Site: same-origin and send without an Origin in older browsers. A
+// request with an Origin but no Sec-Fetch-Site is a cross-origin browser
+// connection (Chromium sends none on a WebSocket handshake), which the app
+// never makes.
+const fromThisApp = ({ headers }) => {
+  const site = headers["sec-fetch-site"];
+  if (site) return site === "same-origin" || site === "none";
+  return !headers.origin;
+};
 
 const httpServer = createServer();
 const io = new Server(httpServer, {
-  cors: { origin: "*" },
+  allowRequest: (request, callback) => callback(null, fromThisApp(request)),
 });
 
 io.on("connection", (socket) => {

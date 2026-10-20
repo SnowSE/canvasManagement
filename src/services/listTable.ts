@@ -38,6 +38,8 @@ interface ListTableToken {
   caption: Token[];
   captionText: string;
   columns: string[];
+  // group= columns, by index: shown in a row of their own when they change
+  group: number[];
   // per row, per column: the value's tokens, or undefined when empty
   rows: (Token[] | undefined)[][];
   // per row, per column: the value as plain text, for sizing the columns
@@ -121,8 +123,8 @@ export const listTableExtension = {
     const options = Object.fromEntries(
       [...open[1].matchAll(OPTION)].map((m) => [m[1], m[2] ?? ""])
     );
-    for (const name of Object.keys(options).filter((o) => o !== "caption"))
-      console.log(`<!-- table --> has no ${name} option (the only one is caption=)`);
+    for (const name of Object.keys(options).filter((o) => o !== "caption" && o !== "group"))
+      console.log(`<!-- table --> has no ${name} option (its options are caption= and group=)`);
 
     const table = arrange(list.items.map(valuesOf));
     if (!table) {
@@ -132,6 +134,22 @@ export const listTableExtension = {
       return undefined;
     }
 
+    const group = (options.group ?? "")
+      .split(",")
+      .map((name) => name.trim())
+      .filter(Boolean)
+      .flatMap((name) => {
+        const column = table.columns.indexOf(name);
+        if (column < 0) console.log(`<!-- table --> group="${name}" isn't one of its columns`);
+        return column < 0 ? [] : [column];
+      });
+    // an empty group value is the same as the row before's, so it's only
+    // written when it changes
+    table.rows.forEach((row, r) => {
+      for (const c of group)
+        if (r > 0 && EMPTY.test(row[c].trim())) row[c] = table.rows[r - 1][c];
+    });
+
     const caption = options.caption ?? "";
     return {
       type: "listTable",
@@ -139,6 +157,7 @@ export const listTableExtension = {
       caption: this.lexer.inline(caption),
       captionText: plainText(caption),
       columns: table.columns,
+      group,
       rows: table.rows.map((row) =>
         row.map((value) =>
           EMPTY.test(value.trim()) ? undefined : this.lexer.blockTokens(value, [])
@@ -158,22 +177,52 @@ export const listTableExtension = {
     };
     const html = t.rows.map((row) => row.map(cell));
     const caption = this.parser.parseInline(t.caption);
+
+    // the group columns aren't shown in the rows; a row of their own starts
+    // each run of rows that share their values
+    const shown = t.columns.map((_, c) => c).filter((c) => !t.group.includes(c));
+    const view = {
+      ...t,
+      columns: shown.map((c) => t.columns[c]),
+      plain: t.plain.map((row) => shown.map((c) => row[c])),
+    };
+    const shownHtml = html.map((row) => shown.map((c) => row[c]));
+    // (a group with no values at all, like rows before the first one, gets none)
+    const groupLabels = t.plain.map((row, r) =>
+      t.group.some((c) => t.rows[r][c]) &&
+      (r === 0 || t.group.some((c) => row[c] !== t.plain[r - 1][c]))
+        ? t.group
+            .map((c) => `<strong>${escapeHtml(t.columns[c])}:</strong> ${html[r][c]}`)
+            .join(" · ")
+        : undefined
+    );
+
     return (
       (caption ? `<p style="margin:0 0 4px 0;"><strong>${caption}</strong></p>` : "") +
-      plainTable(t, html, caption) +
-      responsiveTable(t, html)
+      plainTable(view, shownHtml, caption, groupLabels) +
+      responsiveTable(view, shownHtml, groupLabels)
     );
   },
 };
 
-function plainTable(t: ListTableToken, html: string[][], caption: string) {
+function plainTable(
+  t: ListTableToken,
+  html: string[][],
+  caption: string,
+  groupLabels: (string | undefined)[]
+) {
   const td = `border:${look.line};padding:4px 8px;`;
   return `<details><summary>Show as a table</summary><div style="overflow-x:auto;"><table style="border-collapse:collapse;">${
     caption ? `<caption>${caption}</caption>` : ""
   }<thead><tr>${t.columns
     .map((c) => `<th scope="col" style="${td}text-align:left;">${escapeHtml(c)}</th>`)
     .join("")}</tr></thead><tbody style="vertical-align:top;">${html
-    .map((row) => `<tr>${row.map((v) => `<td style="${td}">${v}</td>`).join("")}</tr>`)
+    .map(
+      (row, r) =>
+        (groupLabels[r]
+          ? `<tr><th scope="colgroup" colspan="${t.columns.length}" style="${td}text-align:left;font-weight:normal;background:${look.shade};">${groupLabels[r]}</th></tr>`
+          : "") + `<tr>${row.map((v) => `<td style="${td}">${v}</td>`).join("")}</tr>`
+    )
     .join("")}</tbody></table></div></details>`;
 }
 
@@ -182,69 +231,85 @@ function plainTable(t: ListTableToken, html: string[][], caption: string) {
 // than `fits`, and calc() clamps it to 0 when narrower; `off` is the reverse.
 // A height is switched through a child whose padding-top is a percentage of a
 // parent whose width is switched.
-function responsiveTable(t: ListTableToken, html: string[][]) {
+//
+// Sizes follow the page's font, whatever it is: text widths are in ch (the
+// width of "0"), heights and padding in em. A character is taken as `CH` ch
+// wide, a little wider than most, so text never needs more room than given.
+const CH = 1.1;
+
+function responsiveTable(
+  t: ListTableToken,
+  html: string[][],
+  groupLabels: (string | undefined)[]
+) {
   const columns = t.columns.map((name, c) => {
     const values = t.plain.map((row) => row[c]);
     const lengths = values.map((v) => v.length).sort((a, b) => a - b);
     const typical = lengths[Math.floor(lengths.length * 0.75)] || 1;
     const longestWord = Math.max(
-      4,
+      1,
       ...values.flatMap((v) => v.split(/\s+/).map((w) => w.length))
     );
-    // its longest word (0.6em a character) plus 16px of padding
-    const wordRem = Math.ceil(longestWord * 0.6) + 1;
+    const longestNameWord = Math.max(...name.split(" ").map((w) => w.length));
+    // room for its longest word, or its heading's (.8em)
+    const wordCh = Math.ceil(Math.max(longestWord, longestNameWord * 0.8) * CH);
     return {
       name,
-      // a square root gives a long column more room without taking over
-      grow: Math.round(Math.sqrt(Math.max(typical, name.length * 0.6, 6)) * 10),
-      minRem: Math.min(10, Math.max(5, wordRem)),
+      // room in proportion to how much it usually holds, so a column of
+      // one-digit numbers stays narrow
+      grow: Math.max(typical, longestNameWord),
+      textCh: Math.min(16, wordCh),
       // Canvas drops overflow-wrap, so a word too long for any column
       // scrolls inside its cell rather than widening the page
-      scroll: wordRem > 10,
+      scroll: wordCh > 16,
     };
   });
-  // the width a row needs on one line
-  const fits = Math.ceil(columns.reduce((sum, c) => sum + c.minRem + 0.1, 0));
-  const on = `calc((100% - ${fits}rem) * 999)`;
-  const off = `calc((${fits}rem - 100%) * 999)`;
-  // wide enough for the longest word of any name (.85em, 0.6em a character,
-  // 20px of padding), so no name breaks inside a word
+  // the width a row needs on one line: each column's text, its 1em of
+  // padding and its 1px line
+  const fits = `${columns.reduce((sum, c) => sum + c.textCh, 0)}ch + ${columns.length * 1.1}em`;
+  const on = `calc((100% - (${fits})) * 999)`;
+  const off = `calc((${fits} - 100%) * 999)`;
+  // wide enough for the longest word of any name (.85em), so no name
+  // breaks inside a word, plus its padding
   const longestNameWord = Math.max(...t.columns.flatMap((c) => c.split(" ").map((w) => w.length)));
-  const labelRem = Math.min(8, Math.max(5, Math.ceil(longestNameWord * 0.6 * 0.85 + 1.25)));
+  const labelCh = Math.min(14, Math.max(8, Math.ceil(longestNameWord * 0.85 * CH)));
+  const labelWidth = `${labelCh}ch + 1.1em`;
   // Canvas drops box-sizing, so nothing whose width matters has padding (it
   // goes on an inner div) and the 1px borders are counted in.
   const flex = (c: (typeof columns)[number], basis: string) =>
-    `flex:${c.grow} 1 ${basis};min-width:${c.minRem}rem;`;
+    `flex:${c.grow} 1 ${basis};min-width:calc(${c.textCh}ch + 1em);`;
   // a zero-width item whose border is the line between columns in table mode
-  const separator = `<div style="flex:0 0 0;border-left:${look.line};"></div>`;
+  const separator = blank(`flex:0 0 0;border-left:${look.line};`);
 
-  // headings are .8em with 16px of padding; estimate wide so no browser
-  // wraps them onto more lines than there is room for
-  const headerRem =
-    Math.max(...columns.map((c) => linesOf(c.name, (c.minRem - 1) / (0.6 * 0.8)))) *
-      1.25 *
-      0.8 +
-    0.5;
-  const header = `<div style="overflow:hidden;"><div role="row" style="display:flex;height:${headerRem}rem;margin-bottom:-${headerRem}rem;background:${look.shade};">${columns
+  // headings are .8em with padding above; lines are 1.25 of their size
+  const headerEm =
+    Math.max(...columns.map((c) => linesOf(c.name, c.textCh / (0.8 * CH)))) * 0.8 * 1.25 + 0.5;
+  const header = `<div style="overflow:hidden;"><div role="row" style="display:flex;height:${headerEm}em;margin-bottom:-${headerEm}em;background:${look.shade};">${columns
     .map(
       (c) =>
-        `${separator}<div role="columnheader" style="${flex(c, "0")}"><div style="padding:4px 8px 0 8px;${look.heading}"><strong>${escapeHtml(c.name)}</strong></div></div>`
+        `${separator}<div role="columnheader" style="${flex(c, "0")}"><div style="padding:.3em .6em 0;${look.heading}"><strong>${escapeHtml(c.name)}</strong></div></div>`
     )
-    .join("")}${separator}</div>${heightSwitch(on, headerRem, 10)}</div>`;
+    .join("")}${separator}</div>${heightSwitch(on, headerEm, 10)}</div>`;
 
   const label = (name: string) => {
-    // .85em with 20px of padding, estimated wide like the headings
-    const h = linesOf(name, (labelRem - 1.25) / (0.6 * 0.85)) * 1.25 * 0.85 + 0.5;
-    return `<div aria-hidden="true" style="flex:0 0 ${labelRem}rem;max-width:${off};overflow:hidden;border-top:${look.softLine};border-left:${look.line};background:${look.shade};"><div style="height:${h}rem;margin-bottom:-${h}rem;padding:6px 8px 0 12px;${look.label}">${escapeHtml(name)}</div><div style="padding-top:${((h / labelRem) * 100).toFixed(2)}%;"></div></div>`;
+    // in em of the row: lines of .85em text, 1.25 apart, plus padding above
+    const h = linesOf(name, labelCh / (0.85 * CH)) * 0.85 * 1.25 + 0.6;
+    return `<div aria-hidden="true" style="flex:0 0 calc(${labelWidth});max-width:${off};overflow:hidden;border-top:${look.softLine};border-left:${look.line};background:${look.shade};"><div style="height:${h / 0.85}em;margin-bottom:-${h / 0.85}em;padding:.45em .5em 0 .8em;${look.label}">${escapeHtml(name)}</div>${heightSwitch("100%", h, 3)}</div>`;
   };
 
+  // a shaded band across the table, or a heading above the cards
+  const groupRow = (label: string) =>
+    `<div role="row" style="border:${look.line};margin-top:-1px;background:${look.shade};"><div role="rowheader" style="padding:.3em .6em;font-size:.9em;">${label}</div></div>`;
+
   const rows = html.map(
-    (row) =>
-      `${heightSwitch(off, 0.8, 10)}<div role="row" style="border:${look.line};border-width:1px 1px 1px 0;display:flex;flex-wrap:wrap;margin-top:-1px;">${row
+    (row, r) =>
+      `${heightSwitch(off, 0.8, 10)}${groupLabels[r] ? groupRow(groupLabels[r]) : ""}<div role="row" style="border:${look.line};border-width:1px 1px 1px 0;display:flex;flex-wrap:wrap;margin-top:-1px;">${row
         .map((value, c) => {
           const column = columns[c];
-          if (!value) return `${separator}<div role="cell" style="${flex(column, off)}"></div>`;
-          return `${label(column.name)}<div role="cell" style="${flex(column, off)}max-width:calc(100% - ${labelRem}rem - 1px);${column.scroll ? "overflow-x:auto;" : ""}border-top:${look.softLine};"><div style="padding:6px 8px;">${c === 0 ? `<strong>${value}</strong>` : value}</div></div>`;
+          // an empty cell keeps its font, which its ch and em widths depend on
+          if (!value)
+            return `${separator}<div role="cell" style="${flex(column, off)}line-height:0;"><span style="font-size:0;">&nbsp;</span></div>`;
+          return `${label(column.name)}<div role="cell" style="${flex(column, off)}max-width:calc(100% - (${labelWidth}) - 1px);${column.scroll ? "overflow-x:auto;" : ""}border-top:${look.softLine};"><div style="padding:.4em .5em;">${c === 0 ? `<strong>${value}</strong>` : value}</div></div>`;
         })
         .join("")}</div>`
   );
@@ -252,10 +317,15 @@ function responsiveTable(t: ListTableToken, html: string[][]) {
   return `<div role="table" aria-label="${escapeHtml(t.captionText)}">${header}${rows.join("")}</div>`;
 }
 
-// Space `heightRem` tall while `width` is on, none while it is 0: padding-top
-// is a share of the width, which is capped at `widthRem`.
-const heightSwitch = (width: string, heightRem: number, widthRem: number) =>
-  `<div style="width:${width};max-width:${widthRem}rem;"><div style="padding-top:${((heightRem / widthRem) * 100).toFixed(2)}%;"></div></div>`;
+// Space `heightEm` tall while `width` is on, none while it is 0: padding-top
+// is a share of the width, which is capped at `widthEm`.
+const heightSwitch = (width: string, heightEm: number, widthEm: number) =>
+  `<div style="width:${width};max-width:${widthEm}em;">${blank(`padding-top:${((heightEm / widthEm) * 100).toFixed(2)}%;`)}</div>`;
+
+// A div with nothing to show. Canvas's editor deletes empty divs when a page
+// holding the table (a front page it's embedded in) is saved there, so it
+// holds a space too small to take up any room.
+const blank = (style: string) => `<div style="${style}font-size:0;">&nbsp;</div>`;
 
 // The lines `text` takes wrapped at `perLine` characters, breaking between words.
 const linesOf = (text: string, perLine: number) =>

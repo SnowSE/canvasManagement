@@ -853,10 +853,17 @@ services:
     container_name: __CONTAINER__
     restart: unless-stopped
     ports:
-      - "${CANVAS_MANAGER_PORT:-3000}:3000"
+      # only this computer can open it; anyone who can reach it acts in Canvas
+      # as you. To open it from other machines, set CANVAS_MANAGER_ADDRESS=0.0.0.0
+      # in .env (a trusted network only), then run ./restart.ps1
+      - "${CANVAS_MANAGER_ADDRESS:-127.0.0.1}:${CANVAS_MANAGER_PORT:-3000}:3000"
     env_file:
       - .env
     environment:
+      # where the port above is published, so the app can warn while other
+      # machines can open it
+      - CANVAS_MANAGER_ADDRESS=${CANVAS_MANAGER_ADDRESS:-127.0.0.1}
+      - CANVAS_MANAGER_PORT=${CANVAS_MANAGER_PORT:-3000}
       - storageDirectory=/app/storage
       - TZ=__TZ__
       - NEXT_PUBLIC_ENABLE_FILE_SYNC=true

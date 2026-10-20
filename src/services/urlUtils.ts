@@ -1,6 +1,10 @@
 // Defined here (not in canvasServiceUtils) so pure url helpers don't pull in axios.
 export const baseCanvasUrl = "https://snow.instructure.com";
 
+/** The course home page in Canvas, for a page that AddToHome fills into it. */
+export const getCanvasHomeUrlFor = (page: { addToHome?: boolean }, canvasId: number) =>
+  page.addToHome ? `${baseCanvasUrl}/courses/${canvasId}` : undefined;
+
 export function getModuleItemUrl(
   courseName: string,
   moduleName: string,

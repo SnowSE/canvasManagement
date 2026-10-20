@@ -29,6 +29,7 @@ docker run "${MODE_ARGS[@]}" \
   -u "$(id -u):$(id -g)" \
   -e HOME=/home/node \
   -p 127.0.0.1:3000:3000 \
+  -e CANVAS_MANAGER_ADDRESS=127.0.0.1 \
   -w /app \
   -v .:/app \
   -v ~/.canvas-manager-dev-home:/home/node \

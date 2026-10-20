@@ -105,8 +105,11 @@ export function ListTableHelp() {
         list.
       </P>
       <P>
-        <C>caption=</C> is optional and is the only setting. The look is built
-        in, so every table matches.
+        Two optional settings: <C>caption=</C>, and <C>group=</C> with one or
+        more column names (<C>group=&quot;Week, Module&quot;</C>). Grouped
+        columns leave the rows; a shaded row showing their values starts each
+        run of rows that share them. A grouped value can be left empty to keep
+        the one above. The look is built in, so every table matches.
       </P>
     </HelpSection>
   );
