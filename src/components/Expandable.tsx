@@ -13,6 +13,8 @@ export function Expandable({
   ExpandableElement,
   defaultExpanded = false,
   storageKey,
+  openRequests,
+  closeRequests,
 }: {
   children: ReactNode;
   ExpandableElement: (props: {
@@ -22,8 +24,17 @@ export function Expandable({
   defaultExpanded?: boolean;
   // remember open/closed in localStorage under this key
   storageKey?: string;
+  // opens or closes it each time these change (from 0), like "expand all"
+  openRequests?: number;
+  closeRequests?: number;
 }) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+  useEffect(() => {
+    if (openRequests) setIsExpanded(true);
+  }, [openRequests]);
+  useEffect(() => {
+    if (closeRequests) setIsExpanded(false);
+  }, [closeRequests]);
   const expandRef = useRef<HTMLDivElement | null>(null);
   const restored = useRef(false);
 

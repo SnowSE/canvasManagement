@@ -19,6 +19,8 @@ export const SyncDifferencesTooltip: FC<{
   message: ReactNode;
   differences: SyncField[];
   unpublished?: boolean;
+  /** Off where the card isn't on the item itself (no menu to right-click). */
+  rightClickHint?: boolean;
 }> = ({
   type,
   moduleName,
@@ -27,6 +29,7 @@ export const SyncDifferencesTooltip: FC<{
   message,
   differences,
   unpublished,
+  rightClickHint = true,
 }) => {
   const { courseName } = useCourseContext();
   if (status !== "incomplete" || differences.length === 0)
@@ -63,7 +66,9 @@ export const SyncDifferencesTooltip: FC<{
         >
           Compare with Canvas →
         </Link>
-        <span className="text-slate-500">right-click for more</span>
+        {rightClickHint && (
+          <span className="text-slate-500">right-click for more</span>
+        )}
       </div>
     </div>
   );

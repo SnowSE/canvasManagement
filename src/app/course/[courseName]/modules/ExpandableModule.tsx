@@ -1,4 +1,5 @@
 "use client";
+import { useEffect } from "react";
 import { usePagesQueries } from "@/features/local/pages/pageHooks";
 import { IModuleItem } from "@/features/local/modules/IModuleItem";
 import {
@@ -33,6 +34,8 @@ import { ItemTypeIcon } from "../ItemTypeIcon";
 import { useInvalidItemsQuery } from "@/features/local/modules/rawItemHooks";
 import { ItemInDay } from "../calendar/day/itemInDay/ItemInDay";
 import { useItemSyncStatus } from "../calendar/day/useItemSyncStatus";
+import { useModuleSelection } from "./bulk/moduleSelection";
+import { kindsOf, shown } from "./bulk/filters";
 
 export default function ExpandableModule({
   moduleName,
@@ -50,6 +53,7 @@ export default function ExpandableModule({
   const { data: canvasModulesWithItems } = useCanvasModulesWithItemsQuery();
   const { data: invalidItems } = useInvalidItemsQuery(moduleName);
   const { statusOf } = useItemSyncStatus();
+  const selection = useModuleSelection();
 
   const moduleItems: {
     type: "assignment" | "quiz" | "page";
@@ -88,7 +92,21 @@ export default function ExpandableModule({
     "expandable module week grouping",
   );
 
-  const groupedItems = moduleItems.reduce(
+  // what the bar's filters let through (everything with none on); a module
+  // with nothing to show is hidden
+  const shownItems = moduleItems.filter(({ type, item }) =>
+    shown(kindsOf(statusOf(type, item, moduleName)), selection.filters),
+  );
+  const shownRefs = shownItems.map(({ type, item }) => ({ type, item, moduleName }));
+  const { report } = selection;
+  const reported = shownRefs.map((r) => r.type + r.item.name).join("\n");
+  useEffect(() => {
+    report(moduleName, shownRefs);
+    // the refs change whenever reported does
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [report, moduleName, reported]);
+
+  const groupedItems = shownItems.reduce(
     (
       groups: {
         dateKey: string;
@@ -123,6 +141,8 @@ export default function ExpandableModule({
     [],
   );
 
+  if (selection.filters.length > 0 && shownItems.length === 0) return null;
+
   return (
     <div
       className="bg-slate-800 rounded-lg border border-slate-600 mb-3 "
@@ -133,6 +153,8 @@ export default function ExpandableModule({
         <div className=" p-3 ">
           <Expandable
             storageKey={`moduleExpanded-${courseName}-${moduleName}`}
+            openRequests={selection.expandRequests}
+            closeRequests={selection.collapseRequests}
             ExpandableElement={({ setIsExpanded, isExpanded }) => (
               <div
                 className="font-bold flex flex-row justify-between cursor-pointer "
@@ -248,15 +270,39 @@ export default function ExpandableModule({
                     <div className="text-slate-500 text-sm mt-1 ps-1">
                       {weekLabel}
                     </div>
-                    {items.map(({ type, item }) => (
-                      <ItemInDay
-                        key={item.name + type}
-                        type={type}
-                        item={item}
-                        moduleName={moduleName}
-                        {...statusOf(type, item, moduleName)}
-                      />
-                    ))}
+                    {items.map(({ type, item }) => {
+                      const status = statusOf(type, item, moduleName);
+                      const ref = { type, item, moduleName };
+                      return (
+                        <div
+                          key={item.name + type}
+                          className="flex items-start"
+                          // a checked item's right-click acts on every checked item
+                          onContextMenuCapture={(e) => {
+                            if (!selection.isSelected(ref)) return;
+                            e.preventDefault();
+                            e.stopPropagation();
+                            selection.openMenu({ x: e.clientX, y: e.clientY });
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            className="mt-1.5 me-1 flex-none"
+                            aria-label={`Select ${item.name}`}
+                            checked={selection.isSelected(ref)}
+                            onChange={() => selection.toggle(ref)}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <ItemInDay
+                              type={type}
+                              item={item}
+                              moduleName={moduleName}
+                              {...status}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 ))}
               </div>
