@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { getCompareUrl } from "@/services/urlUtils";
 import { useCourseContext } from "../../../context/courseContext";
 import { SyncField } from "../getAssignmentSyncStatus";
+import { differenceText } from "./differenceText";
 
 const MAX_LISTED = 5;
 
@@ -48,7 +49,7 @@ export const SyncDifferencesTooltip: FC<{
       </div>
       <ul className="list-disc ps-5 text-rose-300">
         {shown.map((d) => (
-          <li key={d.key}>{d.message}</li>
+          <li key={d.key}>{differenceText(d)}</li>
         ))}
       </ul>
       {hidden > 0 && (
