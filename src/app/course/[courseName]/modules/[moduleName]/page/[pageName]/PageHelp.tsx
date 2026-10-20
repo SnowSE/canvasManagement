@@ -38,7 +38,8 @@ What students should read, in markdown.
           page each time you update it: in its marker{" "}
           <C>{'<div id="embed-<page address>"></div>'}</C> if the home page
           has one, otherwise at the end. <C>AddToHome: false</C> empties that
-          spot.
+          spot. <strong>View home in Canvas</strong> in the footer&apos;s ⋯ menu
+          opens the home page to see it there.
         </P>
         <Example>{`
 DateForOrdering: 08/26/2026 23:59:00
