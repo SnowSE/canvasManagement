@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useNetworkExposureQuery } from "@/features/local/network/networkHooks";
+import { isLocalName } from "@/services/requestGuard";
 
 // A bar across the top of every page, never dismissed, while other machines
 // may be able to reach the app's server, which sends requests to Canvas with
@@ -11,8 +12,19 @@ import { useNetworkExposureQuery } from "@/features/local/network/networkHooks";
 // CANVAS_MANAGER_PORT), which can say "local" while its ports line says
 // otherwise, so the port the page was opened on is checked against it.
 export function NetworkBanner() {
-  const { data: exposure } = useNetworkExposureQuery();
+  const { data: exposure, error } = useNetworkExposureQuery();
   const [open, setOpen] = useState(false);
+  // opened by a domain name the server doesn't know, it refuses the app's own
+  // requests (see src/services/requestGuard.ts), so nothing would load
+  const name = window.location.hostname;
+  if (error && !isLocalName(name))
+    return (
+      <div className="flex-none mb-1 rounded border border-amber-700 bg-amber-950/60 text-amber-100 text-sm px-3 py-1 text-center">
+        <span aria-hidden>⚠</span> CanvasManager only answers names it knows, and{" "}
+        <code>{name}</code> isn&apos;t one of them. Add{" "}
+        <code>CANVAS_MANAGER_HOSTS={name}</code> to <code>.env</code> and restart.
+      </div>
+    );
   if (!exposure) return null;
 
   const pagePort =
@@ -83,26 +95,32 @@ export function NetworkBanner() {
               </p>
               <ol className="list-decimal ps-6 space-y-1">
                 <li>
-                  Replace the line under <code>ports:</code> with the{" "}
-                  <code>ports</code> line below.
+                  In the line under <code>ports:</code>, put{" "}
+                  <code>{"${CANVAS_MANAGER_ADDRESS:-127.0.0.1}:"}</code> in front
+                  of what&apos;s there, and keep the rest exactly as it is, port
+                  and all (it may be shared with another setup that starts it
+                  on a different port).
                 </li>
                 <li>
-                  Add the two <code>environment</code> lines under its{" "}
-                  <code>environment:</code> (add <code>environment:</code> if the
-                  service has none).
+                  Under its <code>environment:</code> (add{" "}
+                  <code>environment:</code> if the service has none), add{" "}
+                  <code>{"CANVAS_MANAGER_ADDRESS=${CANVAS_MANAGER_ADDRESS:-127.0.0.1}"}</code>{" "}
+                  and <code>CANVAS_MANAGER_PORT=</code> followed by the first
+                  number of your <code>ports</code> line, written the same way.
                 </li>
                 <li>Restart it.</li>
               </ol>
+              <p>For example, if its port line is <code>{`- "${port}:3000"`}</code>:</p>
               <pre className="text-xs bg-slate-950 p-2 rounded overflow-x-auto">{`    ports:
-      - "\${CANVAS_MANAGER_ADDRESS:-127.0.0.1}:\${CANVAS_MANAGER_PORT:-${port}}:3000"
+      - "\${CANVAS_MANAGER_ADDRESS:-127.0.0.1}:${port}:3000"
     environment:
       - CANVAS_MANAGER_ADDRESS=\${CANVAS_MANAGER_ADDRESS:-127.0.0.1}
-      - CANVAS_MANAGER_PORT=\${CANVAS_MANAGER_PORT:-${port}}`}</pre>
+      - CANVAS_MANAGER_PORT=${port}`}</pre>
               <p>
-                Both read the same variables, so they stay in sync: to change the
-                address or the port later, set <code>CANVAS_MANAGER_ADDRESS</code>{" "}
-                or <code>CANVAS_MANAGER_PORT</code> in <code>.env</code>, not
-                these lines.
+                If the port is a variable, like{" "}
+                <code>{`"\${CANVAS_MANAGER_PORT:-${port}}:3000"`}</code>, keep it and
+                write the same variable after <code>CANVAS_MANAGER_PORT=</code>,
+                so the two always agree.
               </p>
             </>
           )}

@@ -2,9 +2,11 @@
 // writes the course files, so it only answers the app's own pages and
 // programs on the same computer. A website can't make the browser send these headers any
 // other way, so checking them refuses requests a web page tries to send:
-// - Sec-Fetch-Site and Origin must say the request came from this app itself
-//   (browsers count other ports on localhost as the same *site*, so "site"
-//   isn't enough)
+// - Sec-Fetch-Site must say the request came from this app itself (browsers
+//   count other ports on localhost as the same *site*, so "site" isn't
+//   enough). The browser works it out from the addresses it sees, so a proxy
+//   that rewrites Host doesn't change it. Browsers that don't send it are
+//   checked by comparing Origin with Host instead.
 // - Host must not be a public domain name: DNS rebinding points one at this
 //   computer to get around the browser's same-origin rule. localhost, IP
 //   addresses and local network names (one word, .local, .lan, .home.arpa,
@@ -14,7 +16,7 @@
 
 const hostnameOf = (host: string) => host.replace(/:\d+$/, "").toLowerCase();
 
-const isLocalName = (name: string) =>
+export const isLocalName = (name: string) =>
   name === "localhost" ||
   /^\d{1,3}(\.\d{1,3}){3}$/.test(name) || // an IPv4 address
   /^\[[0-9a-f:.]+\]$/.test(name) || // an IPv6 address
@@ -27,7 +29,7 @@ export function isAllowedRequest(headers: Headers, extraHosts: string[] = []) {
   if (!isLocalName(name) && !extraHosts.includes(name)) return false;
 
   const site = headers.get("sec-fetch-site");
-  if (site && site !== "same-origin" && site !== "none") return false;
+  if (site) return site === "same-origin" || site === "none";
 
   const origin = headers.get("origin");
   // "null" is what a sandboxed frame sends, which a web page can make

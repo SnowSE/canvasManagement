@@ -5,7 +5,7 @@
 
 CanvasManager runs a small server on your computer that sends requests to Canvas with your token and reads and writes your course files. It should only answer requests from its own pages on this computer: it refuses requests from other websites, and the example `docker-compose.yml` in this repo (and the one `get-started.ps1` writes) publishes it on `127.0.0.1`, so other machines can't reach it.
 
-**If your `docker-compose.yml` is from before October 2026, it listens on every network your computer is on**, and the app shows an amber *Possibly open to your network* bar across the top of every page until it's fixed. Run `get-started.ps1` again and let it write a new `docker-compose.yml`, or use the `ports` and `environment` lines from the example below (the bar shows them with your port). See [getting-started](https://snowse.github.io/canvasManagement/getting-started.html#setup-local-only) to open it from another machine on purpose.
+**If your `docker-compose.yml` is from before October 2026, it listens on every network your computer is on**, and the app shows an amber *Possibly open to your network* bar across the top of every page until it's fixed. Run `get-started.ps1` again and let it write a new `docker-compose.yml`, or use the `ports` and `environment` lines from the example below (the bar shows how, keeping your port). See [getting-started](https://snowse.github.io/canvasManagement/getting-started.html#setup-local-only) to open it from another machine on purpose.
 
 ## Handouts
 
