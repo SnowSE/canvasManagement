@@ -1,5 +1,6 @@
 import { createTRPCClient, httpBatchLink } from "@trpc/client";
 import type { AppRouter } from "@/services/serverFunctions/appRouter";
+import { reloadingForNewBuild } from "@/app/staleBuild/staleBuildReload";
 
 // Plain functions like showErrorToast can't use hooks, so they report through
 // their own client. The event tells the error pill to refresh right away.
@@ -8,7 +9,7 @@ export const errorLogChangedEvent = "error-log-changed";
 let client: ReturnType<typeof createTRPCClient<AppRouter>> | undefined;
 
 export const reportBrowserError = (source: string, message: string) => {
-  if (typeof window === "undefined" || !message) return;
+  if (typeof window === "undefined" || !message || reloadingForNewBuild()) return;
   client ??= createTRPCClient<AppRouter>({
     links: [httpBatchLink({ url: "/api/trpc" })],
   });

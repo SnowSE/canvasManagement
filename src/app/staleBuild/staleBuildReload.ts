@@ -5,6 +5,12 @@
 const KEY = "reloadedForNewBuildAt";
 const MINUTE = 60_000;
 
+// Once reloading, the module Vite couldn't load comes back undefined (the
+// reload replaces it), and whatever then fails isn't worth showing or
+// recording: the page is about to be replaced.
+let reloading = false;
+export const reloadingForNewBuild = () => reloading;
+
 export function reloadForNewBuild(
   storage: Pick<Storage, "getItem" | "setItem">,
   now: number,
@@ -13,6 +19,7 @@ export function reloadForNewBuild(
   const last = Number(storage.getItem(KEY) ?? 0);
   if (now - last < MINUTE) return false;
   storage.setItem(KEY, String(now));
+  reloading = true;
   reload();
   return true;
 }

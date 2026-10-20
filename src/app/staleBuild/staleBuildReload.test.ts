@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { reloadForNewBuild } from "./staleBuildReload";
+import { reloadForNewBuild, reloadingForNewBuild } from "./staleBuildReload";
 
 const storage = () => {
   const values = new Map<string, string>();
@@ -14,6 +14,11 @@ describe("reloadForNewBuild", () => {
     const reload = vi.fn();
     expect(reloadForNewBuild(storage(), 1_000_000, reload)).toBe(true);
     expect(reload).toHaveBeenCalledOnce();
+  });
+
+  it("says it's reloading, so the error it caught isn't shown or recorded meanwhile", () => {
+    reloadForNewBuild(storage(), 1_000_000, () => {});
+    expect(reloadingForNewBuild()).toBe(true);
   });
 
   it("doesn't reload again within a minute, so a file that's really missing can't loop", () => {
