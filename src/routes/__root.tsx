@@ -21,6 +21,8 @@ import { SuspenseAndErrorHandling } from "@/components/SuspenseAndErrorHandling"
 import TrpcProvider from "@/services/serverFunctions/TrpcProvider";
 import { getQueryClient } from "@/app/providersQueryClientUtils";
 import appCss from "@/app/globals.css?url";
+import { useEffect } from "react";
+import { watchForNewBuild } from "@/app/staleBuild/staleBuildReload";
 
 type InitialData = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -150,6 +152,7 @@ function ErrorShell({ title, message }: { title: string; message: string }) {
 function RootComponent() {
   const { dehydratedState, startupError } = Route.useLoaderData();
   const queryClient = getQueryClient();
+  useEffect(watchForNewBuild, []);
 
   if (startupError !== undefined) {
     return (
