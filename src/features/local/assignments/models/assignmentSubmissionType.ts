@@ -6,6 +6,7 @@ export enum AssignmentSubmissionType {
   DISCUSSION_TOPIC = "discussion_topic",
   ONLINE_URL = "online_url",
   ON_PAPER = "on_paper",
+  EXTERNAL_TOOL = "external_tool",
   NONE = "none",
 }
 export const zodAssignmentSubmissionType = z.enum([
@@ -15,6 +16,7 @@ export const zodAssignmentSubmissionType = z.enum([
   AssignmentSubmissionType.DISCUSSION_TOPIC,
   AssignmentSubmissionType.ONLINE_URL,
   AssignmentSubmissionType.ON_PAPER,
+  AssignmentSubmissionType.EXTERNAL_TOOL,
   AssignmentSubmissionType.NONE,
 ]);
 
@@ -25,5 +27,6 @@ export const AssignmentSubmissionTypeList: AssignmentSubmissionType[] = [
   AssignmentSubmissionType.DISCUSSION_TOPIC,
   AssignmentSubmissionType.ONLINE_URL,
   AssignmentSubmissionType.ON_PAPER,
+  AssignmentSubmissionType.EXTERNAL_TOOL,
   AssignmentSubmissionType.NONE,
 ] as const;

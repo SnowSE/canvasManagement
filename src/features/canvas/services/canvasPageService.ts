@@ -6,7 +6,7 @@ import { LocalCourseSettings } from "@/features/local/course/localCourseSettings
 import { axiosClient } from "@/services/axiosUtils";
 import { markdownToHTMLSafe } from "@/services/htmlMarkdownUtils";
 import { CanvasLinkTargets } from "@/services/urlUtils";
-import { fillEmbed, placeEmbed } from "./frontPageEmbed";
+import { fillEmbed, placeEmbed, renameEmbed } from "./frontPageEmbed";
 
 // Puts a page's html in its marker on the course front page (adding the
 // marker at the end if needed), or with no html empties the marker, keeping
@@ -30,6 +30,22 @@ const updateFrontPage = async (courseId: number, pageUrl: string, html?: string)
     wiki_page: { body: updated },
   });
   return data;
+};
+
+const moveFrontPageMarker = async (courseId: number, fromUrl: string, toUrl: string) => {
+  const frontPageUrl = `${canvasApi}/courses/${courseId}/front_page`;
+  let frontPage: CanvasPage;
+  try {
+    ({ data: frontPage } = await axiosClient.get<CanvasPage>(frontPageUrl));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
+    if (error?.response?.status === 404) return;
+    throw error;
+  }
+  const updated = renameEmbed(frontPage.body ?? "", fromUrl, toUrl);
+  if (updated === undefined) return;
+  console.log(`Moving the front page marker from ${fromUrl} to ${toUrl}`);
+  await axiosClient.put(frontPageUrl, { wiki_page: { body: updated } });
 };
 
 export const canvasPageService = {
@@ -107,6 +123,22 @@ export const canvasPageService = {
     console.log(`Publishing page ${canvasPageId}`);
     const url = `${canvasApi}/courses/${courseId}/pages/${canvasPageId}`;
     await axiosClient.put(url, { wiki_page: { published: true } });
+  },
+
+  // Canvas gives a renamed page a new address, so its front-page marker
+  // (keyed on the address) moves with it.
+  async rename(
+    courseId: number,
+    canvasPage: { page_id: number; url: string },
+    title: string
+  ): Promise<void> {
+    console.log(`Renaming page in Canvas to: ${title}`);
+    const url = `${canvasApi}/courses/${courseId}/pages/${canvasPage.page_id}`;
+    const { data: renamed } = await axiosClient.put<CanvasPage>(url, {
+      wiki_page: { title },
+    });
+    if (renamed.url !== canvasPage.url)
+      await moveFrontPageMarker(courseId, canvasPage.url, renamed.url);
   },
 
   async delete(courseId: number, canvasPageId: number): Promise<void> {

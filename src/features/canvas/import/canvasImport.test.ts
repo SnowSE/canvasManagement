@@ -207,6 +207,24 @@ describe("canvasAssignmentToLocal", () => {
     expect(item.dueAt).toBe(context.fallbackDate);
     expect(warnings).toHaveLength(2);
   });
+
+  it("keeps an external tool's url", () => {
+    const { item } = canvasAssignmentToLocal(
+      assignment({
+        submission_types: ["external_tool"],
+        external_tool_tag_attributes: {
+          url: "https://tool.example.edu/launch",
+          resource_link_id: "abc",
+        },
+      }),
+      context,
+    );
+    expect(item.submissionTypes).toEqual(["external_tool"]);
+    expect(item.externalToolUrl).toBe("https://tool.example.edu/launch");
+    expect(assignmentMarkdownSerializer.toMarkdown(item)).toContain(
+      "ExternalToolUrl: https://tool.example.edu/launch",
+    );
+  });
 });
 
 describe("canvasPageToLocal", () => {

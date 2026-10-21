@@ -108,6 +108,48 @@ describe("getSyncStatus - assignment", () => {
     expect(result.message).toContain("lock date");
   });
 
+  describe("external tool", () => {
+    const toolAssignment: LocalAssignment = {
+      ...baseLocalAssignment,
+      submissionTypes: [AssignmentSubmissionType.EXTERNAL_TOOL],
+    };
+    const canvasTool = (url: string): CanvasAssignment => ({
+      ...baseCanvasAssignment,
+      submission_types: ["external_tool"],
+      external_tool_tag_attributes: { url, resource_link_id: "abc" },
+    });
+    const toolField = (item: LocalAssignment, canvasItem: CanvasAssignment) =>
+      getSyncReport({ item, canvasItem, type: "assignment", settings: baseSettings })
+        .fields.find((f) => f.key === "externalToolUrl");
+
+    it("flags a different url", () => {
+      const f = toolField(
+        { ...toolAssignment, externalToolUrl: "https://a.example.edu" },
+        canvasTool("https://b.example.edu"),
+      );
+      expect(f?.same).toBe(false);
+      expect(f?.message).toContain("https://b.example.edu");
+    });
+
+    it("matches the same url", () => {
+      const f = toolField(
+        { ...toolAssignment, externalToolUrl: "https://a.example.edu" },
+        canvasTool("https://a.example.edu"),
+      );
+      expect(f?.same).toBe(true);
+    });
+
+    it("shows Canvas's url without flagging it when the file has none", () => {
+      const f = toolField(toolAssignment, canvasTool("https://b.example.edu"));
+      expect(f?.canvas).toBe("https://b.example.edu");
+      expect(f?.same).toBe(true);
+    });
+
+    it("skips assignments with no tool on either side", () => {
+      expect(toolField(baseLocalAssignment, baseCanvasAssignment)).toBeUndefined();
+    });
+  });
+
   it("returns incomplete when assignment group differs", () => {
     const settings: LocalCourseSettings = {
       ...baseSettings,

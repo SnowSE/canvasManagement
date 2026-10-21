@@ -26,6 +26,16 @@ export const placeEmbed = (frontPageHtml: string, pageUrl: string, content: stri
   fillEmbed(frontPageHtml, pageUrl, content) ??
   `${frontPageHtml}<div id="embed-${pageUrl}">${content}</div>`;
 
+/**
+ * The front page with the marker for `fromUrl` pointed at `toUrl` instead,
+ * or undefined when it has no marker for `fromUrl`.
+ */
+export const renameEmbed = (frontPageHtml: string, fromUrl: string, toUrl: string) => {
+  const markerId = new RegExp(`(<div\\b[^>]*\\bid=["'])embed-${escape(fromUrl)}(["'][^>]*>)`);
+  if (!markerId.test(frontPageHtml)) return undefined;
+  return frontPageHtml.replace(markerId, (_, before, after) => `${before}embed-${toUrl}${after}`);
+};
+
 const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /** Where the `</div>` closing an already open div starts. */

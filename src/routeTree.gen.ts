@@ -14,6 +14,7 @@ import { Route as ErrorsRouteImport } from './routes/errors'
 import { Route as ApiCoursesRouteImport } from './routes/api/courses'
 import { Route as CourseCourseNameRouteImport } from './routes/course/$courseName'
 import { Route as ImagesSplatRouteImport } from './routes/images.$'
+import { Route as ApiCanvasNewQuizSplatRouteImport } from './routes/api.canvas-new-quiz.$'
 import { Route as ApiCanvasSplatRouteImport } from './routes/api.canvas.$'
 import { Route as ApiTrpcSplatRouteImport } from './routes/api.trpc.$'
 import { Route as CourseCourseNameIndexRouteImport } from './routes/course/$courseName/index'
@@ -54,6 +55,11 @@ const CourseCourseNameRoute = CourseCourseNameRouteImport.update({
 const ImagesSplatRoute = ImagesSplatRouteImport.update({
   id: '/images/$',
   path: '/images/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCanvasNewQuizSplatRoute = ApiCanvasNewQuizSplatRouteImport.update({
+  id: '/api/canvas-new-quiz/$',
+  path: '/api/canvas-new-quiz/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiCanvasSplatRoute = ApiCanvasSplatRouteImport.update({
@@ -159,6 +165,7 @@ export interface FileRoutesByFullPath {
   '/api/courses': typeof ApiCoursesRoute
   '/course/$courseName': typeof CourseCourseNameRouteWithChildren
   '/images/$': typeof ImagesSplatRoute
+  '/api/canvas-new-quiz/$': typeof ApiCanvasNewQuizSplatRoute
   '/api/canvas/$': typeof ApiCanvasSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
   '/course/$courseName/import': typeof CourseCourseNameImportRoute
@@ -181,6 +188,7 @@ export interface FileRoutesByTo {
   '/errors': typeof ErrorsRoute
   '/api/courses': typeof ApiCoursesRoute
   '/images/$': typeof ImagesSplatRoute
+  '/api/canvas-new-quiz/$': typeof ApiCanvasNewQuizSplatRoute
   '/api/canvas/$': typeof ApiCanvasSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
   '/course/$courseName/import': typeof CourseCourseNameImportRoute
@@ -205,6 +213,7 @@ export interface FileRoutesById {
   '/api/courses': typeof ApiCoursesRoute
   '/course/$courseName': typeof CourseCourseNameRouteWithChildren
   '/images/$': typeof ImagesSplatRoute
+  '/api/canvas-new-quiz/$': typeof ApiCanvasNewQuizSplatRoute
   '/api/canvas/$': typeof ApiCanvasSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
   '/course/$courseName/import': typeof CourseCourseNameImportRoute
@@ -230,6 +239,7 @@ export interface FileRouteTypes {
     | '/api/courses'
     | '/course/$courseName'
     | '/images/$'
+    | '/api/canvas-new-quiz/$'
     | '/api/canvas/$'
     | '/api/trpc/$'
     | '/course/$courseName/import'
@@ -252,6 +262,7 @@ export interface FileRouteTypes {
     | '/errors'
     | '/api/courses'
     | '/images/$'
+    | '/api/canvas-new-quiz/$'
     | '/api/canvas/$'
     | '/api/trpc/$'
     | '/course/$courseName/import'
@@ -275,6 +286,7 @@ export interface FileRouteTypes {
     | '/api/courses'
     | '/course/$courseName'
     | '/images/$'
+    | '/api/canvas-new-quiz/$'
     | '/api/canvas/$'
     | '/api/trpc/$'
     | '/course/$courseName/import'
@@ -299,6 +311,7 @@ export interface RootRouteChildren {
   ApiCoursesRoute: typeof ApiCoursesRoute
   CourseCourseNameRoute: typeof CourseCourseNameRouteWithChildren
   ImagesSplatRoute: typeof ImagesSplatRoute
+  ApiCanvasNewQuizSplatRoute: typeof ApiCanvasNewQuizSplatRoute
   ApiCanvasSplatRoute: typeof ApiCanvasSplatRoute
   ApiTrpcSplatRoute: typeof ApiTrpcSplatRoute
 }
@@ -338,6 +351,13 @@ declare module '@tanstack/react-router' {
       path: '/images/$'
       fullPath: '/images/$'
       preLoaderRoute: typeof ImagesSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/canvas-new-quiz/$': {
+      id: '/api/canvas-new-quiz/$'
+      path: '/api/canvas-new-quiz/$'
+      fullPath: '/api/canvas-new-quiz/$'
+      preLoaderRoute: typeof ApiCanvasNewQuizSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/canvas/$': {
@@ -509,6 +529,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCoursesRoute: ApiCoursesRoute,
   CourseCourseNameRoute: CourseCourseNameRouteWithChildren,
   ImagesSplatRoute: ImagesSplatRoute,
+  ApiCanvasNewQuizSplatRoute: ApiCanvasNewQuizSplatRoute,
   ApiCanvasSplatRoute: ApiCanvasSplatRoute,
   ApiTrpcSplatRoute: ApiTrpcSplatRoute,
 }

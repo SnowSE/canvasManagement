@@ -51,6 +51,7 @@ const sectionLabels: Record<SyncSection, string> = {
   modules: "Modules",
   dates: "Dates",
   grading: "Grading",
+  submission: "Submission",
   groups: "Groups",
   schedule: "Schedule",
   rubric: "Rubric",

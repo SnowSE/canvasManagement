@@ -1,6 +1,7 @@
 import { CanvasAssignment } from "@/features/canvas/models/assignments/canvasAssignment";
 import { canvasApi, paginatedRequest } from "./canvasServiceUtils";
 import { LocalAssignment } from "@/features/local/assignments/models/localAssignment";
+import { AssignmentSubmissionType } from "@/features/local/assignments/models/assignmentSubmissionType";
 import { CanvasRubricCreationResponse } from "@/features/canvas/models/assignments/canvasRubricCreationResponse";
 import { assignmentPoints } from "@/features/local/assignments/models/utils/assignmentPointsUtils";
 import { getDateFromString } from "@/features/local/utils/timeUtils";
@@ -80,6 +81,7 @@ export const canvasAssignmentService = {
         points_possible: assignmentPoints(localAssignment.rubric),
         assignment_group_id: canvasAssignmentGroupId,
         ...groupFields(publishOptions),
+        ...externalToolFields(localAssignment),
       },
     };
 
@@ -136,6 +138,7 @@ export const canvasAssignmentService = {
         points_possible: assignmentPoints(localAssignment.rubric),
         assignment_group_id: canvasAssignmentGroupId,
         ...groupFields(publishOptions),
+        ...externalToolFields(localAssignment),
       },
     };
 
@@ -166,6 +169,13 @@ export const canvasAssignmentService = {
     await axiosClient.put(url, { assignment: { published: true } });
   },
 
+  // only the name, so a rename doesn't also publish unsaved edits
+  async rename(courseId: number, assignmentCanvasId: number, name: string) {
+    console.log(`Renaming assignment in Canvas to: ${name}`);
+    const url = `${canvasApi}/courses/${courseId}/assignments/${assignmentCanvasId}`;
+    await axiosClient.put(url, { assignment: { name } });
+  },
+
   async delete(
     courseId: number,
     assignmentCanvasId: number,
@@ -184,6 +194,13 @@ export const canvasAssignmentService = {
 
 // group_category_id is sent explicitly (null clears it) so removing GroupSet
 // from a file also removes the group setting in Canvas
+// Without an ExternalToolUrl the tool chosen in Canvas is left as it is.
+const externalToolFields = (assignment: LocalAssignment) =>
+  assignment.externalToolUrl &&
+  assignment.submissionTypes.includes(AssignmentSubmissionType.EXTERNAL_TOOL)
+    ? { external_tool_tag_attributes: { url: assignment.externalToolUrl } }
+    : {};
+
 const groupFields = (options?: CanvasAssignmentPublishOptions) => ({
   group_category_id: options?.groupCategoryId ?? null,
   grade_group_students_individually: options?.gradeIndividually ?? false,

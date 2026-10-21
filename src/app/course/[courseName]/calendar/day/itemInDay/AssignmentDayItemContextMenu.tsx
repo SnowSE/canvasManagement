@@ -9,6 +9,8 @@ import {
   useDeleteAssignmentMutation,
   useUpdateAssignmentMutation,
 } from "@/features/local/assignments/assignmentHooks";
+import { useRenameAssignmentMutation } from "@/features/canvas/hooks/canvasRenameHooks";
+import { showErrorToast } from "@/app/MyToaster";
 import {
   useCanvasAssignmentsQuery,
   useUpdateAssignmentInCanvasMutation,
@@ -58,6 +60,7 @@ export const AssignmentDayItemContextMenu: FC<{
   const [renaming, setRenaming] = useState(false);
   const [newName, setNewName] = useState(item.name);
   const updateAssignmentMutation = useUpdateAssignmentMutation();
+  const renameAssignmentMutation = useRenameAssignmentMutation();
 
   const assignmentInCanvas = canvasAssignments?.find(
     (a) => a.name === item.name,
@@ -100,14 +103,24 @@ export const AssignmentDayItemContextMenu: FC<{
       return;
     }
     const assignment = item as LocalAssignment;
-    await updateAssignmentMutation.mutateAsync({
-      assignment: { ...assignment, name: newName },
-      moduleName,
-      assignmentName: newName,
-      previousModuleName: moduleName,
-      previousAssignmentName: item.name,
-      courseName,
-    });
+    try {
+      await renameAssignmentMutation.mutateAsync({
+        oldName: item.name,
+        newName,
+        renameFile: () =>
+          updateAssignmentMutation.mutateAsync({
+            assignment: { ...assignment, name: newName },
+            moduleName,
+            assignmentName: newName,
+            previousModuleName: moduleName,
+            previousAssignmentName: item.name,
+            courseName,
+          }),
+      });
+    } catch (error) {
+      showErrorToast(error instanceof Error ? error.message : String(error));
+      return;
+    }
     handleClose();
   };
 
@@ -208,7 +221,7 @@ export const AssignmentDayItemContextMenu: FC<{
                 <button
                   type="submit"
                   disabled={
-                    updateAssignmentMutation.isPending || !newName.trim()
+                    renameAssignmentMutation.isPending || !newName.trim()
                   }
                   className={`unstyled ${baseButtonClasses} ${normalButtonClass}`}
                 >

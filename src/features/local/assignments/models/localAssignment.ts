@@ -21,6 +21,7 @@ export interface LocalAssignment extends IModuleItem {
   allowedFileUploadExtensions: string[];
   rubric: RubricItem[];
   classroom50Slug?: string;
+  externalToolUrl?: string;
   groupSet?: string;
   gradeIndividually?: boolean;
   schedule?: AssignmentScheduleEntry[];
@@ -65,6 +66,10 @@ export const zodLocalAssignment = z.object({
     .describe(
       "Classroom 50 assignment slug; the student accept URL is derived from course classroom50 settings + this slug"
     ),
+  externalToolUrl: z
+    .string()
+    .optional()
+    .describe("Launch url of the LTI tool for an external_tool submission"),
   groupSet: z
     .string()
     .optional()

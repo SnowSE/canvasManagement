@@ -25,6 +25,7 @@ import {
 } from "@/features/local/assignments/models/utils/scheduleUtils";
 import { AssignmentScheduleEntry } from "@/features/local/assignments/models/localAssignment";
 import { assignmentPoints } from "@/features/local/assignments/models/utils/assignmentPointsUtils";
+import { AssignmentSubmissionType } from "@/features/local/assignments/models/assignmentSubmissionType";
 import { CanvasQuizQuestion } from "@/features/canvas/models/quizzes/canvasQuizQuestionModel";
 import { checkQuizQuestions } from "./quizQuestionSync";
 
@@ -38,6 +39,7 @@ export type SyncSection =
   | "modules"
   | "dates"
   | "grading"
+  | "submission"
   | "groups"
   | "schedule"
   | "rubric"
@@ -240,6 +242,45 @@ function checkPoints(
     canvas: String(canvas),
     same: local === canvas,
     message: `points different: ${local} vs ${canvas}`,
+  });
+}
+
+/**
+ * The url an external_tool assignment launches. Without an ExternalToolUrl,
+ * Update in Canvas keeps the tool chosen there, so its url is shown (to copy
+ * into the file) but isn't a difference.
+ */
+function checkExternalTool(
+  assignment: LocalAssignment,
+  canvasAssignment: CanvasAssignment,
+): SyncField | null {
+  const canvasUrl = canvasAssignment.submission_types?.includes("external_tool")
+    ? canvasAssignment.external_tool_tag_attributes?.url
+    : undefined;
+  const local = assignment.externalToolUrl;
+  if (!local && !canvasUrl) return null;
+  const base = {
+    key: "externalToolUrl",
+    label: "External tool",
+    section: "submission" as const,
+    canvas: canvasUrl ?? UNSET,
+  };
+  if (!local)
+    return field({ ...base, local: "not set (Canvas's is kept)", same: true });
+  if (!assignment.submissionTypes.includes(AssignmentSubmissionType.EXTERNAL_TOOL))
+    return field({
+      ...base,
+      local,
+      same: false,
+      message: "ExternalToolUrl is set but SubmissionTypes has no external_tool",
+    });
+  return field({
+    ...base,
+    local,
+    same: local === canvasUrl,
+    message: canvasUrl
+      ? `external tool url different: ${local} vs ${canvasUrl}`
+      : "external tool url not in canvas",
   });
 }
 
@@ -576,6 +617,8 @@ function checkAssignment(
     settings,
   );
   if (group) fields.push(group);
+  const externalTool = checkExternalTool(assignment, canvasAssignment);
+  if (externalTool) fields.push(externalTool);
   fields.push(...checkRubric(assignment.rubric, canvasAssignment.rubric));
   const points = checkPoints(
     assignment.rubric,

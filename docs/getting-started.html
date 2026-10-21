@@ -96,6 +96,7 @@ footer{margin-top:64px;color:var(--faint);font-size:13px;border-top:1px solid va
         02 Async Messaging/
           ...</code></pre>
 <p>Every <code>.md</code> file in an <code>assignments</code>, <code>quizzes</code> or <code>pages</code> folder is an item; other files there are ignored. You can add, rename or delete module folders and files with other tools while the app is open, and it picks up the change without a reload.</p>
+<p>A file finds its Canvas item by name. Renaming an assignment, quiz or page <em>in the app</em> (the rename box on its editor or <b>Rename</b> in its right-click menu) renames it in Canvas too, so they stay linked. Renaming a file with other tools doesn&rsquo;t: the file then shows as not in Canvas until you give the Canvas item the same name. If Canvas already has another item with the new name, the app says so and renames nothing.</p>
 <p><code>globalSettings.yml</code> lists the course folders you want to see right now, so old semesters can stay on disk without cluttering the app:</p>
 <pre><code><span class="k">courses</span>:<span class="v"></span>
   - path: ./4620_Distributed/2026-fall/Modules/
@@ -224,6 +225,7 @@ docker compose up -d</code></pre>
 <li><b>Where files go.</b> Each item goes in a module named like the Canvas module that holds it; a module that doesn&rsquo;t exist here yet is created. For items in no Canvas module, pick the module in <em>Items not in a Canvas module go in</em>. Assignment groups the items use are added to the course settings first, with their Canvas ids and weights.</li>
 <li><b>What carries over.</b> Descriptions and page bodies become markdown. Tables and embedded videos stay HTML, and Canvas equations become <code>$&hellip;$</code> math. Assignments keep their dates, submission types, upload extensions, rubric (Canvas&rsquo;s default Full Marks/No Marks ratings are left out) and group set. Quizzes keep their settings and every question of the types the quiz file has, answers and feedback included.</li>
 <li><b>Notes.</b> The results list what didn&rsquo;t carry over exactly: a question type the file can&rsquo;t hold (file upload, formula) comes in as an essay question to rewrite; an item with no due date in Canvas (every page) gets the earliest due date in its Canvas module, or the semester start; an assignment with points but no rubric gets one rubric row worth its points; per-student due dates stay in Canvas (see <em>Schedule</em> in the <a href="group-assignments-and-student-schedules.html">group assignments guide</a>).</li>
+<li><b>New Quizzes.</b> A New Quizzes quiz is listed with the quizzes (marked <em>New Quizzes</em>) and is written as a classic quiz file: its settings carry over, and so does every multiple choice, true/false, multiple answer, matching, numeric and essay question. A question the file can&rsquo;t hold (ordering, categorization, hot spot, formula, fill in the blank, file upload, a stimulus passage or a question pulled from an item bank) is left out, and an HTML comment at the end of the quiz&rsquo;s <code>Description</code> describes it: its type, points, prompt, options and answer key, and where it came in the quiz. Comments never reach Canvas. The New Quiz itself is left alone; <b>Add to Canvas</b> on the file creates a separate classic quiz, so until then the file shows as not in Canvas.</li>
 <li><b>What can&rsquo;t be imported.</b> A name with a character a file name can&rsquo;t have (like <code>:</code> or <code>/</code>) is greyed out; rename it in Canvas first. When Canvas has two items of a type with the same name, only one can be a file. Canvas won&rsquo;t share a quiz&rsquo;s questions in a concluded course, so those quizzes fail with a message and nothing is written.</li>
 </ul>
 <p>An imported item should show green on the calendar, matching Canvas. If one doesn&rsquo;t, open <a href="#compare">Compare with Canvas</a> to see what reads differently.</p>
@@ -288,6 +290,7 @@ Next week you&#x27;ll implement primary-backup replication...
 <ul>
 <li>Dates are <code>MM/DD/YYYY HH:MM:SS</code>. <code>UnlockAt</code> and <code>LockAt</code> may be blank.</li>
 <li>Each rubric line is <code>- Npts: label</code> (<code>pt</code> for a single point; decimals work). Indented lines under a criterion become ratings the grader can pick from. Labels starting with <em>(extra credit)</em>, and negative rows used as deductions, do not count toward points possible.</li>
+<li>For an assignment students submit through an LTI tool, use <code>SubmissionTypes: external_tool</code> and give the tool&rsquo;s launch url on an <code>ExternalToolUrl:</code> line (for example <code>ExternalToolUrl: https://tool.example.edu/launch</code>). Without that line, the tool chosen on the assignment in Canvas is left as it is. Import from Canvas fills it in, and Compare with Canvas shows both urls.</li>
 <li>Markdown, tables, Mermaid diagrams, LaTeX math and images all render in Canvas.</li>
 <li>Link to another page, assignment or quiz by its relative path, like <code>[spec](&lt;../pages/Wire Protocol Spec.md&gt;)</code>. The preview opens it in the app, and publishing rewrites it to the Canvas url.</li>
 <li>The <b>?</b> button at the bottom left opens a searchable reference with copyable examples for every setting and syntax.</li>
@@ -372,7 +375,7 @@ AddToHome: true
 <li><code>AddToHome: false</code> empties the page&rsquo;s spot on the next update, keeping the marker where it is. Without the setting, updating the page never touches the home page.</li>
 <li>The home page changes only when you update the page from the app. Edits saved only to the file don&rsquo;t reach it.</li>
 <li>Whatever is inside the marker is replaced on each update, so edit that page&rsquo;s file, not the copy in Canvas. Everything outside the marker is left as it is.</li>
-<li>Renaming a page in Canvas can change its address. Then its marker needs the new address, or the next update adds the page at the end again.</li>
+<li>Renaming a page in Canvas can change its address. A rename made in the app moves the marker to the new address; after a rename made in Canvas, the marker needs the new address by hand, or the next update adds the page at the end again.</li>
 <li>Several pages can each be on the home page, each in its own spot. A course without a home page is left alone.</li>
 </ul>
 
@@ -482,6 +485,9 @@ AddToHome: true
 <h2 id="changes">Recent changes</h2>
 <div class="tw"><table>
 <tr><th>When</th><th>What changed</th></tr>
+<tr><td style="white-space:nowrap">Oct 2026</td><td><a href="#import-canvas">Import from Canvas</a> lists New Quizzes and writes each as a classic quiz file, with the questions the file can hold; the others are described in comments at the end of its Description.</td></tr>
+<tr><td style="white-space:nowrap">Oct 2026</td><td><a href="#edit-assignments">External tool assignments</a>: <code>SubmissionTypes: external_tool</code> with an <code>ExternalToolUrl:</code> line sets the LTI tool students submit through. Import from Canvas brings in the type and the tool&rsquo;s url instead of leaving them out, and Compare with Canvas checks the url.</td></tr>
+<tr><td style="white-space:nowrap">Oct 2026</td><td>Renaming an assignment, quiz or page in the app renames it in Canvas too, so the file stays linked to its Canvas item (and a page&rsquo;s home-page marker follows its new address). Before, only the file was renamed, and the file looked like it had never been added.</td></tr>
 <tr><td style="white-space:nowrap">Oct 2026</td><td><a href="#import-canvas">Import from Canvas</a>: <b>Import</b> at the top of a course lists the assignments, quizzes and pages Canvas has and the files don&rsquo;t, in a table you can sort and filter; check any number and they&rsquo;re written as files one after another, adding the modules and assignment groups they need.</td></tr>
 <tr><td style="white-space:nowrap">Oct 2026</td><td><a href="#quiz-time-limit">Quiz time limits</a>: <code>TimeLimit: 5</code> gives each student five minutes from when they start, while the quiz stays open until <code>LockAt</code>. Autocomplete offers it on a blank settings line, and Compare with Canvas checks it.</td></tr>
 <tr><td style="white-space:nowrap">Oct 2026</td><td>Course settings can pull the assignment groups from Canvas: the groups Canvas has are added with their ids, and Canvas&rsquo;s weights replace the ones here.</td></tr>

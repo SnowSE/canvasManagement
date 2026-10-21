@@ -8,6 +8,8 @@ import {
   useDeletePageMutation,
   useUpdatePageMutation,
 } from "@/features/local/pages/pageHooks";
+import { useRenamePageMutation } from "@/features/canvas/hooks/canvasRenameHooks";
+import { showErrorToast } from "@/app/MyToaster";
 import {
   useCanvasPagesQuery,
   useCreateCanvasPageMutation,
@@ -56,6 +58,7 @@ export const PageDayItemContextMenu: FC<{
   const [renaming, setRenaming] = useState(false);
   const [newName, setNewName] = useState(item.name);
   const updatePageMutation = useUpdatePageMutation();
+  const renamePageMutation = useRenamePageMutation();
 
   const pageInCanvas = canvasPages?.find((p) => p.title === item.name);
 
@@ -96,14 +99,24 @@ export const PageDayItemContextMenu: FC<{
       return;
     }
     const page = item as LocalCoursePage;
-    await updatePageMutation.mutateAsync({
-      page: { ...page, name: newName },
-      moduleName,
-      pageName: newName,
-      previousModuleName: moduleName,
-      previousPageName: item.name,
-      courseName,
-    });
+    try {
+      await renamePageMutation.mutateAsync({
+        oldName: item.name,
+        newName,
+        renameFile: () =>
+          updatePageMutation.mutateAsync({
+            page: { ...page, name: newName },
+            moduleName,
+            pageName: newName,
+            previousModuleName: moduleName,
+            previousPageName: item.name,
+            courseName,
+          }),
+      });
+    } catch (error) {
+      showErrorToast(error instanceof Error ? error.message : String(error));
+      return;
+    }
     handleClose();
   };
 
@@ -202,7 +215,7 @@ export const PageDayItemContextMenu: FC<{
                 </button>
                 <button
                   type="submit"
-                  disabled={updatePageMutation.isPending || !newName.trim()}
+                  disabled={renamePageMutation.isPending || !newName.trim()}
                   className={`unstyled ${baseButtonClasses} ${normalButtonClass}`}
                 >
                   Save

@@ -130,6 +130,15 @@ What students should do, in markdown.
               name: "Classroom50Slug",
               children: "Links this assignment to Classroom 50. See below.",
             },
+            {
+              name: "ExternalToolUrl",
+              children: (
+                <>
+                  The launch url of the LTI tool for an <C>external_tool</C>{" "}
+                  submission. Leave it out to keep the tool chosen in Canvas.
+                </>
+              ),
+            },
           ]}
         />
       </HelpSection>

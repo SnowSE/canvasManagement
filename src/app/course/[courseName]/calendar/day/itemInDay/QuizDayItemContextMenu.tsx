@@ -8,6 +8,8 @@ import {
   useCreateQuizMutation,
   useUpdateQuizMutation,
 } from "@/features/local/quizzes/quizHooks";
+import { useRenameQuizMutation } from "@/features/canvas/hooks/canvasRenameHooks";
+import { showErrorToast } from "@/app/MyToaster";
 import {
   useAddQuizToCanvasMutation,
   useCanvasQuizzesQuery,
@@ -43,6 +45,7 @@ export const QuizDayItemContextMenu: FC<{
   const calendarItems = useCalendarItemsContext();
   const createQuizMutation = useCreateQuizMutation();
   const updateQuizMutation = useUpdateQuizMutation();
+  const renameQuizMutation = useRenameQuizMutation();
   const addToCanvasMutation = useAddQuizToCanvasMutation();
   const updateInCanvasMutation = useUpdateQuizInCanvasMutation();
   const { data: canvasQuizzes } = useCanvasQuizzesQuery();
@@ -68,14 +71,24 @@ export const QuizDayItemContextMenu: FC<{
       return;
     }
     const quiz = item as LocalQuiz;
-    await updateQuizMutation.mutateAsync({
-      quiz: { ...quiz, name: newName },
-      moduleName,
-      quizName: newName,
-      previousModuleName: moduleName,
-      previousQuizName: item.name,
-      courseName,
-    });
+    try {
+      await renameQuizMutation.mutateAsync({
+        oldName: item.name,
+        newName,
+        renameFile: () =>
+          updateQuizMutation.mutateAsync({
+            quiz: { ...quiz, name: newName },
+            moduleName,
+            quizName: newName,
+            previousModuleName: moduleName,
+            previousQuizName: item.name,
+            courseName,
+          }),
+      });
+    } catch (error) {
+      showErrorToast(error instanceof Error ? error.message : String(error));
+      return;
+    }
     handleClose();
   };
 
@@ -138,7 +151,7 @@ export const QuizDayItemContextMenu: FC<{
                 </button>
                 <button
                   type="submit"
-                  disabled={updateQuizMutation.isPending || !newName.trim()}
+                  disabled={renameQuizMutation.isPending || !newName.trim()}
                   className={`unstyled ${baseButtonClasses} ${normalButtonClass}`}
                 >
                   Save

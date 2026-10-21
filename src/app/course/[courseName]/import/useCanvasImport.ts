@@ -20,6 +20,8 @@ import { CanvasQuiz } from "@/features/canvas/models/quizzes/canvasQuizModel";
 import { CanvasPage } from "@/features/canvas/models/pages/canvasPageModel";
 import { CanvasAssignmentGroup } from "@/features/canvas/models/assignments/canvasAssignmentGroup";
 import { canvasQuizService } from "@/features/canvas/services/canvasQuizService";
+import { canvasNewQuizService } from "@/features/canvas/services/canvasNewQuizService";
+import { newQuizToLocal } from "@/features/canvas/import/newQuizImport";
 import {
   useRosterGroupSetsQuery,
   useSyncRosterGroupSetsMutation,
@@ -193,6 +195,33 @@ export function useCanvasImport({
       : (settings.assignmentGroups.find((g) => g.canvasId === canvasGroupId)
           ?.name ?? canvasAssignmentGroups.find((g) => g.id === canvasGroupId)?.name);
 
+  const questionsForbidden = (e: unknown) => {
+    if (isAxiosError(e) && e.response?.status === 403)
+      throw new Error(
+        "Canvas won't share this quiz's questions. That happens in a concluded course, or when your account can't edit the quiz. No file was written.",
+      );
+    throw e;
+  };
+
+  const convertClassicQuiz = async (candidate: ImportCandidate, context: ImportContext) => {
+    const canvasQuiz = canvasQuizzes.find((q) => q.id === candidate.canvasId)!;
+    const questions = await canvasQuizService
+      .getQuizQuestions(settings.canvasId, canvasQuiz.id)
+      .catch(questionsForbidden);
+    return canvasQuizToLocal(canvasQuiz, questions, context);
+  };
+
+  // a New Quiz is a Canvas assignment; its settings and questions come from
+  // the New Quizzes API under the same id
+  const convertNewQuiz = async (candidate: ImportCandidate, context: ImportContext) => {
+    const canvasAssignment = canvasAssignments.find((a) => a.id === candidate.canvasId)!;
+    const [newQuiz, items] = await Promise.all([
+      canvasNewQuizService.get(settings.canvasId, candidate.canvasId),
+      canvasNewQuizService.getItems(settings.canvasId, candidate.canvasId),
+    ]).catch(questionsForbidden);
+    return newQuizToLocal(canvasAssignment, newQuiz, items, context);
+  };
+
   const importOne = async (
     candidate: ImportCandidate,
     moduleName: string,
@@ -215,17 +244,9 @@ export function useCanvasImport({
       return warnings;
     }
     if (candidate.type === "quiz") {
-      const canvasQuiz = canvasQuizzes.find((q) => q.id === candidate.canvasId)!;
-      const questions = await canvasQuizService
-        .getQuizQuestions(settings.canvasId, canvasQuiz.id)
-        .catch((e) => {
-          if (isAxiosError(e) && e.response?.status === 403)
-            throw new Error(
-              "Canvas won't share this quiz's questions. That happens in a concluded course, or when your account can't edit the quiz. No file was written.",
-            );
-          throw e;
-        });
-      const { item, warnings } = canvasQuizToLocal(canvasQuiz, questions, context);
+      const { item, warnings } = candidate.newQuiz
+        ? await convertNewQuiz(candidate, context)
+        : await convertClassicQuiz(candidate, context);
       await createQuiz.mutateAsync({
         courseName,
         moduleName,

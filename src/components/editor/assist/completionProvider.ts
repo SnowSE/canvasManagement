@@ -42,6 +42,7 @@ const keySuggestions: Record<
     { key: "GradeIndividually", insert: "GradeIndividually: ", opensList: true, detail: "each group member graded separately" },
     { key: "Schedule", insert: "Schedule:\n  ", opensList: false, detail: "per-student due dates" },
     { key: "Classroom50Slug", insert: "Classroom50Slug: ", opensList: false, detail: "Classroom 50 assignment slug" },
+    { key: "ExternalToolUrl", insert: "ExternalToolUrl: ", opensList: false, detail: "LTI tool launch url (external_tool)" },
     { key: "SubmissionTypes", insert: "SubmissionTypes:\n- ", opensList: true, detail: "" },
     { key: "AllowedFileUploadExtensions", insert: "AllowedFileUploadExtensions:\n- ", opensList: true, detail: "" },
   ],

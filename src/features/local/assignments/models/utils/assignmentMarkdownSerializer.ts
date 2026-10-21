@@ -66,6 +66,10 @@ const settingsToMarkdown = (assignment: LocalAssignment) => {
     ...groupLines,
     ...scheduleLines,
     `Classroom50Slug: ${assignment.classroom50Slug ?? ""}`,
+    // only written when set, like GroupSet
+    ...(assignment.externalToolUrl
+      ? [`ExternalToolUrl: ${assignment.externalToolUrl}`]
+      : []),
     `SubmissionTypes:\n${submissionTypesMarkdown}`,
     `AllowedFileUploadExtensions:\n${allowedFileUploadExtensionsMarkdown}`,
   ];

@@ -31,6 +31,8 @@ export interface CanvasAssignment {
   grader_count: number;
   allowed_attempts: number;
   is_quiz_assignment: boolean;
+  /** A New Quizzes quiz, which Canvas keeps as an external_tool assignment. */
+  is_quiz_lti_assignment?: boolean;
   submission_types: string[];
   updated_at?: string; // ISO 8601 date string
   due_at?: string; // ISO 8601 date string

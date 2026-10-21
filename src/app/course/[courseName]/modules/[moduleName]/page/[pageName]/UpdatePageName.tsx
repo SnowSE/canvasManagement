@@ -6,6 +6,7 @@ import {
   usePageQuery,
   useUpdatePageMutation,
 } from "@/features/local/pages/pageHooks";
+import { useRenamePageMutation } from "@/features/canvas/hooks/canvasRenameHooks";
 import { validateFileName } from "@/services/fileNameValidation";
 import { getModuleItemUrl } from "@/services/urlUtils";
 import { useNavigate } from "@tanstack/react-router";
@@ -23,6 +24,7 @@ export function UpdatePageName({
   const navigate = useNavigate();
   const { data: page } = usePageQuery(moduleName, pageName);
   const updatePage = useUpdatePageMutation();
+  const renamePage = useRenamePageMutation();
   const [name, setName] = useState(page.name);
   const [isLoading, setIsLoading] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -49,13 +51,18 @@ export function UpdatePageName({
               setSaveError("");
               setIsLoading(true);
               try {
-                await updatePage.mutateAsync({
-                  page: page,
-                  moduleName,
-                  pageName: name,
-                  previousModuleName: moduleName,
-                  previousPageName: pageName,
-                  courseName,
+                await renamePage.mutateAsync({
+                  oldName: pageName,
+                  newName: name,
+                  renameFile: () =>
+                    updatePage.mutateAsync({
+                      page: page,
+                      moduleName,
+                      pageName: name,
+                      previousModuleName: moduleName,
+                      previousPageName: pageName,
+                      courseName,
+                    }),
                 });
 
                 // update url (will trigger reload...)
@@ -72,16 +79,8 @@ export function UpdatePageName({
               }
             }}
           >
-            <div
-              className="
-                text-yellow-300 
-                bg-yellow-950/30 
-                border-2 
-                rounded-lg 
-                border-yellow-800 
-                p-1 text-sm mb-2"
-            >
-              Warning: does not rename in Canvas
+            <div className="text-slate-400 text-sm mb-2">
+              Also renames it in Canvas
             </div>
             <TextInput value={name} setValue={setName} label={"Rename Page"} />
             {(nameError || saveError) && (

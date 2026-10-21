@@ -5,6 +5,10 @@ import { showErrorToast } from "@/app/MyToaster";
 import { createCanvasRequestQueue } from "./canvasRequestQueue";
 
 const canvasBaseUrl = "https://snow.instructure.com/api/v1/";
+// New Quizzes has its own API beside v1, with its own proxy route
+const canvasNewQuizBaseUrl = "https://snow.instructure.com/api/quiz/v1/";
+const isCanvasUrl = (url: string | undefined) =>
+  !!url && (url.startsWith(canvasBaseUrl) || url.startsWith(canvasNewQuizBaseUrl));
 
 export const axiosClient: AxiosInstance = axios.create();
 
@@ -13,6 +17,8 @@ if (!isServer) {
     if (config.url && config.url.startsWith(canvasBaseUrl)) {
       const newUrl = config.url.replace(canvasBaseUrl, "/api/canvas/");
       config.url = newUrl;
+    } else if (config.url && config.url.startsWith(canvasNewQuizBaseUrl)) {
+      config.url = config.url.replace(canvasNewQuizBaseUrl, "/api/canvas-new-quiz/");
     }
     return config;
   });
@@ -22,7 +28,7 @@ if (!isServer) {
   const canvasQueue = createCanvasRequestQueue();
   const send = axios.getAdapter(axios.defaults.adapter);
   axiosClient.defaults.adapter = (config) =>
-    config.url?.startsWith(canvasBaseUrl)
+    isCanvasUrl(config.url)
       ? canvasQueue.run(config, send)
       : send(config);
 
@@ -31,7 +37,7 @@ if (!isServer) {
     console.error("CANVAS_TOKEN not in environment");
   } else {
     axiosClient.interceptors.request.use((config) => {
-      if (config.url && config.url.startsWith(canvasBaseUrl)) {
+      if (isCanvasUrl(config.url)) {
         config.headers.set("Authorization", `Bearer ${token}`);
       }
       return config;

@@ -366,6 +366,11 @@ export default function ImportFromCanvas() {
                     ) : (
                       c.name
                     )}
+                    {c.newQuiz && (
+                      <div className="text-slate-400 text-xs">
+                        New Quizzes; imports as a classic quiz
+                      </div>
+                    )}
                     {sameNameCount(c) > 1 && (
                       <div className="text-amber-300 text-xs">
                         Canvas has {sameNameCount(c)} {c.type}s with this name; only one can be imported.

@@ -45,11 +45,13 @@ export interface ImportCandidate {
   published: boolean;
   htmlUrl?: string;
   questionCount?: number;
+  /** A New Quizzes quiz (a Canvas assignment); imports as a classic quiz file. */
+  newQuiz?: boolean;
   /** Why the name can't be a file name; empty when it can. */
   nameError: string;
 }
 
-const toMarkdownDate = (value: string | undefined) => {
+export const toMarkdownDate = (value: string | undefined) => {
   if (!value) return undefined;
   const date = getDateFromString(value);
   return date ? dateToMarkdownString(date) : undefined;
@@ -58,7 +60,8 @@ const toMarkdownDate = (value: string | undefined) => {
 /**
  * What Canvas has that the course files don't: items are matched by name,
  * the same way the calendar matches them. A quiz's own assignment is the
- * quiz, so it is left out of the assignments.
+ * quiz, so it is left out of the assignments, and so is a New Quizzes quiz,
+ * which Canvas keeps as an assignment: it is listed with the quizzes.
  */
 export function findImportCandidates({
   canvasAssignments,
@@ -82,6 +85,7 @@ export function findImportCandidates({
     .filter(
       (a) =>
         !a.is_quiz_assignment &&
+        !a.is_quiz_lti_assignment &&
         !a.quiz_id &&
         !a.submission_types?.includes("online_quiz") &&
         !localNames.assignment.has(a.name),
@@ -121,6 +125,26 @@ export function findImportCandidates({
       }),
     );
 
+  const newQuizzes = canvasAssignments
+    .filter((a) => a.is_quiz_lti_assignment && !localNames.quiz.has(a.name))
+    .map(
+      (a): ImportCandidate => ({
+        key: `newQuiz:${a.id}`,
+        type: "quiz",
+        canvasId: a.id,
+        name: a.name,
+        dueAt: toMarkdownDate(a.due_at),
+        points: a.points_possible ?? undefined,
+        canvasAssignmentGroupId: a.assignment_group_id,
+        // in a module, it is an assignment item
+        canvasModules: modulesOf("assignment", a),
+        published: a.published,
+        htmlUrl: a.html_url,
+        newQuiz: true,
+        nameError: validateFileName(a.name),
+      }),
+    );
+
   const pages = canvasPages
     .filter((p) => !localNames.page.has(p.title))
     .map(
@@ -135,7 +159,7 @@ export function findImportCandidates({
       }),
     );
 
-  return [...assignments, ...quizzes, ...pages];
+  return [...assignments, ...quizzes, ...newQuizzes, ...pages];
 }
 
 /**
@@ -178,7 +202,7 @@ export interface Converted<T> {
   warnings: string[];
 }
 
-const dueDateOrFallback = (
+export const dueDateOrFallback = (
   dueAt: string | undefined,
   context: ImportContext,
   warnings: string[],
@@ -278,6 +302,10 @@ export function canvasAssignmentToLocal(
     ),
     allowedFileUploadExtensions: canvasAssignment.allowed_extensions ?? [],
     rubric: canvasRubricToLocal(canvasAssignment, warnings),
+    ...(canvasAssignment.submission_types?.includes("external_tool") &&
+      canvasAssignment.external_tool_tag_attributes?.url && {
+        externalToolUrl: canvasAssignment.external_tool_tag_attributes.url,
+      }),
     ...(groupSet && {
       groupSet,
       gradeIndividually:
@@ -322,7 +350,7 @@ const uniqueBlankIds = (question: CanvasQuizQuestion) => [
   ),
 ];
 
-const questionTextMarkdown = (html: string) =>
+export const questionTextMarkdown = (html: string) =>
   canvasHtmlToMarkdown(html, { bulletListMarker: "*" });
 
 const answerMarkdown = (answer: { html?: string; text: string }) =>
@@ -330,7 +358,7 @@ const answerMarkdown = (answer: { html?: string; text: string }) =>
     ? questionTextMarkdown(answer.html)
     : (answer.text ?? "").trim();
 
-class UnsupportedQuestion extends Error {}
+export class UnsupportedQuestion extends Error {}
 
 /**
  * A multiple dropdowns question's file form lists its prompts as answers;
@@ -502,7 +530,7 @@ function convertQuestion(question: CanvasQuizQuestion): LocalQuizQuestion {
   }
 }
 
-const questionRoundTrips = (question: LocalQuizQuestion) => {
+export const questionRoundTrips = (question: LocalQuizQuestion) => {
   try {
     const markdown = quizQuestionMarkdownUtils.toMarkdown(question);
     const reparsed = quizQuestionMarkdownUtils.parseMarkdown(markdown, 0);

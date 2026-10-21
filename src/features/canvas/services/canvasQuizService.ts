@@ -561,6 +561,12 @@ export const canvasQuizService = {
     const url = `${canvasApi}/courses/${canvasCourseId}/quizzes/${canvasQuizId}`;
     await axiosClient.put(url, { quiz: { published: true } });
   },
+  // only the title, so a rename doesn't also publish unsaved edits
+  async rename(canvasCourseId: number, canvasQuizId: number, title: string) {
+    console.log(`Renaming quiz in Canvas to: ${title}`);
+    const url = `${canvasApi}/courses/${canvasCourseId}/quizzes/${canvasQuizId}`;
+    await axiosClient.put(url, { quiz: { title } });
+  },
   async delete(canvasCourseId: number, canvasQuizId: number) {
     const url = `${canvasApi}/courses/${canvasCourseId}/quizzes/${canvasQuizId}`;
     await rateLimitAwareDelete(url);

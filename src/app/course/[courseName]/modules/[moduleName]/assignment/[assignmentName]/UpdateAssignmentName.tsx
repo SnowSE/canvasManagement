@@ -6,6 +6,7 @@ import {
   useAssignmentQuery,
   useUpdateAssignmentMutation,
 } from "@/features/local/assignments/assignmentHooks";
+import { useRenameAssignmentMutation } from "@/features/canvas/hooks/canvasRenameHooks";
 import { validateFileName } from "@/services/fileNameValidation";
 import { getModuleItemUrl } from "@/services/urlUtils";
 import { useNavigate } from "@tanstack/react-router";
@@ -23,6 +24,7 @@ export function UpdateAssignmentName({
   const navigate = useNavigate();
   const { data: assignment } = useAssignmentQuery(moduleName, assignmentName);
   const updateAssignment = useUpdateAssignmentMutation();
+  const renameAssignment = useRenameAssignmentMutation();
   const [name, setName] = useState(assignment.name);
   const [isLoading, setIsLoading] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -49,13 +51,18 @@ export function UpdateAssignmentName({
               setSaveError("");
               setIsLoading(true);
               try {
-                await updateAssignment.mutateAsync({
-                  assignment: assignment,
-                  moduleName,
-                  assignmentName: name,
-                  previousModuleName: moduleName,
-                  previousAssignmentName: assignmentName,
-                  courseName,
+                await renameAssignment.mutateAsync({
+                  oldName: assignmentName,
+                  newName: name,
+                  renameFile: () =>
+                    updateAssignment.mutateAsync({
+                      assignment: assignment,
+                      moduleName,
+                      assignmentName: name,
+                      previousModuleName: moduleName,
+                      previousAssignmentName: assignmentName,
+                      courseName,
+                    }),
                 });
 
                 // update url (will trigger reload...)
@@ -77,16 +84,8 @@ export function UpdateAssignmentName({
               }
             }}
           >
-            <div
-              className="
-                text-yellow-300 
-                bg-yellow-950/30 
-                border-2 
-                rounded-lg 
-                border-yellow-800 
-                p-1 text-sm mb-2"
-            >
-              Warning: does not rename in Canvas
+            <div className="text-slate-400 text-sm mb-2">
+              Also renames it in Canvas
             </div>
             <TextInput
               value={name}

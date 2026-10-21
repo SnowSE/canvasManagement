@@ -121,6 +121,7 @@ const parseSettings = (input: string) => {
   const submissionTypes = parseSubmissionTypes(input);
   const fileUploadExtensions = parseFileUploadExtensions(input);
   const classroom50Slug = extractLabelValue(input, "Classroom50Slug");
+  const externalToolUrl = extractLabelValue(input, "ExternalToolUrl");
   const groupSet = extractLabelValue(input, "GroupSet");
   const gradeIndividually = parseBoolean(
     extractLabelValue(input, "GradeIndividually"),
@@ -141,6 +142,7 @@ const parseSettings = (input: string) => {
     lockAt,
     dateForOrdering,
     classroom50Slug,
+    externalToolUrl,
     groupSet,
     gradeIndividually,
     schedule,
@@ -225,6 +227,7 @@ export const assignmentMarkdownParser = {
       lockAt,
       dateForOrdering,
       classroom50Slug,
+      externalToolUrl,
       groupSet,
       gradeIndividually,
       schedule,
@@ -254,6 +257,9 @@ export const assignmentMarkdownParser = {
     if (dateForOrdering) assignment.dateForOrdering = dateForOrdering;
     if (classroom50Slug) {
       assignment.classroom50Slug = classroom50Slug;
+    }
+    if (externalToolUrl) {
+      assignment.externalToolUrl = externalToolUrl;
     }
     if (groupSet) {
       assignment.groupSet = groupSet;
