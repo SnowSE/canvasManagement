@@ -35,7 +35,7 @@ import { useInvalidItemsQuery } from "@/features/local/modules/rawItemHooks";
 import { ItemInDay } from "../calendar/day/itemInDay/ItemInDay";
 import { useItemSyncStatus } from "../calendar/day/useItemSyncStatus";
 import { useModuleSelection } from "./bulk/moduleSelection";
-import { kindsOf, shown } from "./bulk/rules";
+import { kindsOf, shown, showsErrors } from "./bulk/rules";
 
 export default function ExpandableModule({
   moduleName,
@@ -98,10 +98,18 @@ export default function ExpandableModule({
     shown(kindsOf(statusOf(type, item, moduleName)), selection.filters),
   );
   const shownRefs = shownItems.map(({ type, item }) => ({ type, item, moduleName }));
+  const itemKinds = [
+    ...moduleItems.flatMap(({ type, item }) => kindsOf(statusOf(type, item, moduleName))),
+    ...(invalidItems ?? []).map(() => "withErrors" as const),
+  ];
+  // files that can't be read, plus ones with dates Canvas won't save
+  const errorCount =
+    (invalidItems?.length ?? 0) +
+    moduleItems.filter(({ type, item }) => statusOf(type, item, moduleName).problem).length;
   const { report } = selection;
-  const reported = shownRefs.map((r) => r.type + r.item.name).join("\n");
+  const reported = shownRefs.map((r) => r.type + r.item.name).join("\n") + itemKinds.join(",");
   useEffect(() => {
-    report(moduleName, shownRefs);
+    report(moduleName, shownRefs, itemKinds);
     // the refs change whenever reported does
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [report, moduleName, reported]);
@@ -141,7 +149,9 @@ export default function ExpandableModule({
     [],
   );
 
-  if (selection.filters.length > 0 && shownItems.length === 0) return null;
+  const shownInvalid = showsErrors(selection.filters) ? (invalidItems ?? []) : [];
+  if (selection.filters.length > 0 && shownItems.length === 0 && shownInvalid.length === 0)
+    return null;
 
   return (
     <div
@@ -162,12 +172,12 @@ export default function ExpandableModule({
               >
                 <div className="flex-1">{moduleName}</div>
                 <div className=" flex flex-row justify-end">
-                  {invalidItems && invalidItems.length > 0 && (
+                  {errorCount > 0 && (
                     <span
                       className="me-2 rounded-full bg-rose-900 px-2 text-sm text-rose-100"
-                      title={`${invalidItems.length} file${invalidItems.length === 1 ? "" : "s"} in this module can't be read`}
+                      title={`${errorCount} file${errorCount === 1 ? "" : "s"} in this module can't be read or sent to Canvas`}
                     >
-                      ⚠ {invalidItems.length}
+                      ⚠ {errorCount}
                     </span>
                   )}
                   <ClientOnly>
@@ -231,12 +241,12 @@ export default function ExpandableModule({
                 )}
               </Modal>
               <div className="flex flex-col">
-                {invalidItems && invalidItems.length > 0 && (
+                {shownInvalid.length > 0 && (
                   <div>
                     <div className="text-rose-400 text-sm mt-1 ps-1">
                       Can&rsquo;t be read, click to fix
                     </div>
-                    {invalidItems.map((invalid) => (
+                    {shownInvalid.map((invalid) => (
                       <div
                         key={invalid.type + invalid.name}
                         className="flex items-start ps-3"

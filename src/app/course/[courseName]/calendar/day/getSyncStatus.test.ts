@@ -679,3 +679,14 @@ describe("getSyncReport - dates Canvas won't save", () => {
     expect(differences.find((d) => d.key === "dateOrder")?.message).toMatch(/^DueAt .* is after LockAt/);
   });
 });
+
+describe("getSyncStatus - dates Canvas won't save, not in Canvas yet", () => {
+  it("still says what the problem is, so the module list can count it", () => {
+    const item = { ...baseLocalAssignment, dueAt: "08/21/2023 23:59:00", lockAt: "08/02/2023 10:30:00" };
+
+    const status = getSyncStatus({ item, canvasItem: undefined, type: "assignment", settings: baseSettings });
+
+    expect(status.status).toBe("localOnly");
+    expect(status.problem).toMatch(/^DueAt .* is after LockAt/);
+  });
+});

@@ -55,7 +55,28 @@ export function BulkBar() {
 
   return (
     <div className="flex flex-wrap items-center gap-2 mb-2 text-sm">
+      {/* show only the items matching any filter that's on, with how many
+          there are; a filter with nothing to show says so instead */}
+      {kinds.map(({ kind, label, none }) => {
+        const count = selection.present.filter((k) => k === kind).length;
+        return count > 0 ? (
+          <button
+            key={kind}
+            aria-pressed={selection.filters.includes(kind)}
+            className={selection.filters.includes(kind) ? "btn" : "unstyled btn-outline"}
+            onClick={() => selection.toggleFilter(kind)}
+          >
+            <span className="opacity-70 font-normal">{count}</span> {label}
+          </button>
+        ) : (
+          <span key={kind} className="text-green-600 px-1">
+            {none}
+          </span>
+        );
+      })}
+      {/* the select-all box sits with what it selects: the count of checked items */}
       <input
+        className="ms-2"
         type="checkbox"
         aria-label="Select all shown"
         title="Select all shown, or clear them when they're all selected"
@@ -65,17 +86,6 @@ export function BulkBar() {
         checked={visible.length > 0 && visibleChecked === visible.length}
         onChange={selection.toggleVisible}
       />
-      {/* show only the items matching any filter that's on */}
-      {kinds.map(({ kind, label }) => (
-        <button
-          key={kind}
-          aria-pressed={selection.filters.includes(kind)}
-          className={selection.filters.includes(kind) ? "btn" : "unstyled btn-outline"}
-          onClick={() => selection.toggleFilter(kind)}
-        >
-          {label}
-        </button>
-      ))}
       {progress ? (
         <span className="text-slate-300">{progress}</span>
       ) : (

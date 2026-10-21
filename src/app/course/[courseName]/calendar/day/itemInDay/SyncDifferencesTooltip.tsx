@@ -20,6 +20,8 @@ export const SyncDifferencesTooltip: FC<{
   message: ReactNode;
   differences: SyncField[];
   unpublished?: boolean;
+  /** Dates Canvas won't save; shown when there's nothing else to list. */
+  problem?: string;
   /** Off where the card isn't on the item itself (no menu to right-click). */
   rightClickHint?: boolean;
 }> = ({
@@ -30,11 +32,21 @@ export const SyncDifferencesTooltip: FC<{
   message,
   differences,
   unpublished,
+  problem,
   rightClickHint = true,
 }) => {
   const { courseName } = useCourseContext();
   if (status !== "incomplete" || differences.length === 0)
-    return <>{message}</>;
+    return (
+      <>
+        {message}
+        {problem && (
+          <div className="text-rose-300 pt-1">
+            Can&apos;t send to Canvas: {problem}
+          </div>
+        )}
+      </>
+    );
 
   // the tooltip has a fixed max height; keep the compare link in view
   const shown = differences.slice(0, MAX_LISTED);

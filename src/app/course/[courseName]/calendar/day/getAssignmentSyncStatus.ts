@@ -79,6 +79,11 @@ export type ItemSyncStatus = {
    * something the file says or Update in Canvas would change.
    */
   unpublished?: boolean;
+  /**
+   * Dates Canvas won't save (see dateOrderProblem), in Canvas or not: the
+   * module list counts it as an error, and the item can't be sent.
+   */
+  problem?: string;
 };
 
 export interface SyncReport extends ItemSyncStatus {
@@ -734,11 +739,13 @@ function checkQuizOptions(quiz: LocalQuiz, canvasQuiz: CanvasQuiz): SyncField[] 
 function buildReport(
   fields: SyncField[],
   published: boolean | undefined,
-  description?: SyncDescription,
+  description: SyncDescription | undefined,
+  problem: string | undefined,
 ): SyncReport {
   const differences = fields.filter((f) => !f.same);
   const unpublished = !published;
   return {
+    problem,
     status: differences.length > 0 || unpublished ? "incomplete" : "published",
     message:
       differences[0]?.message ?? (unpublished ? "not published in canvas" : ""),
@@ -795,12 +802,14 @@ export function getSyncReport({
   /** The file's module and the Canvas modules holding the item; without them the module is not compared. */
   module?: { file: string; canvas: string[] };
 }): SyncReport {
+  const problem = dateOrderProblem(item);
   if (!canvasItem)
     return {
       status: "localOnly",
       message: "not in canvas",
       differences: [],
       fields: [],
+      problem,
     };
 
   const fields: SyncField[] = module
@@ -819,7 +828,12 @@ export function getSyncReport({
       (canvasItem as CanvasPage).body,
     );
     fields.push(description.field);
-    return buildReport(fields, canvasItem.published, description.description);
+    return buildReport(
+      fields,
+      canvasItem.published,
+      description.description,
+      problem,
+    );
   }
 
   const checked =
@@ -846,12 +860,18 @@ export function getSyncReport({
         settings,
       ),
     );
-  return buildReport(fields, canvasItem.published, checked.description);
+  return buildReport(
+    fields,
+    canvasItem.published,
+    checked.description,
+    problem,
+  );
 }
 
 export function getSyncStatus(
   args: Parameters<typeof getSyncReport>[0],
 ): ItemSyncStatus {
-  const { status, message, differences, unpublished } = getSyncReport(args);
-  return { status, message, differences, unpublished };
+  const { status, message, differences, unpublished, problem } =
+    getSyncReport(args);
+  return { status, message, differences, unpublished, problem };
 }
