@@ -64,7 +64,7 @@ export default function QuizPreview({
       <MarkdownDisplay markdown={quiz.description} className="p-3" />
       <div className="p-3 rounded-md bg-slate-950 m-5 flex flex-col gap-3">
         {quiz.questions.map((question, i) => (
-          <QuizQuestionPreview key={i} question={question} />
+          <QuizQuestionPreview key={i} question={question} number={i + 1} />
         ))}
       </div>
       <br />
@@ -80,11 +80,20 @@ export default function QuizPreview({
   );
 }
 
-function QuizQuestionPreview({ question }: { question: LocalQuizQuestion }) {
+function QuizQuestionPreview({
+  question,
+  number,
+}: {
+  question: LocalQuizQuestion;
+  number: number;
+}) {
   return (
     <div className="rounded bg-slate-900 px-2">
       <div className="flex flex-row justify-between text-slate-400">
-        <div>{question.questionType}</div>
+        <div>
+          <span className="font-bold text-slate-200">{number}.</span>{" "}
+          {question.questionType}
+        </div>
         <div className="">
           {question.points} {question.points === 1 ? " Point" : " Points"}
         </div>
