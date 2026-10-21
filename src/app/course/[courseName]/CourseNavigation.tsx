@@ -25,7 +25,7 @@ import {
   CloseMenuOnClick,
   MobileActionsMenu,
 } from "@/components/MobileActionsMenu";
-import { getCourseSettingsUrl } from "@/services/urlUtils";
+import { getCourseImportUrl, getCourseSettingsUrl } from "@/services/urlUtils";
 import { useCourseContext } from "./context/courseContext";
 import ClientOnly from "@/components/ClientOnly";
 import { GitStatusButton } from "./git/GitStatusButton";
@@ -80,6 +80,17 @@ export function CourseNavigation({
     </a>
   );
 
+  // "Import" on the crowded desktop bar, next to View in Canvas
+  const importLink = (label: string) => (
+    <Link
+      className="btn"
+      to={getCourseImportUrl(courseName)}
+      title="Import from Canvas: bring in assignments, quizzes and pages that are in Canvas but have no file here"
+    >
+      {label}
+    </Link>
+  );
+
   const reloadControl = isFetching ? (
     <div className="flex flex-row">
       <Spinner />
@@ -98,6 +109,7 @@ export function CourseNavigation({
       </div>
       <div className="max-md:hidden flex flex-row items-center gap-3">
         {viewInCanvasLink}
+        {importLink("Import")}
         {reloadControl}
         <ClientOnly>
           <GitStatusButton />
@@ -115,6 +127,7 @@ export function CourseNavigation({
           </CloseMenuOnClick>
         )}
         <CloseMenuOnClick>{viewInCanvasLink}</CloseMenuOnClick>
+        <CloseMenuOnClick>{importLink("Import From Canvas")}</CloseMenuOnClick>
         {reloadControl}
         <ClientOnly>
           <GitStatusButton />

@@ -14,4 +14,6 @@ export interface CanvasQuizQuestion {
   answers?: CanvasQuizAnswer[];
   /** Matching: the extra right-hand options, one per line. */
   matching_answer_incorrect_matches?: string | null;
+  /** Set when the question is in a question group. */
+  quiz_group_id?: number | null;
 }

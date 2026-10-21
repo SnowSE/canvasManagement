@@ -17,6 +17,7 @@ import { Route as ImagesSplatRouteImport } from './routes/images.$'
 import { Route as ApiCanvasSplatRouteImport } from './routes/api.canvas.$'
 import { Route as ApiTrpcSplatRouteImport } from './routes/api.trpc.$'
 import { Route as CourseCourseNameIndexRouteImport } from './routes/course/$courseName/index'
+import { Route as CourseCourseNameImportRouteImport } from './routes/course/$courseName/import'
 import { Route as CourseCourseNameSettingsRouteImport } from './routes/course/$courseName/settings'
 import { Route as CourseCourseNameLectureLectureDayIndexRouteImport } from './routes/course/$courseName/lecture/$lectureDay/index'
 import { Route as CourseCourseNameLectureLectureDayPreviewRouteImport } from './routes/course/$courseName/lecture/$lectureDay/preview'
@@ -68,6 +69,11 @@ const ApiTrpcSplatRoute = ApiTrpcSplatRouteImport.update({
 const CourseCourseNameIndexRoute = CourseCourseNameIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => CourseCourseNameRoute,
+} as any)
+const CourseCourseNameImportRoute = CourseCourseNameImportRouteImport.update({
+  id: '/import',
+  path: '/import',
   getParentRoute: () => CourseCourseNameRoute,
 } as any)
 const CourseCourseNameSettingsRoute =
@@ -155,6 +161,7 @@ export interface FileRoutesByFullPath {
   '/images/$': typeof ImagesSplatRoute
   '/api/canvas/$': typeof ApiCanvasSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
+  '/course/$courseName/import': typeof CourseCourseNameImportRoute
   '/course/$courseName/settings': typeof CourseCourseNameSettingsRoute
   '/course/$courseName/': typeof CourseCourseNameIndexRoute
   '/course/$courseName/lecture/$lectureDay/preview': typeof CourseCourseNameLectureLectureDayPreviewRoute
@@ -176,6 +183,7 @@ export interface FileRoutesByTo {
   '/images/$': typeof ImagesSplatRoute
   '/api/canvas/$': typeof ApiCanvasSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
+  '/course/$courseName/import': typeof CourseCourseNameImportRoute
   '/course/$courseName/settings': typeof CourseCourseNameSettingsRoute
   '/course/$courseName': typeof CourseCourseNameIndexRoute
   '/course/$courseName/lecture/$lectureDay/preview': typeof CourseCourseNameLectureLectureDayPreviewRoute
@@ -199,6 +207,7 @@ export interface FileRoutesById {
   '/images/$': typeof ImagesSplatRoute
   '/api/canvas/$': typeof ApiCanvasSplatRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
+  '/course/$courseName/import': typeof CourseCourseNameImportRoute
   '/course/$courseName/settings': typeof CourseCourseNameSettingsRoute
   '/course/$courseName/': typeof CourseCourseNameIndexRoute
   '/course/$courseName/lecture/$lectureDay/preview': typeof CourseCourseNameLectureLectureDayPreviewRoute
@@ -223,6 +232,7 @@ export interface FileRouteTypes {
     | '/images/$'
     | '/api/canvas/$'
     | '/api/trpc/$'
+    | '/course/$courseName/import'
     | '/course/$courseName/settings'
     | '/course/$courseName/'
     | '/course/$courseName/lecture/$lectureDay/preview'
@@ -244,6 +254,7 @@ export interface FileRouteTypes {
     | '/images/$'
     | '/api/canvas/$'
     | '/api/trpc/$'
+    | '/course/$courseName/import'
     | '/course/$courseName/settings'
     | '/course/$courseName'
     | '/course/$courseName/lecture/$lectureDay/preview'
@@ -266,6 +277,7 @@ export interface FileRouteTypes {
     | '/images/$'
     | '/api/canvas/$'
     | '/api/trpc/$'
+    | '/course/$courseName/import'
     | '/course/$courseName/settings'
     | '/course/$courseName/'
     | '/course/$courseName/lecture/$lectureDay/preview'
@@ -347,6 +359,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/course/$courseName/'
       preLoaderRoute: typeof CourseCourseNameIndexRouteImport
+      parentRoute: typeof CourseCourseNameRoute
+    }
+    '/course/$courseName/import': {
+      id: '/course/$courseName/import'
+      path: '/import'
+      fullPath: '/course/$courseName/import'
+      preLoaderRoute: typeof CourseCourseNameImportRouteImport
       parentRoute: typeof CourseCourseNameRoute
     }
     '/course/$courseName/settings': {
@@ -437,6 +456,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface CourseCourseNameRouteChildren {
+  CourseCourseNameImportRoute: typeof CourseCourseNameImportRoute
   CourseCourseNameSettingsRoute: typeof CourseCourseNameSettingsRoute
   CourseCourseNameIndexRoute: typeof CourseCourseNameIndexRoute
   CourseCourseNameLectureLectureDayPreviewRoute: typeof CourseCourseNameLectureLectureDayPreviewRoute
@@ -453,6 +473,7 @@ interface CourseCourseNameRouteChildren {
 }
 
 const CourseCourseNameRouteChildren: CourseCourseNameRouteChildren = {
+  CourseCourseNameImportRoute: CourseCourseNameImportRoute,
   CourseCourseNameSettingsRoute: CourseCourseNameSettingsRoute,
   CourseCourseNameIndexRoute: CourseCourseNameIndexRoute,
   CourseCourseNameLectureLectureDayPreviewRoute:

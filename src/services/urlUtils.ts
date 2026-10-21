@@ -50,6 +50,10 @@ export function getCourseSettingsUrl(courseName: string) {
   return "/course/" + encodeURIComponent(courseName) + "/settings";
 }
 
+export function getCourseImportUrl(courseName: string) {
+  return "/course/" + encodeURIComponent(courseName) + "/import";
+}
+
 const moduleItemTypeByFolder = {
   pages: "page",
   assignments: "assignment",

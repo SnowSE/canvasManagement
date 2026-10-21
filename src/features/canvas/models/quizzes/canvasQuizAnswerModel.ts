@@ -15,4 +15,6 @@ export interface CanvasQuizAnswer {
   margin?: number;
   start?: number;
   end?: number;
+  approximate?: number;
+  precision?: number;
 }
