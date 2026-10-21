@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import CourseList from "@/app/CourseList";
+import Handouts from "@/app/Handouts";
 import { AddExistingCourseToGlobalSettings } from "@/app/addCourse/AddExistingCourseToGlobalSettings";
 import AddCourseToGlobalSettings from "@/app/addCourse/AddNewCourse";
 import TodaysLectures from "@/app/todaysLectures/TodaysLectures";
@@ -25,6 +26,8 @@ function Home() {
         <br />
         <TodaysLectures />
         <br />
+        <br />
+        <Handouts />
         <br />
         <AddCourseToGlobalSettings />
         <br />

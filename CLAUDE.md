@@ -22,7 +22,8 @@ What to update:
     (month, one sentence).
   - A feature big enough to need its own walkthrough gets its own handout
     (like `docs/group-assignments-and-student-schedules.html`). Link it from
-    getting-started, from Recent changes and from the README's Handouts list.
+    getting-started, from Recent changes, from the README's Handouts list and
+    from the home page's list in `src/app/Handouts.tsx`.
   - Bump the "updated <Month YYYY>" in the header eyebrow of any handout you
     change.
 - **`README.md`** when setup, deployment or the list of handouts changes.
