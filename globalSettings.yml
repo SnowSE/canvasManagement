@@ -17,3 +17,5 @@ courses:
     name: Mobile ('26 Fall)
   - path: ./4620_Distributed/2026-fall-jonathan/Modules/
     name: Distributed
+git:
+  commitOnPublish: true
