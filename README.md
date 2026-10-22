@@ -281,8 +281,9 @@ git button for committing that course's folder, pulling and pushing, and each
 editor's footer menu has a File history page. The image has `git` installed.
 
 - Commits need a name and email. If git has none configured in the container,
-  the app asks for them and saves them with `git config --global`, so give the
-  container a persistent `HOME` (or mount a `.gitconfig`) to keep them.
+  the app asks for them and saves them in the repository's own `.git/config`,
+  which lives on the storage volume and so survives recreating the container.
+  A `.gitconfig` you mount into the container's `HOME` works too.
 - Pull and push use the repository's remote. With `GH_TOKEN` set and no ssh
   key in the container's `~/.ssh`, GitHub remotes written as
   `git@github.com:...` are reached over https with that token through `gh`, so

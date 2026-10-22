@@ -183,10 +183,15 @@ export const gitService = {
     return (await runGit(directory, ["rev-parse", "--short", "HEAD"])).trim();
   },
 
+  /**
+   * Saved in the repository's own .git/config, not --global: the container's
+   * HOME is not a volume, so a global setting is lost whenever the container
+   * is recreated, while the repository lives on the mounted storage.
+   */
   async setIdentity(courseName: string, name: string, email: string) {
     const directory = await courseDirectory(courseName);
-    await runGit(directory, ["config", "--global", "user.name", name]);
-    await runGit(directory, ["config", "--global", "user.email", email]);
+    await runGit(directory, ["config", "--local", "user.name", name]);
+    await runGit(directory, ["config", "--local", "user.email", email]);
   },
 
   /**

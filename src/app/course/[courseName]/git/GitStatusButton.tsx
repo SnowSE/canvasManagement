@@ -253,7 +253,8 @@ function IdentityForm() {
     >
       <div className="text-sm">
         Git needs a name and email to put on your commits. This is saved in
-        the app&rsquo;s git config, not in the course files.
+        the repository&rsquo;s git config (.git/config), not in the course
+        files.
       </div>
       <div className="flex flex-wrap gap-2">
         <input
