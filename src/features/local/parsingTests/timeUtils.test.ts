@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { dateToMarkdownString, getDateFromString } from "../utils/timeUtils";
+import { dateOrderProblem, dateToMarkdownString, getDateFromString } from "../utils/timeUtils";
 
 describe("Can properly handle expected date formats", () => {
   it("can use AM/PM dates", () => {
@@ -67,5 +67,24 @@ describe("Can properly handle expected date formats", () => {
     expect(dateObject).not.toBeUndefined();
     const updatedString = dateToMarkdownString(dateObject!);
     expect(updatedString).toBe("08/29/2024 00:00:00");
+  });
+});
+
+describe("dateOrderProblem", () => {
+  it("is nothing for available, then due, then closed, with any of them missing", () => {
+    expect(
+      dateOrderProblem({ unlockAt: "11/01/2026 08:00:00", dueAt: "11/13/2026 23:59:00", lockAt: "11/14/2026 23:59:00" }),
+    ).toBeUndefined();
+    expect(dateOrderProblem({ dueAt: "11/13/2026 23:59:00", lockAt: "11/13/2026 23:59:00" })).toBeUndefined();
+    expect(dateOrderProblem({ dueAt: "11/13/2026 23:59:00" })).toBeUndefined();
+  });
+
+  it("names the dates that are out of order", () => {
+    expect(dateOrderProblem({ dueAt: "11/13/2026 23:59:00", lockAt: "11/02/2026 10:30:00" })).toMatch(
+      /^DueAt \(11\/13\/2026 23:59:00\) is after LockAt \(11\/02\/2026 10:30:00\)/,
+    );
+    expect(dateOrderProblem({ unlockAt: "11/18/2026 00:00:00", dueAt: "11/13/2026 23:59:00" })).toMatch(
+      /^UnlockAt \(11\/18\/2026 00:00:00\) is after DueAt/,
+    );
   });
 });

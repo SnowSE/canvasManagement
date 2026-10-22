@@ -99,6 +99,45 @@ export const verifyDateOrThrow = (
   return dateToMarkdownString(myDate);
 };
 
+/**
+ * Canvas keeps an item's dates in order, available then due then closed, and
+ * won't save them otherwise: it refuses an assignment, and says OK to a quiz
+ * while keeping its old settings. The problem with these dates, if any.
+ */
+export const dateOrderProblem = (dates: {
+  unlockAt?: string;
+  dueAt?: string;
+  lockAt?: string;
+}): string | undefined => {
+  const set = (
+    [
+      ["UnlockAt", dates.unlockAt],
+      ["DueAt", dates.dueAt],
+      ["LockAt", dates.lockAt],
+    ] as const
+  ).flatMap(([label, value]) => {
+    const date = value && getDateFromString(value);
+    return date ? [{ label, value, date }] : [];
+  });
+  for (const [i, earlier] of set.entries())
+    for (const later of set.slice(i + 1))
+      if (earlier.date > later.date)
+        return `${earlier.label} (${earlier.value}) is after ${later.label} (${later.value}); Canvas needs the dates in order: available, then due, then closed`;
+  return undefined;
+};
+
+/** Stops an item with dates Canvas won't save from being sent. */
+export const requireDatesInOrder = (item: {
+  name: string;
+  unlockAt?: string;
+  dueAt?: string;
+  lockAt?: string;
+}) => {
+  const problem = dateOrderProblem(item);
+  if (problem)
+    throw new Error(`Can't send "${item.name}" to Canvas: ${problem}`);
+};
+
 export const dateToMarkdownString = (date: Date) => {
   const stringDay = String(date.getDate()).padStart(2, "0");
   const stringMonth = String(date.getMonth() + 1).padStart(2, "0"); // Months are zero-based

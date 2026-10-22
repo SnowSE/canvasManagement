@@ -8,6 +8,7 @@ import { LocalCoursePage } from "@/features/local/pages/localCoursePageModels";
 import { LocalCourseSettings } from "@/features/local/course/localCourseSettings";
 import { LocalQuiz } from "@/features/local/quizzes/models/localQuiz";
 import {
+  dateOrderProblem,
   dateToMarkdownString,
   getDateFromString,
 } from "@/features/local/utils/timeUtils";
@@ -586,6 +587,27 @@ function checkSchedule(
   return fields;
 }
 
+/** Dates Canvas won't save (see dateOrderProblem): a difference until fixed. */
+function checkDateOrder(item: {
+  unlockAt?: string;
+  dueAt?: string;
+  lockAt?: string;
+}): SyncField[] {
+  const problem = dateOrderProblem(item);
+  if (!problem) return [];
+  return [
+    field({
+      key: "dateOrder",
+      label: "Dates",
+      section: "dates",
+      local: problem,
+      canvas: UNSET,
+      same: false,
+      message: problem,
+    }),
+  ];
+}
+
 function checkAssignment(
   assignment: LocalAssignment,
   canvasAssignment: CanvasAssignment,
@@ -594,6 +616,7 @@ function checkAssignment(
   roster?: RosterForStatus,
 ): { fields: SyncField[]; description: SyncDescription } {
   const fields: SyncField[] = [];
+  fields.push(...checkDateOrder(assignment));
   const unlock = checkOptionalDate(
     "unlockAt",
     "Unlock",
@@ -646,6 +669,7 @@ function checkQuiz(
   canvasLinkTargets?: CanvasLinkTargets,
 ): { fields: SyncField[]; description: SyncDescription } {
   const fields: SyncField[] = [];
+  fields.push(...checkDateOrder(quiz));
   const unlock = checkOptionalDate(
     "unlockAt",
     "Unlock",

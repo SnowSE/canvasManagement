@@ -668,3 +668,14 @@ describe("getSyncReport - student overrides", () => {
     expect(otherOverrides(scheduled)).toHaveLength(1);
   });
 });
+
+describe("getSyncReport - dates Canvas won't save", () => {
+  it("counts a due date after the close date as a difference", () => {
+    const item = { ...baseLocalAssignment, dueAt: "08/21/2023 23:59:00", lockAt: "08/02/2023 10:30:00" };
+    const canvasItem = { ...baseCanvasAssignment, lock_at: "08/02/2023 10:30:00" };
+
+    const { differences } = getSyncReport({ item, canvasItem, type: "assignment", settings: baseSettings });
+
+    expect(differences.find((d) => d.key === "dateOrder")?.message).toMatch(/^DueAt .* is after LockAt/);
+  });
+});

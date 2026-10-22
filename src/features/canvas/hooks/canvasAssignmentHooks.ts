@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { requireDatesInOrder } from "@/features/local/utils/timeUtils";
 import { LocalAssignment } from "@/features/local/assignments/models/localAssignment";
 import {
   useAddToCanvasModule,
@@ -45,6 +46,7 @@ export const useAddAssignmentToCanvasMutation = () => {
       assignment: LocalAssignment;
       moduleName: string;
     }) => {
+      requireDatesInOrder(assignment);
       const assignmentGroup = settings.assignmentGroups.find(
         (g) => g.name === assignment.localAssignmentGroupName,
       );
@@ -93,6 +95,7 @@ export const useUpdateAssignmentInCanvasMutation = () => {
       canvasAssignmentId: number;
       moduleName: string;
     }) => {
+      requireDatesInOrder(assignment);
       const assignmentGroup = settings.assignmentGroups.find(
         (g) => g.name === assignment.localAssignmentGroupName,
       );
