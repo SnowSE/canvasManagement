@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { requireDatesInOrder } from "@/features/local/utils/timeUtils";
 import {
   useAddToCanvasModule,
   usePlaceInCanvasModule,
@@ -91,6 +92,7 @@ export const useAddQuizToCanvasMutation = () => {
       quiz: LocalQuiz;
       moduleName: string;
     }) => {
+      requireDatesInOrder(quiz);
       const assignmentGroup = settings.assignmentGroups.find(
         (g) => g.name === quiz.localAssignmentGroupName
       );
@@ -114,6 +116,7 @@ export const useAddQuizToCanvasMutation = () => {
         queryKey: canvasQuizKeys.quizzes(settings.canvasId),
       });
     },
+    onError: (error) => showErrorToast(error.message),
   });
 };
 
@@ -150,6 +153,7 @@ export const useUpdateQuizInCanvasMutation = () => {
       canvasQuizId: number;
       moduleName: string;
     }) => {
+      requireDatesInOrder(quiz);
       const versions = await canvasQuizService.getVersionsTaken(
         settings.canvasId,
         canvasQuizId

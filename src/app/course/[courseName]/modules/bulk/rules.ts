@@ -1,12 +1,16 @@
 // The module list's bulk rules: which items its filters show, toggling a
 // whole set of checkboxes, and running an action on each item in turn.
 
-export type Kind = "notInCanvas" | "needsSync" | "unpublished";
-/** The module list's filters, in the order the bar shows them. */
-export const kinds: { kind: Kind; label: string }[] = [
-  { kind: "notInCanvas", label: "Not In Canvas" },
-  { kind: "needsSync", label: "Needs Sync" },
-  { kind: "unpublished", label: "Unpublished" },
+export type Kind = "notInCanvas" | "needsSync" | "unpublished" | "withErrors";
+/**
+ * The module list's filters, in the order the bar shows them, and what the
+ * bar says instead when the course has nothing for one.
+ */
+export const kinds: { kind: Kind; label: string; none: string }[] = [
+  { kind: "notInCanvas", label: "Not In Canvas", none: "All In Canvas" },
+  { kind: "needsSync", label: "Needs Sync", none: "All Synced" },
+  { kind: "unpublished", label: "Unpublished", none: "All Published" },
+  { kind: "withErrors", label: "With Errors", none: "No Errors" },
 ];
 
 /** The filters an item matches, from how it stands against Canvas. */
@@ -14,15 +18,20 @@ export const kindsOf = (s: {
   status: "localOnly" | "incomplete" | "published";
   differences: unknown[];
   unpublished?: boolean;
+  problem?: string;
 }): Kind[] => [
   ...(s.status === "localOnly" ? ["notInCanvas" as const] : []),
   ...(s.differences.length > 0 ? ["needsSync" as const] : []),
   ...(s.unpublished ? ["unpublished" as const] : []),
+  ...(s.problem ? ["withErrors" as const] : []),
 ];
 
 /** With no filter on everything shows; otherwise what matches any that's on. */
 export const shown = (itemKinds: Kind[], filters: Kind[]) =>
   filters.length === 0 || itemKinds.some((k) => filters.includes(k));
+
+/** Files that can't be read show with no filter on, or With Errors on. */
+export const showsErrors = (filters: Kind[]) => shown(["withErrors"], filters);
 
 /**
  * "Select all …": checks the rest of `these`, or, when all of them are

@@ -1,17 +1,32 @@
 import { describe, it, expect, vi } from "vitest";
-import { kindsOf, shown, toggleAll, updateEach } from "./rules";
+import { kindsOf, shown, showsErrors, toggleAll, updateEach } from "./rules";
 
-const status = (s: { status?: "localOnly" | "incomplete" | "published"; differences?: number; unpublished?: boolean }) => ({
+const status = (s: {
+  status?: "localOnly" | "incomplete" | "published";
+  differences?: number;
+  unpublished?: boolean;
+  problem?: string;
+}) => ({
   status: s.status ?? "published",
   differences: Array(s.differences ?? 0).fill({}),
   unpublished: s.unpublished,
+  problem: s.problem,
 });
 
 describe("kindsOf", () => {
   it("says which filters an item matches", () => {
     expect(kindsOf(status({ status: "localOnly" }))).toEqual(["notInCanvas"]);
     expect(kindsOf(status({ status: "incomplete", differences: 2, unpublished: true }))).toEqual(["needsSync", "unpublished"]);
+    expect(kindsOf(status({ status: "localOnly", problem: "DueAt is after LockAt" }))).toEqual(["notInCanvas", "withErrors"]);
     expect(kindsOf(status({}))).toEqual([]);
+  });
+});
+
+describe("showsErrors", () => {
+  it("shows unreadable files with no filter on, or With Errors on, not with others only", () => {
+    expect(showsErrors([])).toBe(true);
+    expect(showsErrors(["needsSync", "withErrors"])).toBe(true);
+    expect(showsErrors(["needsSync"])).toBe(false);
   });
 });
 

@@ -30,6 +30,7 @@ export const ItemInDay: FC<{
   message: ReactNode;
   differences?: SyncField[];
   unpublished?: boolean;
+  problem?: string;
   scheduleEntry?: AssignmentScheduleEntry;
 }> = ({
   type,
@@ -39,6 +40,7 @@ export const ItemInDay: FC<{
   message,
   differences = [],
   unpublished,
+  problem,
   scheduleEntry,
 }) => {
   const { courseName } = useCourseContext();
@@ -64,9 +66,12 @@ export const ItemInDay: FC<{
           " bg-slate-800 " +
           " block " +
           (scheduleEntry ? " border-dashed " : "") +
-          (status === "localOnly" && " text-slate-500 border-slate-600 ") +
-          (status === "incomplete" && " border-rose-900 ") +
-          (status === "published" && " border-green-800 ")
+          (status === "localOnly" ? " text-slate-500 " : "") +
+          (status === "incomplete" || problem
+            ? " border-rose-900 "
+            : status === "localOnly"
+              ? " border-slate-600 "
+              : " border-green-800 ")
         }
         role="button"
         draggable="true"
@@ -158,6 +163,7 @@ export const ItemInDay: FC<{
                 message={message}
                 differences={differences}
                 unpublished={unpublished}
+                problem={problem}
               />
             }
             targetRef={targetRef}

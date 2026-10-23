@@ -5,6 +5,7 @@ import {
 import { useCanvasModuleNames } from "@/features/canvas/hooks/canvasModuleHooks";
 import { getSyncReport } from "@/app/course/[courseName]/calendar/day/getAssignmentSyncStatus";
 import { TrashIcon } from "@/components/icons/ActionIcons";
+import { dateOrderProblem } from "@/features/local/utils/timeUtils";
 import { useCanvasAssignmentsQuery } from "@/features/canvas/hooks/canvasAssignmentHooks";
 import { useCourseContext } from "@/app/course/[courseName]/context/courseContext";
 import Modal, { useModal } from "@/components/Modal";
@@ -130,6 +131,7 @@ export function QuizButtons({
         deleteFromCanvas.isPending ||
         updateInCanvas.isPending
       }
+      problem={dateOrderProblem(quiz)}
       onAdd={() => addToCanvas.mutate({ quiz, moduleName })}
       onUpdate={() =>
         quizInCanvas &&

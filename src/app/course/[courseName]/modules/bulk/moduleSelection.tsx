@@ -20,6 +20,10 @@ function useSelectionState() {
   const [selected, setSelected] = useState<Record<string, ModuleItemRef>>({});
   const [filters, setFilters] = useState<Kind[]>([]);
   const [visibleBy, setVisibleBy] = useState<Record<string, ModuleItemRef[]>>({});
+  // every kind each module's items match: a filter with nothing to show is
+  // replaced by "All Synced" and the like, and counts as off if it was on
+  const [kindsBy, setKindsBy] = useState<Record<string, Kind[]>>({});
+  const present = Object.values(kindsBy).flat();
   // using a filter or "select all shown" opens every module, to show them
   const [expandRequests, setExpandRequests] = useState(0);
   const expandAll = () => setExpandRequests((n) => n + 1);
@@ -35,16 +39,16 @@ function useSelectionState() {
       ),
     set: (refs: ModuleItemRef[]) =>
       setSelected(Object.fromEntries(refs.map((r) => [keyOf(r), r]))),
-    filters,
+    filters: filters.filter((k) => present.includes(k)),
+    present,
     toggleFilter: (kind: Kind) => {
       expandAll();
       setFilters((f) => (f.includes(kind) ? f.filter((k) => k !== kind) : [...f, kind]));
     },
-    report: useCallback(
-      (moduleName: string, refs: ModuleItemRef[]) =>
-        setVisibleBy((v) => ({ ...v, [moduleName]: refs })),
-      [],
-    ),
+    report: useCallback((moduleName: string, refs: ModuleItemRef[], itemKinds: Kind[]) => {
+      setVisibleBy((v) => ({ ...v, [moduleName]: refs }));
+      setKindsBy((k) => ({ ...k, [moduleName]: itemKinds }));
+    }, []),
     visible,
     toggleVisible: () => {
       expandAll();

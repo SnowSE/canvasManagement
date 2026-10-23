@@ -5,6 +5,7 @@ import {
 import { useCanvasModuleNames } from "@/features/canvas/hooks/canvasModuleHooks";
 import { getSyncReport } from "@/app/course/[courseName]/calendar/day/getAssignmentSyncStatus";
 import { ClassroomIcon, TrashIcon } from "@/components/icons/ActionIcons";
+import { dateOrderProblem } from "@/features/local/utils/timeUtils";
 import { useCourseContext } from "@/app/course/[courseName]/context/courseContext";
 import Modal, { useModal } from "@/components/Modal";
 import { Spinner } from "@/components/Spinner";
@@ -161,6 +162,7 @@ export function AssignmentFooterButtons({
         assignmentName,
       )}
       busy={anythingIsLoading}
+      problem={dateOrderProblem(assignment)}
       onAdd={() => addToCanvas.mutate({ assignment, moduleName })}
       onUpdate={() =>
         assignmentInCanvas &&

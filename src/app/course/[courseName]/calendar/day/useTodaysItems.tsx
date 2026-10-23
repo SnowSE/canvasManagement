@@ -22,6 +22,8 @@ export type TodayItem = {
   differences: SyncField[];
   // in Canvas but students can't see it; red border, not a difference
   unpublished?: boolean;
+  // dates Canvas won't save; red border, and the item can't be sent
+  problem?: string;
   // set when this is one batch of an assignment's Schedule rather than its DueAt
   scheduleEntry?: AssignmentScheduleEntry;
 };

@@ -8,6 +8,7 @@ import { LocalCoursePage } from "@/features/local/pages/localCoursePageModels";
 import { LocalCourseSettings } from "@/features/local/course/localCourseSettings";
 import { LocalQuiz } from "@/features/local/quizzes/models/localQuiz";
 import {
+  dateOrderProblem,
   dateToMarkdownString,
   getDateFromString,
 } from "@/features/local/utils/timeUtils";
@@ -78,6 +79,11 @@ export type ItemSyncStatus = {
    * something the file says or Update in Canvas would change.
    */
   unpublished?: boolean;
+  /**
+   * Dates Canvas won't save (see dateOrderProblem), in Canvas or not: the
+   * module list counts it as an error, and the item can't be sent.
+   */
+  problem?: string;
 };
 
 export interface SyncReport extends ItemSyncStatus {
@@ -586,6 +592,27 @@ function checkSchedule(
   return fields;
 }
 
+/** Dates Canvas won't save (see dateOrderProblem): a difference until fixed. */
+function checkDateOrder(item: {
+  unlockAt?: string;
+  dueAt?: string;
+  lockAt?: string;
+}): SyncField[] {
+  const problem = dateOrderProblem(item);
+  if (!problem) return [];
+  return [
+    field({
+      key: "dateOrder",
+      label: "Dates",
+      section: "dates",
+      local: problem,
+      canvas: UNSET,
+      same: false,
+      message: problem,
+    }),
+  ];
+}
+
 function checkAssignment(
   assignment: LocalAssignment,
   canvasAssignment: CanvasAssignment,
@@ -594,6 +621,7 @@ function checkAssignment(
   roster?: RosterForStatus,
 ): { fields: SyncField[]; description: SyncDescription } {
   const fields: SyncField[] = [];
+  fields.push(...checkDateOrder(assignment));
   const unlock = checkOptionalDate(
     "unlockAt",
     "Unlock",
@@ -646,6 +674,7 @@ function checkQuiz(
   canvasLinkTargets?: CanvasLinkTargets,
 ): { fields: SyncField[]; description: SyncDescription } {
   const fields: SyncField[] = [];
+  fields.push(...checkDateOrder(quiz));
   const unlock = checkOptionalDate(
     "unlockAt",
     "Unlock",
@@ -710,11 +739,13 @@ function checkQuizOptions(quiz: LocalQuiz, canvasQuiz: CanvasQuiz): SyncField[] 
 function buildReport(
   fields: SyncField[],
   published: boolean | undefined,
-  description?: SyncDescription,
+  description: SyncDescription | undefined,
+  problem: string | undefined,
 ): SyncReport {
   const differences = fields.filter((f) => !f.same);
   const unpublished = !published;
   return {
+    problem,
     status: differences.length > 0 || unpublished ? "incomplete" : "published",
     message:
       differences[0]?.message ?? (unpublished ? "not published in canvas" : ""),
@@ -771,12 +802,14 @@ export function getSyncReport({
   /** The file's module and the Canvas modules holding the item; without them the module is not compared. */
   module?: { file: string; canvas: string[] };
 }): SyncReport {
+  const problem = dateOrderProblem(item);
   if (!canvasItem)
     return {
       status: "localOnly",
       message: "not in canvas",
       differences: [],
       fields: [],
+      problem,
     };
 
   const fields: SyncField[] = module
@@ -795,7 +828,12 @@ export function getSyncReport({
       (canvasItem as CanvasPage).body,
     );
     fields.push(description.field);
-    return buildReport(fields, canvasItem.published, description.description);
+    return buildReport(
+      fields,
+      canvasItem.published,
+      description.description,
+      problem,
+    );
   }
 
   const checked =
@@ -822,12 +860,18 @@ export function getSyncReport({
         settings,
       ),
     );
-  return buildReport(fields, canvasItem.published, checked.description);
+  return buildReport(
+    fields,
+    canvasItem.published,
+    checked.description,
+    problem,
+  );
 }
 
 export function getSyncStatus(
   args: Parameters<typeof getSyncReport>[0],
 ): ItemSyncStatus {
-  const { status, message, differences, unpublished } = getSyncReport(args);
-  return { status, message, differences, unpublished };
+  const { status, message, differences, unpublished, problem } =
+    getSyncReport(args);
+  return { status, message, differences, unpublished, problem };
 }

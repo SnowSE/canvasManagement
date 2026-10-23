@@ -62,6 +62,7 @@ export function EditorFooter({
   onUpdate,
   updateTitle,
   onViewInCanvas,
+  problem,
   extraActions = [],
   toggleHelp,
   previousUrl,
@@ -82,6 +83,8 @@ export function EditorFooter({
   onUpdate: () => void;
   updateTitle?: string;
   onViewInCanvas?: () => void;
+  /** Why the file can't be sent to Canvas (dates out of order); Add and Update are off while it's set. */
+  problem?: string;
   /** Classroom 50, the deletes: always in the ⋯ menu. */
   extraActions?: FooterAction[];
   toggleHelp?: () => void;
@@ -110,8 +113,8 @@ export function EditorFooter({
     label: "Update in Canvas",
     icon: <UploadIcon />,
     onClick: onUpdate,
-    title: updateTitle,
-    disabled: busy,
+    title: problem ?? updateTitle,
+    disabled: busy || !!problem,
   };
   const publishAction: FooterAction | undefined = canvasItem
     ? {
@@ -149,7 +152,8 @@ export function EditorFooter({
       label: "Add to Canvas",
       icon: <AddIcon />,
       onClick: onAdd,
-      disabled: busy,
+      title: problem,
+      disabled: busy || !!problem,
     };
   } else if (differences && differences.length > 0) {
     const text = `${differences.length} ${differences.length === 1 ? "difference" : "differences"} from Canvas`;
@@ -203,6 +207,14 @@ export function EditorFooter({
       ? [compare, { ...update, label: "Update in Canvas anyway" }]
       : [view];
   }
+
+  if (problem)
+    status = (
+      <span className={statusClass + " text-rose-300"} title={problem}>
+        <WarningIcon />
+        Can&apos;t send to Canvas: {problem}
+      </span>
+    );
 
   const history: FooterAction | undefined = git?.status.available
     ? {
