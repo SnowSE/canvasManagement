@@ -1,5 +1,4 @@
 "use client";
-import { Toggle } from "@/components/form/Toggle";
 import { useLocalCoursesSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import {
   useGlobalSettingsQuery,
@@ -12,13 +11,11 @@ import {
 } from "@/features/local/utils/timeUtils";
 import { getCourseUrl } from "@/services/urlUtils";
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
 import Modal, { useModal } from "@/components/Modal";
 import { Spinner } from "@/components/Spinner";
 
-export default function CourseList() {
+export default function CourseList({ isDeleting }: { isDeleting: boolean }) {
   const { data: allSettings } = useLocalCoursesSettingsQuery();
-  const [isDeleting, setIsDeleting] = useState(false);
 
   const coursesByStartDate = groupByStartDate(allSettings);
 
@@ -28,11 +25,6 @@ export default function CourseList() {
 
   return (
     <div>
-      <Toggle
-        label={"Delete Mode"}
-        value={isDeleting}
-        onChange={(set) => setIsDeleting(set)}
-      />
       <div className="flex flex-col-reverse sm:flex-row sm:flex-wrap sm:justify-center">
         {sortedDates.map((startDate) => (
           <div

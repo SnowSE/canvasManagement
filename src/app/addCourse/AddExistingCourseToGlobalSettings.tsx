@@ -14,16 +14,13 @@ import {
   useCourseWithSameName,
 } from "./DuplicateCourseNameWarning";
 
-export const AddExistingCourseToGlobalSettings = () => {
-  const [showForm, setShowForm] = useState(false);
+export const AddExistingCourseToGlobalSettings = ({
+  showForm,
+}: {
+  showForm: boolean;
+}) => {
   return (
     <div>
-      <div className="flex justify-center">
-        <button className="" onClick={() => setShowForm((i) => !i)}>
-          {showForm ? "Hide Form" : "Import Existing Course"}
-        </button>
-      </div>
-
       <div className={" collapsible " + (showForm && "expand")}>
         <div className="border rounded-md p-3 m-3">
           <SuspenseAndErrorHandling>
