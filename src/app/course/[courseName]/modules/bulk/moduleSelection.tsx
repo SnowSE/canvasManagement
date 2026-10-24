@@ -41,6 +41,7 @@ function useSelectionState() {
       setSelected(Object.fromEntries(refs.map((r) => [keyOf(r), r]))),
     filters: filters.filter((k) => present.includes(k)),
     present,
+    reportedModules: Object.keys(kindsBy),
     toggleFilter: (kind: Kind) => {
       expandAll();
       setFilters((f) => (f.includes(kind) ? f.filter((k) => k !== kind) : [...f, kind]));

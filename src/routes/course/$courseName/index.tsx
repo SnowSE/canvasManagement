@@ -6,6 +6,7 @@ import { DragStyleContextProvider } from "@/app/course/[courseName]/context/drag
 import CollapsableSidebar from "@/app/course/[courseName]/CollapsableSidebar";
 import { useState } from "react";
 import CalendarItemsContextProvider from "@/app/course/[courseName]/context/CalendarItemsContextProvider";
+import { SyncStatusProvider } from "@/app/course/[courseName]/calendar/day/useItemSyncStatus";
 import CalendarQuizQuestionsProvider from "@/app/course/[courseName]/context/CalendarQuizQuestionsProvider";
 
 export const Route = createFileRoute("/course/$courseName/")({
@@ -22,6 +23,7 @@ function CoursePage() {
               same status against Canvas */}
           <CalendarItemsContextProvider>
             <CalendarQuizQuestionsProvider>
+              <SyncStatusProvider>
               <div className="flex sm:flex-row h-full flex-col max-w-[2400px] w-full mx-auto">
                 <div className="flex-1 h-full flex flex-col">
                   <CourseNavigation
@@ -34,6 +36,7 @@ function CoursePage() {
                   onMobileClose={() => setMobileModulesOpen(false)}
                 />
               </div>
+              </SyncStatusProvider>
             </CalendarQuizQuestionsProvider>
           </CalendarItemsContextProvider>
         </DraggingContextProvider>

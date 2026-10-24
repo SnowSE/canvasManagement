@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { kindsOf, shown, showsErrors, toggleAll, updateEach } from "./rules";
+import { kindsOf, settled, shown, showsErrors, toggleAll, updateEach } from "./rules";
 
 const status = (s: {
   status?: "localOnly" | "incomplete" | "published";
@@ -19,6 +19,15 @@ describe("kindsOf", () => {
     expect(kindsOf(status({ status: "incomplete", differences: 2, unpublished: true }))).toEqual(["needsSync", "unpublished"]);
     expect(kindsOf(status({ status: "localOnly", problem: "DueAt is after LockAt" }))).toEqual(["notInCanvas", "withErrors"]);
     expect(kindsOf(status({}))).toEqual([]);
+  });
+});
+
+describe("settled", () => {
+  it("waits for Canvas's answer and for every module to have counted", () => {
+    expect(settled(false, ["01", "02"], ["01", "02"])).toBe(false);
+    expect(settled(true, ["01", "02"], ["01"])).toBe(false);
+    expect(settled(true, ["01", "02"], ["01", "02"])).toBe(true);
+    expect(settled(true, [], [])).toBe(true);
   });
 });
 

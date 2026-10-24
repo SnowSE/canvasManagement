@@ -2,8 +2,10 @@
 import { ReactNode, useState } from "react";
 import Modal, { ModalControl, useModal } from "@/components/Modal";
 import { showErrorToast } from "@/app/MyToaster";
+import { Spinner } from "@/components/Spinner";
 import { useItemSyncStatus } from "../../calendar/day/useItemSyncStatus";
-import { kinds, updateEach } from "./rules";
+import { useModuleNamesQuery } from "@/features/local/modules/localCourseModuleHooks";
+import { kinds, settled, updateEach } from "./rules";
 import { keyOf, ModuleItemRef, useModuleSelection } from "./moduleSelection";
 import { useAddOrUpdateInCanvas, useRemoveUnpublishedFromCanvas } from "./canvasActions";
 import { ReviewDialog } from "./ReviewDialog";
@@ -23,7 +25,9 @@ export function BulkBar() {
   const selection = useModuleSelection();
   const addOrUpdate = useAddOrUpdateInCanvas();
   const removeUnpublished = useRemoveUnpublishedFromCanvas();
-  const { statusOf } = useItemSyncStatus();
+  const { statusOf, ready } = useItemSyncStatus();
+  const { data: moduleNames } = useModuleNamesQuery();
+  const counted = settled(ready, moduleNames, selection.reportedModules);
   const review = useModal();
   const [reviewing, setReviewing] = useState<ModuleItemRef[]>([]);
   const [progress, setProgress] = useState<string>();
@@ -56,8 +60,14 @@ export function BulkBar() {
   return (
     <div className="flex flex-wrap items-center gap-2 mb-2 text-sm">
       {/* show only the items matching any filter that's on, with how many
-          there are; a filter with nothing to show says so instead */}
-      {kinds.map(({ kind, label, none }) => {
+          there are; a filter with nothing to show says so instead. Nothing is
+          said until Canvas has answered: a count is shown once it's right */}
+      {!counted && (
+        <span className="text-slate-400 inline-flex items-center gap-2">
+          <Spinner /> Checking Canvas…
+        </span>
+      )}
+      {counted && kinds.map(({ kind, label, none }) => {
         const count = selection.present.filter((k) => k === kind).length;
         return count > 0 ? (
           <button

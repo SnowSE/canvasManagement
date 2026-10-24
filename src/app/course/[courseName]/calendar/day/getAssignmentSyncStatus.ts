@@ -95,6 +95,36 @@ export interface SyncReport extends ItemSyncStatus {
 
 const UNSET = "—";
 
+// Rendering an item's markdown is most of the cost of comparing it, and the
+// same text renders the same, so each text is rendered once per settings and
+// link targets. Capped: an editor renders every keystroke's text.
+const RENDERED_CAP = 1000;
+const renderedBySettings = new WeakMap<LocalCourseSettings, Map<string, string>>();
+const targetIds = new WeakMap<object, number>();
+const NONE = {};
+let nextTargetId = 1;
+const idOf = (targets: object = NONE) => {
+  if (!targetIds.has(targets)) targetIds.set(targets, nextTargetId++);
+  return targetIds.get(targets);
+};
+function renderForCompare({
+  markdownString,
+  settings,
+  replaceText = [],
+  canvasLinkTargets,
+}: Parameters<typeof markdownToHTMLSafe>[0]) {
+  let rendered = renderedBySettings.get(settings);
+  if (!rendered) renderedBySettings.set(settings, (rendered = new Map()));
+  const targets = `${idOf(canvasLinkTargets?.assignments)}/${idOf(canvasLinkTargets?.quizzes)}`;
+  const key = `${targets}\n${JSON.stringify(replaceText)}\n${markdownString}`;
+  const hit = rendered.get(key);
+  if (hit !== undefined) return hit;
+  const html = markdownToHTMLSafe({ markdownString, settings, replaceText, canvasLinkTargets });
+  if (rendered.size >= RENDERED_CAP) rendered.delete(rendered.keys().next().value!);
+  rendered.set(key, html);
+  return html;
+}
+
 function field(
   partial: Omit<SyncField, "same" | "message"> & {
     same: boolean;
@@ -655,7 +685,7 @@ function checkAssignment(
   if (points) fields.push(points);
   const description = checkDescription(
     () =>
-      markdownToHTMLSafe({
+      renderForCompare({
         markdownString: assignment.description,
         settings,
         replaceText: getClassroomReplaceText({ assignment, settings }),
@@ -699,7 +729,7 @@ function checkQuiz(
   fields.push(...checkQuizOptions(quiz, canvasQuiz));
   const description = checkDescription(
     () =>
-      markdownToHTMLSafe({
+      renderForCompare({
         markdownString: quiz.description,
         settings,
         canvasLinkTargets,
@@ -820,7 +850,7 @@ export function getSyncReport({
     const page = item as LocalCoursePage;
     const description = checkDescription(
       () =>
-        markdownToHTMLSafe({
+        renderForCompare({
           markdownString: page.text,
           settings,
           canvasLinkTargets,

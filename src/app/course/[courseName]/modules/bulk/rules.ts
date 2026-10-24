@@ -30,6 +30,14 @@ export const kindsOf = (s: {
 export const shown = (itemKinds: Kind[], filters: Kind[]) =>
   filters.length === 0 || itemKinds.some((k) => filters.includes(k));
 
+/**
+ * The bar shows its filters and counts once they can't change: Canvas has
+ * answered and every module has counted with that answer. Until then it
+ * says it's checking, rather than counts that would change.
+ */
+export const settled = (ready: boolean, moduleNames: string[], reportedModules: string[]) =>
+  ready && moduleNames.every((m) => reportedModules.includes(m));
+
 /** Files that can't be read show with no filter on, or With Errors on. */
 export const showsErrors = (filters: Kind[]) => shown(["withErrors"], filters);
 

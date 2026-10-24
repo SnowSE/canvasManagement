@@ -48,7 +48,6 @@ export const ItemInDay: FC<{
   const { visible, targetRef, showTooltip, hideTooltip, tooltipProps } =
     useTooltip(500);
   const modalControl = useModal();
-  const { data: roster } = useRosterStudentsQuery();
 
   const handleContextMenu = (e: React.MouseEvent) => {
     if (type !== "assignment" && type !== "quiz" && type !== "page") return;
@@ -123,11 +122,7 @@ export const ItemInDay: FC<{
                 {scheduleEntry.students.length === 0 ? (
                   <div className="text-slate-400">no students yet</div>
                 ) : (
-                  <ul className="list-disc ps-5">
-                    {scheduleEntry.students.map((s) => (
-                      <li key={s}>{studentDisplayName(s, roster?.students)}</li>
-                    ))}
-                  </ul>
+                  <ScheduledStudents students={scheduleEntry.students} />
                 )}
                 {status !== "published" && (
                   <div className="text-rose-300 pt-1">{message}</div>
@@ -198,3 +193,15 @@ export const ItemInDay: FC<{
     </div>
   );
 };
+
+// its own component so only scheduled pills subscribe to the roster
+function ScheduledStudents({ students }: { students: string[] }) {
+  const { data: roster } = useRosterStudentsQuery();
+  return (
+    <ul className="list-disc ps-5">
+      {students.map((s) => (
+        <li key={s}>{studentDisplayName(s, roster?.students)}</li>
+      ))}
+    </ul>
+  );
+}
