@@ -26,6 +26,13 @@ import {
 
 export type ItemType = "assignment" | "quiz" | "page";
 
+/** Before Canvas has answered: nothing is claimed. */
+const CHECKING: ItemSyncStatus = {
+  status: "localOnly",
+  message: "Checking Canvas…",
+  differences: [],
+};
+
 // Each item's last status, with what it was compared from. Comparing an item
 // renders its markdown, which is slow, so it's compared again only when one
 // of those changed. Kept outside the page so coming back to it costs nothing.
@@ -42,6 +49,7 @@ function remembered(key: string, deps: unknown[], compare: () => ItemSyncStatus)
  * How each item stands against Canvas, for the calendar and the module list:
  * `statusOf` finds the item in Canvas by name and compares them, and
  * `scheduleStatusOf` does the same for one batch of an assignment's Schedule.
+ * Until Canvas has answered, `ready` is false and nothing is claimed.
  */
 function useSyncStatuses() {
   const { data: settings } = useLocalCourseSettingsQuery();
@@ -55,14 +63,16 @@ function useSyncStatuses() {
   const quizQuestions = useCalendarQuizQuestions();
   const { data: canvasModules } = useCanvasModulesWithItemsQuery();
   const canvasLinkTargets = { assignments: canvasAssignments, quizzes: canvasQuizzes };
+  const ready = !!(canvasAssignments && canvasQuizzes && canvasPages && canvasModules);
 
   const statusOf = (type: ItemType, item: IModuleItem, moduleName: string) => {
+    if (!canvasAssignments || !canvasQuizzes || !canvasPages || !canvasModules) return CHECKING;
     const canvasItem =
       type === "assignment"
-        ? canvasAssignments?.find((c) => c.name === item.name)
+        ? canvasAssignments.find((c) => c.name === item.name)
         : type === "quiz"
-          ? canvasQuizzes?.find((q) => q.title === item.name)
-          : canvasPages?.find((p) => p.title === item.name);
+          ? canvasQuizzes.find((q) => q.title === item.name)
+          : canvasPages.find((p) => p.title === item.name);
     const canvasQuestions = type === "quiz" ? quizQuestions[item.name] : undefined;
     return remembered(
       `${settings.name}/${type}/${moduleName}/${item.name}`,
@@ -76,13 +86,14 @@ function useSyncStatuses() {
           canvasLinkTargets,
           roster,
           canvasQuestions,
-          module: canvasModules && canvasItem && { file: moduleName, canvas: canvasModuleNames(canvasModules, type, canvasItem) },
+          module: canvasItem && { file: moduleName, canvas: canvasModuleNames(canvasModules, type, canvasItem) },
         }),
     );
   };
 
   const scheduleStatusOf = (assignment: LocalAssignment, entry: AssignmentScheduleEntry) => {
-    const canvasAssignment = canvasAssignments?.find((c) => c.name === assignment.name);
+    if (!canvasAssignments) return CHECKING;
+    const canvasAssignment = canvasAssignments.find((c) => c.name === assignment.name);
     return remembered(
       `${settings.name}/schedule/${assignment.name}/${entry.date}`,
       [assignment, canvasAssignment, rosterStudents, rosterGroupSets, entry],
@@ -90,7 +101,7 @@ function useSyncStatuses() {
     );
   };
 
-  return { statusOf, scheduleStatusOf };
+  return { ready, statusOf, scheduleStatusOf };
 }
 
 const SyncStatusContext = createContext<ReturnType<typeof useSyncStatuses> | undefined>(undefined);

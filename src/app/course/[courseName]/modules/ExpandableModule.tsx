@@ -52,7 +52,7 @@ export default function ExpandableModule({
   const { data: canvasModules } = useCanvasModulesQuery();
   const { data: canvasModulesWithItems } = useCanvasModulesWithItemsQuery();
   const { data: invalidItems } = useInvalidItemsQuery(moduleName);
-  const { statusOf } = useItemSyncStatus();
+  const { statusOf, ready } = useItemSyncStatus();
   const selection = useModuleSelection();
 
   const moduleItems: {
@@ -98,21 +98,26 @@ export default function ExpandableModule({
     shown(kindsOf(statusOf(type, item, moduleName)), selection.filters),
   );
   const shownRefs = shownItems.map(({ type, item }) => ({ type, item, moduleName }));
-  const itemKinds = [
-    ...moduleItems.flatMap(({ type, item }) => kindsOf(statusOf(type, item, moduleName))),
-    ...(invalidItems ?? []).map(() => "withErrors" as const),
-  ];
+  // nothing is counted until Canvas has answered, so no count changes later
+  const itemKinds = ready
+    ? [
+        ...moduleItems.flatMap(({ type, item }) => kindsOf(statusOf(type, item, moduleName))),
+        ...(invalidItems ?? []).map(() => "withErrors" as const),
+      ]
+    : [];
   // files that can't be read, plus ones with dates Canvas won't save
-  const errorCount =
-    (invalidItems?.length ?? 0) +
-    moduleItems.filter(({ type, item }) => statusOf(type, item, moduleName).problem).length;
+  const errorCount = ready
+    ? (invalidItems?.length ?? 0) +
+      moduleItems.filter(({ type, item }) => statusOf(type, item, moduleName).problem).length
+    : 0;
   const { report } = selection;
   const reported = shownRefs.map((r) => r.type + r.item.name).join("\n") + itemKinds.join(",");
   useEffect(() => {
+    if (!ready) return;
     report(moduleName, shownRefs, itemKinds);
     // the refs change whenever reported does
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [report, moduleName, reported]);
+  }, [report, moduleName, reported, ready]);
 
   const groupedItems = shownItems.reduce(
     (
