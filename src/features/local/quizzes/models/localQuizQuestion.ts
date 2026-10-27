@@ -38,6 +38,12 @@ export const zodQuestionGroup = z.object({
     .int()
     .positive()
     .describe("How many of the group's questions each student gets"),
+  bank: z
+    .string()
+    .optional()
+    .describe(
+      "Path of the question bank file the group's questions come from, relative to the quiz file",
+    ),
 });
 export type QuestionGroup = z.infer<typeof zodQuestionGroup>;
 

@@ -13,6 +13,7 @@ import {
 } from "../globalSettings/globalSettingsFileStorageService";
 import { localPageMarkdownUtils } from "@/features/local/pages/localCoursePageModels";
 import { quizMarkdownUtils } from "../quizzes/models/utils/quizMarkdownUtils";
+import { loadBanks } from "../quizzes/questionBankFileStorage";
 import { getFeedbackDelimitersFromSettings } from "../globalSettings/globalSettingsUtils";
 import {
   extractDateForOrdering,
@@ -71,7 +72,7 @@ const getItem = async <T extends CourseItemType>({
   }
   const rawFile = (await fs.readFile(filePath, "utf-8")).replace(/\r\n/g, "\n");
   try {
-    const item = await parseItemText(type, rawFile, name);
+    const item = await parseItemText(type, rawFile, name, filePath);
     resolveError(fileErrorKey(filePath));
     return item;
   } catch (e) {
@@ -102,6 +103,8 @@ export const parseItemText = async <T extends CourseItemType>(
   type: T,
   rawFile: string,
   name: string,
+  /** Where the file is, so a quiz's question banks can be found next to it. */
+  filePath?: string,
 ): Promise<CourseItemReturnType<T>> => {
   if (type === "Assignment") {
     return localAssignmentMarkdown.parseMarkdown(
@@ -111,10 +114,12 @@ export const parseItemText = async <T extends CourseItemType>(
   } else if (type === "Quiz") {
     const globalSettings = await getGlobalSettings();
     const delimiters = getFeedbackDelimitersFromSettings(globalSettings);
+    const banks = filePath ? await loadBanks(filePath, rawFile) : {};
     return quizMarkdownUtils.parseMarkdown(
       rawFile,
       name,
       delimiters,
+      banks,
     ) as CourseItemReturnType<T>;
   } else if (type === "Page") {
     return localPageMarkdownUtils.parseMarkdown(
@@ -213,7 +218,7 @@ export const courseItemFileStorageService = {
             const filePath = await itemFilePath({ courseName, moduleName, name, type });
             const raw = (await fs.readFile(filePath, "utf-8")).replace(/\r\n/g, "\n");
             try {
-              await parseItemText(type, raw, name);
+              await parseItemText(type, raw, name, filePath);
               return null;
             } catch (e) {
               return {
@@ -241,7 +246,7 @@ export const courseItemFileStorageService = {
     const filePath = await itemFilePath(args);
     const text = (await fs.readFile(filePath, "utf-8")).replace(/\r\n/g, "\n");
     try {
-      await parseItemText(args.type, text, args.name);
+      await parseItemText(args.type, text, args.name, filePath);
       resolveError(fileErrorKey(filePath));
       return { text };
     } catch (e) {
@@ -266,7 +271,7 @@ export const courseItemFileStorageService = {
       throw new Error(`${args.type} "${args.name}" no longer exists`);
     await fs.writeFile(filePath, args.text);
     try {
-      await parseItemText(args.type, args.text, args.name);
+      await parseItemText(args.type, args.text, args.name, filePath);
       resolveError(fileErrorKey(filePath));
       return {};
     } catch (e) {

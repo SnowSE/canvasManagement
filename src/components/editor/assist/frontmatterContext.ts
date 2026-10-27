@@ -101,10 +101,26 @@ function findHeader(
   return null;
 }
 
+const bankLine = /^(Bank):(\s*)(.*)$/i;
+
 export function getLineContext(lines: string[], lineIndex: number): LineContext {
   const end = frontmatterEndLine(lines);
-  if (end === -1 || lineIndex >= end || lineIndex < 0) return null;
+  if (end === -1 || lineIndex < 0) return null;
   const line = lines[lineIndex];
+  // past the settings, only a quiz group's Bank line has anything to offer
+  if (lineIndex >= end) {
+    const bank = bankLine.exec(line ?? "");
+    if (lineIndex === end || !bank || itemTypeFromFrontmatter(lines) !== "quiz")
+      return null;
+    const [, key, spaces, rest] = bank;
+    return {
+      kind: "value",
+      key: "Bank",
+      valueStart: key.length + 2 + spaces.length,
+      value: rest.trim(),
+      needsSpace: spaces.length === 0,
+    };
+  }
 
   const kv = keyWithValue.exec(line);
   if (kv) {

@@ -15,6 +15,7 @@ import { quizMarkdownUtils } from "./models/utils/quizMarkdownUtils";
 import { courseItemFileStorageService } from "../course/courseItemFileStorageService";
 import { getFeedbackDelimitersFromSettings } from "../globalSettings/globalSettingsUtils";
 import { assertValidFileName } from "@/services/fileNameValidation";
+import { listBankFiles, readBank } from "./questionBankFileStorage";
 
 export const quizRouter = router({
   getQuiz: publicProcedure
@@ -110,6 +111,34 @@ export const quizRouter = router({
         }
       },
     ),
+  /** The question banks a quiz's text names, for the editor to parse it with. */
+  getBanks: publicProcedure
+    .input(
+      z.object({
+        courseName: z.string(),
+        moduleName: z.string(),
+        paths: z.array(z.string()),
+      }),
+    )
+    .query(async ({ input: { courseName, moduleName, paths } }) => {
+      const quizFolder = path.join(
+        await getCoursePathByName(courseName),
+        moduleName,
+        "quizzes",
+      );
+      // any quiz in the folder resolves a relative path the same way
+      const quizFile = path.join(quizFolder, "quiz.md");
+      const entries = await Promise.all(
+        paths.map(async (p) => [p, await readBank(quizFile, p)] as const),
+      );
+      return Object.fromEntries(entries);
+    }),
+
+  /** Every bank file in a module's banks folder, as `<module>/banks/<file>`. */
+  listBankFiles: publicProcedure
+    .input(z.string())
+    .query(async ({ input: courseName }) => await listBankFiles(courseName)),
+
   deleteQuiz: publicProcedure
     .input(
       z.object({

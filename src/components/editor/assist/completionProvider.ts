@@ -75,6 +75,7 @@ export function shouldAutoSuggest(ctx: LineContext): boolean {
       (ctx.key === "AssignmentGroupName" ||
         ctx.key === "AssignmentGroup" ||
         ctx.key === "GroupSet" ||
+        ctx.key === "Bank" ||
         booleanKeys.has(ctx.key))
     );
   if (ctx.kind === "listItem")
@@ -142,6 +143,18 @@ export function buildCompletions(
         suggestions: data.groupSets.map((g) =>
           item(g.name, lead + g.name, range, Kind.Class, {
             detail: `${g.groupCount} group${g.groupCount === 1 ? "" : "s"} · ${g.studentCount} students`,
+          })
+        ),
+      };
+    }
+    if (ctx.key === "Bank") {
+      if (data.bankPaths.length === 0) return undefined;
+      return {
+        suggestions: data.bankPaths.map((p) =>
+          item(p, lead + p, range, Kind.File, {
+            detail: "question bank",
+            // the file name finds it, whichever module it is in
+            filterText: `${p.split("/").pop()} ${p}`,
           })
         ),
       };

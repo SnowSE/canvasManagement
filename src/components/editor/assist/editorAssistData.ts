@@ -9,6 +9,8 @@ export interface EditorAssistData {
   groupSetsLoaded: boolean;
   assignmentGroupNames: string[];
   fileUploadTypes: string[];
+  /** Question bank files, each as the path a quiz in this module writes after Bank:. */
+  bankPaths: string[];
   calendar: {
     daysOfWeek: DayOfWeek[];
     holidays: string[]; // MM/DD/YYYY
@@ -25,6 +27,7 @@ export const emptyAssistData: EditorAssistData = {
   groupSetsLoaded: false,
   assignmentGroupNames: [],
   fileUploadTypes: [],
+  bankPaths: [],
   calendar: {
     daysOfWeek: [],
     holidays: [],

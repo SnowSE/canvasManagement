@@ -167,6 +167,15 @@ const useFilePathInvalidation = () => {
         });
       }
 
+      // a bank's questions are part of every quiz that names it
+      if (itemType === "banks") {
+        queryClient.invalidateQueries({ queryKey: trpc.quiz.getBanks.queryKey() });
+        queryClient.invalidateQueries({ queryKey: trpc.quiz.listBankFiles.queryKey() });
+        queryClient.invalidateQueries({ queryKey: trpc.quiz.getQuiz.queryKey() });
+        queryClient.invalidateQueries({ queryKey: trpc.quiz.getAllQuizzes.queryKey() });
+        return;
+      }
+
       if (itemType === "assignments") {
         console.log("assignment updated on FS ", allParts);
         queryClient.invalidateQueries({
@@ -229,6 +238,8 @@ const useFilePathInvalidation = () => {
       trpc.assignment.getAssignment,
       trpc.lectures.getLectures,
       trpc.git.status,
+      trpc.quiz.getBanks,
+      trpc.quiz.listBankFiles,
       trpc.module.getInvalidItems,
       trpc.module.getInvalidItemsForCourse,
       trpc.module.getRawItem,

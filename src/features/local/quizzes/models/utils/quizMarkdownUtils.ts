@@ -130,7 +130,8 @@ const getQuizWithOnlySettings = (settings: string, name: string): LocalQuiz => {
 
 
 // A question group is a "Group:" section (with its Pick and Points lines),
-// the group's questions, then an "EndGroup" section.
+// the group's questions, then an "EndGroup" section. With a Bank line the
+// questions come from that file instead, and EndGroup follows straight after.
 const groupHeaderPattern = /^group:/i;
 const endGroupPattern = /^end ?group$/i;
 
@@ -143,10 +144,17 @@ const parseGroupHeader = (section: string) => {
       .trim();
   const name = value("Group") ?? "";
   if (!name) throw new Error("Error with Group: a group needs a name, like Group: Ports");
-  const unknown = lines.find((line) => !/^(group|pick|points):/i.test(line.trim()));
+  const unknown = lines.find(
+    (line) => !/^(group|pick|points|bank):/i.test(line.trim())
+  );
   if (unknown)
     throw new Error(
-      `Error with Group: ${name}: "${unknown.trim()}" isn't a group setting (Group, Pick, Points); start the group's first question in a new --- section`
+      `Error with Group: ${name}: "${unknown.trim()}" isn't a group setting (Group, Pick, Points, Bank); start the group's first question in a new --- section`
+    );
+  const bank = value("Bank");
+  if (bank === "")
+    throw new Error(
+      `Error with Group: ${name}: Bank needs the path of a question bank file, like Bank: ../banks/networking.md`
     );
   const rawPick = value("Pick") ?? "";
   if (!/^\d+$/.test(rawPick) || parseInt(rawPick, 10) === 0)
@@ -158,10 +166,60 @@ const parseGroupHeader = (section: string) => {
   if (isNaN(points))
     throw new Error(`Error with Group: ${name}: Points: ${rawPoints} (points for each question)`);
   return {
-    group: { name, pickCount: parseInt(rawPick, 10) } as QuestionGroup,
+    group: {
+      name,
+      pickCount: parseInt(rawPick, 10),
+      ...(bank && { bank }),
+    } as QuestionGroup,
     points,
   };
 };
+
+const bankLinePattern = /^bank:\s*(.*?)\s*$/i;
+
+/** The questions of a question bank file: question sections separated by --- lines. */
+const parseBank = (
+  text: string,
+  bankPath: string,
+  firstIndex: number,
+  delimiters?: FeedbackDelimiters
+) => {
+  const sections = text
+    .replace(/\r\n/g, "\n")
+    .split("---\n")
+    .filter((section) => section.trim().length > 0);
+  if (sections.length === 0)
+    throw new Error(`Error in question bank ${bankPath}: it has no questions`);
+  return sections.map((section, i) => {
+    const firstLine = section.trim().split("\n")[0].trim();
+    if (groupHeaderPattern.test(firstLine) || endGroupPattern.test(section.trim()))
+      throw new Error(
+        `Error in question bank ${bankPath}: a bank holds only questions, not Group or EndGroup sections`
+      );
+    if (/^points:/i.test(firstLine))
+      throw new Error(
+        `Error in question bank ${bankPath}, question ${i + 1}: a bank's questions take their points from the Group that uses the bank, so they don't have Points lines`
+      );
+    return quizQuestionMarkdownUtils.parseMarkdown(
+      section,
+      firstIndex + i,
+      delimiters
+    );
+  });
+};
+
+/** A bank file's text for its questions (without the Points lines the group sets). */
+const bankToMarkdown = (
+  questions: LocalQuizQuestion[],
+  delimiters?: FeedbackDelimiters
+) =>
+  questions
+    .map((q) =>
+      quizQuestionMarkdownUtils
+        .toMarkdown(q, delimiters)
+        .replace(/^Points: .*\n/, "")
+    )
+    .join("\n\n---\n\n") + "\n";
 
 const groupQuestions = (questions: LocalQuizQuestion[]) =>
   questions.reduce(
@@ -193,13 +251,12 @@ export const quizMarkdownUtils = {
           quizQuestionMarkdownUtils.toMarkdown(q, delimiters)
         );
         if (!group) return markdown;
+        const header = `Group: ${group.name}\nPick: ${group.pickCount}\nPoints: ${questions[0].points}`;
+        // a bank's questions stay in the bank file
+        if (group.bank) return [`${header}\nBank: ${group.bank}`, "EndGroup"];
         // a grouped question's points are the group's
         const withoutPoints = markdown.map((m) => m.replace(/^Points: .*\n/, ""));
-        return [
-          `Group: ${group.name}\nPick: ${group.pickCount}\nPoints: ${questions[0].points}`,
-          ...withoutPoints,
-          "EndGroup",
-        ];
+        return [header, ...withoutPoints, "EndGroup"];
       }
     );
     const questionDelimiter = "\n\n---\n\n";
@@ -227,7 +284,8 @@ ${questionMarkdown}`;
     const reparsedQuiz = quizMarkdownUtils.parseMarkdown(
       markdown,
       quiz.name,
-      delimiters
+      delimiters,
+      quizMarkdownUtils.banksOf(quiz, delimiters)
     );
     const reparsedMarkdown = quizMarkdownUtils.toMarkdown(
       reparsedQuiz,
@@ -243,10 +301,35 @@ ${questionMarkdown}`;
     return markdown;
   },
 
+  /** The question bank paths a quiz file's groups name, for loading them. */
+  bankPaths(input: string): string[] {
+    const paths = input
+      .split("\n")
+      .map((line) => bankLinePattern.exec(line.trim())?.[1])
+      .filter((p): p is string => !!p);
+    return [...new Set(paths)];
+  },
+
+  /** Each bank's text, rebuilt from the questions a quiz got from it. */
+  banksOf(
+    quiz: LocalQuiz,
+    delimiters?: FeedbackDelimiters
+  ): Record<string, string> {
+    const banks: Record<string, string> = {};
+    for (const { group, questions } of groupQuestions(quiz.questions))
+      if (group?.bank) banks[group.bank] = bankToMarkdown(questions, delimiters);
+    return banks;
+  },
+
+  /**
+   * banks holds the text of each question bank file the quiz's groups name,
+   * by the path written after Bank:.
+   */
   parseMarkdown(
     input: string,
     name: string,
-    delimiters?: FeedbackDelimiters
+    delimiters?: FeedbackDelimiters,
+    banks: Record<string, string> = {}
   ): LocalQuiz {
     const splitInput = input.split("---\n");
     const settings = splitInput[0];
@@ -257,7 +340,9 @@ ${questionMarkdown}`;
       .filter((str) => str.trim().length > 0);
     const questions: LocalQuizQuestion[] = [];
     const groupNames = new Set<string>();
-    let current: { group: QuestionGroup; points: number; size: number } | undefined;
+    let current:
+      | { group: QuestionGroup; points: number; size: number }
+      | undefined;
     const endGroup = () => {
       if (current && current.size < current.group.pickCount)
         throw new Error(
@@ -278,6 +363,18 @@ ${questionMarkdown}`;
           throw new Error(`Error with Group: ${group.name}: two groups have that name`);
         groupNames.add(group.name);
         current = { group, points, size: 0 };
+        if (group.bank) {
+          const text = banks[group.bank];
+          if (text === undefined)
+            throw new Error(
+              `Error with Group: ${group.name}: question bank ${group.bank} isn't loaded`
+            );
+          const bankQuestions = parseBank(text, group.bank, questions.length, delimiters);
+          current.size = bankQuestions.length;
+          questions.push(
+            ...bankQuestions.map((q) => ({ ...q, points, group }))
+          );
+        }
         continue;
       }
       const question = quizQuestionMarkdownUtils.parseMarkdown(
@@ -285,6 +382,10 @@ ${questionMarkdown}`;
         questions.length,
         delimiters
       );
+      if (current?.group.bank)
+        throw new Error(
+          `Error with Group: ${current.group.name}: its questions come from ${current.group.bank}, so put EndGroup right after the Group section, before question ${questions.length + 1}`
+        );
       if (current) {
         if (/^points:/i.test(firstLine))
           throw new Error(

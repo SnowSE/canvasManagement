@@ -250,6 +250,28 @@ EndGroup
 `}</Example>
       </HelpSection>
 
+      <HelpSection title="Question banks (a group's questions from a file)">
+        <P>
+          To share questions between quizzes, put them in a bank file: a{" "}
+          <C>.md</C> file in a <C>banks</C> folder in the module (beside{" "}
+          <C>quizzes</C>) holding only questions, separated by <C>---</C>{" "}
+          lines, without <C>Points</C> lines. A group&apos;s <C>Bank</C> line
+          takes its questions from that file, with the path relative to the
+          quiz, and <C>EndGroup</C> comes right after. On the <C>Bank:</C>{" "}
+          line, the suggestions list every bank in the course with the right
+          path. Editing the bank changes every quiz that uses it; click Update
+          in Canvas on each to send the change.
+        </P>
+        <Example>{`
+Group: Ports
+Pick: 2
+Points: 1
+Bank: ../banks/ports.md
+---
+EndGroup
+`}</Example>
+      </HelpSection>
+
       <HelpSection title="Short answer (fill in the blank)">
         <P>
           End with <C>short_answer</C> (or <C>short answer</C>) for a manually

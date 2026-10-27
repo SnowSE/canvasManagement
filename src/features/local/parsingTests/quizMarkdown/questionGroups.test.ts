@@ -118,3 +118,90 @@ Two?
     ).toThrow(message);
   });
 });
+
+describe("question banks", () => {
+  const quizMarkdown = `${settings}Group: Ports
+Pick: 1
+Points: 2
+Bank: ../banks/ports.md
+
+---
+
+EndGroup
+
+---
+
+Points: 5
+Explain the three-way handshake.
+essay`;
+  const bank = `What port does HTTP use?
+*a) 80
+b) 443
+
+---
+
+What port does SSH use?
+*a) 22
+b) 21
+`;
+  const banks = { "../banks/ports.md": bank };
+
+  it("lists the banks a quiz names", () => {
+    expect(quizMarkdownUtils.bankPaths(quizMarkdown)).toEqual(["../banks/ports.md"]);
+  });
+
+  it("puts the bank's questions in the group, with the group's points", () => {
+    const quiz = quizMarkdownUtils.parseMarkdown(quizMarkdown, "Banked", undefined, banks);
+    expect(quiz.questions.map((q) => [q.text, q.group?.name, q.points])).toEqual([
+      ["What port does HTTP use?", "Ports", 2],
+      ["What port does SSH use?", "Ports", 2],
+      ["Explain the three-way handshake.", undefined, 5],
+    ]);
+    expect(quiz.questions[0].group).toEqual({
+      name: "Ports",
+      pickCount: 1,
+      bank: "../banks/ports.md",
+    });
+    expect(quizPointTotal(quiz.questions)).toBe(2 + 5);
+  });
+
+  it("writes the Bank line back, not the bank's questions", () => {
+    const quiz = quizMarkdownUtils.parseMarkdown(quizMarkdown, "Banked", undefined, banks);
+    expect(quizMarkdownUtils.toMarkdown(quiz)).toBe(quizMarkdown);
+    expect(quizMarkdownUtils.assertCanRoundTrip(quiz)).toBe(quizMarkdown);
+    expect(quizMarkdownUtils.banksOf(quiz)).toEqual(banks);
+  });
+
+  it.each([
+    [{}, "question bank ../banks/ports.md isn't loaded"],
+    [{ "../banks/ports.md": "Points: 3\nOne?\n*a) yes" }, "don't have Points lines"],
+    [{ "../banks/ports.md": "Group: Inner\nPick: 1\n---\nOne?\n*a) yes" }, "not Group or EndGroup"],
+    [{ "../banks/ports.md": "\n" }, "it has no questions"],
+  ])("explains a problem with the bank: %s", (badBanks, message) => {
+    expect(() =>
+      quizMarkdownUtils.parseMarkdown(quizMarkdown, "Banked", undefined, badBanks),
+    ).toThrow(message);
+  });
+
+  it("needs EndGroup before questions that follow a bank group", () => {
+    expect(() =>
+      quizMarkdownUtils.parseMarkdown(
+        `${settings}Group: Ports\nPick: 1\nBank: ../banks/ports.md\n---\nOne?\n*a) yes`,
+        "Banked",
+        undefined,
+        banks,
+      ),
+    ).toThrow("put EndGroup right after the Group section");
+  });
+
+  it("checks Pick against the bank's size", () => {
+    expect(() =>
+      quizMarkdownUtils.parseMarkdown(
+        quizMarkdown.replace("Pick: 1", "Pick: 3"),
+        "Banked",
+        undefined,
+        banks,
+      ),
+    ).toThrow("Pick: 3, but the group has 2 questions");
+  });
+});

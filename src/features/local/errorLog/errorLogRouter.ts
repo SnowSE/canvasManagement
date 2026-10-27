@@ -42,7 +42,12 @@ export const errorLogRouter = router({
       const parses =
         itemType && itemTypes.includes(itemType)
           ? async (text: string, name: string) =>
-              parseItemText(itemType as CourseItemType, text, name).then(
+              parseItemText(
+                itemType as CourseItemType,
+                text,
+                name,
+                entry.context?.filePath,
+              ).then(
                 () => true,
                 () => false,
               )

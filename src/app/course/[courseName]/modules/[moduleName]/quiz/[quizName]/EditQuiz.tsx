@@ -1,12 +1,13 @@
 "use client";
 import { MonacoEditor } from "@/components/editor/MonacoEditor";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import QuizPreview from "./QuizPreview";
 import { QuizButtons } from "./QuizButton";
 import ClientOnly from "@/components/ClientOnly";
 import { SuspenseAndErrorHandling } from "@/components/SuspenseAndErrorHandling";
 import { useCourseContext } from "@/app/course/[courseName]/context/courseContext";
 import {
+  useQuizBanksQuery,
   useQuizQuery,
   useUpdateQuizMutation,
 } from "@/features/local/quizzes/quizHooks";
@@ -51,6 +52,9 @@ export default function EditQuiz({
   const [error, setError] = useState("");
   const [showHelp, setShowHelp] = useState(false);
 
+  const bankPaths = useMemo(() => quizMarkdownUtils.bankPaths(text), [text]);
+  const { data: bankFiles } = useQuizBanksQuery(moduleName, bankPaths);
+
   useEffect(() => {
     const delay = 1000;
     const handler = setTimeout(async () => {
@@ -58,11 +62,20 @@ export default function EditQuiz({
         console.log("network requests in progress, not updating page");
         return;
       }
+      // wait for the banks the text names before reading it
+      if (bankPaths.some((p) => !bankFiles?.[p])) return;
       try {
+        const banks: Record<string, string> = {};
+        for (const p of bankPaths) {
+          const bank = bankFiles![p];
+          if ("error" in bank) throw new Error(bank.error);
+          banks[p] = bank.text;
+        }
         const updatedQuiz = quizMarkdownUtils.parseMarkdown(
           text,
           quizName,
           feedbackDelimiters,
+          banks,
         );
         quizMarkdownUtils.assertCanRoundTrip(updatedQuiz, feedbackDelimiters);
 
@@ -102,6 +115,8 @@ export default function EditQuiz({
       clearTimeout(handler);
     };
   }, [
+    bankFiles,
+    bankPaths,
     clientIsAuthoritative,
     courseName,
     feedbackDelimiters,

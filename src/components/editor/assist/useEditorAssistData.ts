@@ -10,11 +10,17 @@ import {
   getDateOnlyMarkdownString,
 } from "@/features/local/utils/timeUtils";
 import { EditorAssistData } from "./editorAssistData";
+import { useParams } from "@tanstack/react-router";
+import { useBankFilesQuery } from "@/features/local/quizzes/quizHooks";
+import { bankPathFromQuiz } from "@/features/local/quizzes/questionBankPaths";
 
 export function useEditorAssistData(): EditorAssistData {
   const { data: settings } = useLocalCourseSettingsQuery();
   const { data: roster } = useRosterStudentsQuery();
   const { data: groupSets } = useRosterGroupSetsQuery();
+  const { moduleName } = useParams({ strict: false }) as { moduleName?: string };
+  const { data: bankFiles } = useBankFilesQuery();
+  const quizModule = moduleName ? decodeURIComponent(moduleName) : undefined;
 
   return useMemo(
     () => ({
@@ -33,6 +39,9 @@ export function useEditorAssistData(): EditorAssistData {
       groupSetsLoaded: !!groupSets,
       assignmentGroupNames: settings.assignmentGroups.map((g) => g.name),
       fileUploadTypes: settings.defaultFileUploadTypes,
+      bankPaths: quizModule
+        ? (bankFiles ?? []).map((file) => bankPathFromQuiz(quizModule, file))
+        : [],
       calendar: {
         daysOfWeek: settings.daysOfWeek,
         holidays: settings.holidays
@@ -45,6 +54,6 @@ export function useEditorAssistData(): EditorAssistData {
         defaultDueTime: settings.defaultDueTime,
       },
     }),
-    [settings, roster, groupSets]
+    [settings, roster, groupSets, quizModule, bankFiles]
   );
 }

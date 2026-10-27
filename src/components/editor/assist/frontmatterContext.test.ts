@@ -104,3 +104,37 @@ What is 2+3?`.split("\n");
     expect(getLineContext(quiz, 4)).toBeNull();
   });
 });
+
+describe("quiz Bank lines", () => {
+  const quiz = [
+    "DueAt: 08/21/2023 23:59:00",
+    "ShuffleAnswers: true",
+    "Description: x",
+    "---",
+    "Group: Ports",
+    "Pick: 1",
+    "Bank: ",
+    "---",
+    "Bank: not in a quiz group but still offered",
+  ];
+
+  it("offers bank paths on a Bank line after the settings", () => {
+    expect(getLineContext(quiz, 6)).toEqual({
+      kind: "value",
+      key: "Bank",
+      valueStart: 7,
+      value: "",
+      needsSpace: false,
+    });
+  });
+
+  it("has nothing for the other lines of a quiz's questions", () => {
+    expect(getLineContext(quiz, 4)).toBeNull();
+    expect(getLineContext(quiz, 3)).toBeNull();
+  });
+
+  it("only in a quiz", () => {
+    const assignment = ["DueAt: 08/21/2023 23:59:00", "SubmissionTypes:", "---", "Bank: x"];
+    expect(getLineContext(assignment, 3)).toBeNull();
+  });
+});
