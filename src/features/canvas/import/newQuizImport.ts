@@ -148,6 +148,8 @@ function convertItem(item: CanvasNewQuizItem, warnings: string[], number: number
       };
     case "essay":
       return { ...base, text, questionType: QuestionType.ESSAY, answers: [] };
+    case "file-upload":
+      return { ...base, text, questionType: QuestionType.FILE_UPLOAD, answers: [] };
     case "matching": {
       const prompts = data.questions as { id: string; item_body?: string }[] | undefined;
       const matches = correct as Record<string, string> | undefined;

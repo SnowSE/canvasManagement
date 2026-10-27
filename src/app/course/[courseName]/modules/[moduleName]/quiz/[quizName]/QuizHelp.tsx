@@ -208,6 +208,19 @@ essay
 `}</Example>
       </HelpSection>
 
+      <HelpSection title="File upload">
+        <P>
+          End the question with <C>file_upload</C> (or <C>file upload</C>) to
+          have students attach a file. Canvas can&apos;t grade it, so it is
+          graded by hand like an essay.
+        </P>
+        <Example>{`
+Points: 10
+Upload a screenshot of your running container.
+file_upload
+`}</Example>
+      </HelpSection>
+
       <HelpSection title="Short answer (fill in the blank)">
         <P>
           End with <C>short_answer</C> (or <C>short answer</C>) for a manually

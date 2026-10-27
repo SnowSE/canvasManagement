@@ -456,6 +456,8 @@ function convertQuestion(question: CanvasQuizQuestion): LocalQuizQuestion {
       };
     case "essay_question":
       return { ...base, text, questionType: QuestionType.ESSAY, answers: [] };
+    case "file_upload_question":
+      return { ...base, text, questionType: QuestionType.FILE_UPLOAD, answers: [] };
     case "short_answer_question":
       return answers.length === 0
         ? { ...base, text, questionType: QuestionType.SHORT_ANSWER, answers: [] }

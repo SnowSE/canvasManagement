@@ -54,6 +54,7 @@ function localAnswerLines(
   >[];
   switch (question.questionType) {
     case QuestionType.ESSAY:
+    case QuestionType.FILE_UPLOAD:
       return [];
     case QuestionType.MATCHING:
       return [
@@ -94,6 +95,7 @@ function canvasAnswerLines(question: CanvasQuizQuestion): string[] {
   const answers = question.answers ?? [];
   switch (question.question_type) {
     case "essay_question":
+    case "file_upload_question":
       return [];
     case "matching_question":
       return [

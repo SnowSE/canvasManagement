@@ -110,6 +110,7 @@ const items: CanvasNewQuizItem[] = [
   ),
   item("numeric", 1, "How many nodes?", {}, [{ type: "exactResponse", value: "3" }]),
   item("essay", 0, "Anything unclear?", { rce: true }, ""),
+  item("file-upload", 0, "Upload your diagram.", {}, ""),
 ];
 
 describe("newQuizToLocal", () => {
@@ -123,6 +124,7 @@ describe("newQuizToLocal", () => {
       "matching",
       "numerical",
       "essay",
+      "file_upload",
     ]);
     expect(quiz.questions[0].answers).toEqual([
       { correct: true, text: "Follower" },
@@ -164,7 +166,7 @@ describe("newQuizToLocal", () => {
     const markdown = quizMarkdownUtils.toMarkdown(quiz);
     const reparsed = quizMarkdownUtils.parseMarkdown(markdown, quiz.name);
     expect(quizMarkdownUtils.toMarkdown(reparsed)).toBe(markdown);
-    expect(reparsed.questions).toHaveLength(6);
+    expect(reparsed.questions).toHaveLength(7);
   });
 
   it("comments out a stimulus and a note that would end the comment early", () => {

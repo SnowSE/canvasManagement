@@ -12,6 +12,7 @@ export const zodQuestionType = z.enum([
   "short_answer=",
   "numerical",
   "fill_in_multiple_blanks",
+  "file_upload",
 ]);
 
 export const QuestionType = {
@@ -25,6 +26,7 @@ export const QuestionType = {
   SHORT_ANSWER_WITH_ANSWERS: "short_answer=",
   NUMERICAL: "numerical",
   FILL_IN_MULTIPLE_BLANKS: "fill_in_multiple_blanks",
+  FILE_UPLOAD: "file_upload",
 } as const;
 
 export type QuestionType = z.infer<typeof zodQuestionType>;

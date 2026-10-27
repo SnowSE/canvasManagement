@@ -292,6 +292,8 @@ export const quizQuestionAnswerMarkdownUtils = {
     if (indexOfFirstBlankAnswer(linesWithoutPoints) !== -1)
       return QuestionType.FILL_IN_MULTIPLE_BLANKS;
     if (lastLine === "essay") return QuestionType.ESSAY;
+    if (lastLine === "file_upload" || lastLine === "file upload")
+      return QuestionType.FILE_UPLOAD;
     if (lastLine === "short answer") return QuestionType.SHORT_ANSWER;
     if (lastLine === "short_answer") return QuestionType.SHORT_ANSWER;
     if (lastLine === "short_answer=")

@@ -52,7 +52,13 @@ const removeQuestionTypeFromDescriptionLines = (
   linesWithoutAnswers: string[],
   questionType: QuestionType,
 ): string[] => {
-  const questionTypesWithoutAnswers = ["essay", "short answer", "short_answer"];
+  const questionTypesWithoutAnswers = [
+    "essay",
+    "short answer",
+    "short_answer",
+    "file upload",
+    "file_upload",
+  ];
 
   const descriptionLines = questionTypesWithoutAnswers.includes(questionType)
     ? linesWithoutAnswers.filter(
@@ -96,7 +102,8 @@ export const quizQuestionMarkdownUtils = {
       .join("\n");
     const questionTypeIndicator =
       question.questionType === "essay" ||
-      question.questionType === "short_answer"
+      question.questionType === "short_answer" ||
+      question.questionType === QuestionType.FILE_UPLOAD
         ? question.questionType
         : question.questionType === QuestionType.SHORT_ANSWER_WITH_ANSWERS
           ? `\n${QuestionType.SHORT_ANSWER_WITH_ANSWERS}`

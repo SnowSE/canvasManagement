@@ -351,14 +351,25 @@ describe("canvasQuizToLocal", () => {
     expect(quizMarkdownUtils.parseMarkdown(markdown, item.name)).toEqual(item);
   });
 
-  it("imports a question the file can't hold as an essay, with a warning", () => {
+  it("imports a file upload question as one", () => {
     const { item, warnings } = convert([
       question({ question_type: "file_upload_question", points_possible: 3 }),
+    ]);
+    expect(warnings).toEqual([]);
+    expect(item.questions[0]).toMatchObject({
+      questionType: QuestionType.FILE_UPLOAD,
+      points: 3,
+    });
+  });
+
+  it("imports a question the file can't hold as an essay, with a warning", () => {
+    const { item, warnings } = convert([
+      question({ question_type: "calculated_question", points_possible: 3 }),
     ]);
     expect(item.questions[0]).toMatchObject({
       questionType: QuestionType.ESSAY,
       points: 3,
     });
-    expect(warnings[0]).toContain("question 1 (file upload)");
+    expect(warnings[0]).toContain("question 1 (calculated)");
   });
 });
