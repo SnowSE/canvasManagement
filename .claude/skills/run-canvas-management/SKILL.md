@@ -128,6 +128,13 @@ the install is not churning `node_modules` underneath a running vite.
 
 ## Gotchas
 
+- **On a Fedora host `docker` is rootless podman.** `run.sh` detects it and adds
+  `--userns=keep-id --security-opt label=disable`; without them the container
+  can't write `~/.canvas-manager-dev-home` (`EACCES`, `npm error ... root-owned
+  files`). A one-off `docker run` with mounts (the playwright driver) needs
+  `--security-opt label=disable` too, or it gets `Permission denied` reading them.
+- **`EMFILE: too many open files, watch`** from vite means the host's inotify
+  instances ran out (`fs.inotify.max_user_instances`, 128 by default), not open files.
 - **Windows Chrome and Edge are reachable via `/mnt/c` but are a dead end.** Both
   hang indefinitely in `--headless` when launched from WSL, and exit 21 with no
   output file when detached. Don't spend time on flag combinations; use the

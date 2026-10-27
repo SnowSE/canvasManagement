@@ -20,8 +20,17 @@ mkdir -p ~/.canvas-manager-dev-home
 ENV_FILE_ARGS=()
 [ -f .env ] && ENV_FILE_ARGS=(--env-file .env)
 
+# Rootless podman (Fedora's "docker") maps -u to a different uid on the host
+# unless keep-id is set, and SELinux blocks the mounted folders unless
+# labeling is off for this container. Docker itself rejects keep-id.
+PODMAN_ARGS=()
+if docker --version 2>/dev/null | grep -qi podman; then
+  PODMAN_ARGS=(--userns=keep-id --security-opt label=disable)
+fi
+
 docker run "${MODE_ARGS[@]}" \
   --name canvas-manager-2 \
+  "${PODMAN_ARGS[@]}" \
   -e TZ=America/Denver \
   -e NODE_ENV=development \
   -e "NEXT_PUBLIC_ENABLE_FILE_SYNC=true" \
