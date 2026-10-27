@@ -229,6 +229,11 @@ file_upload
           of its questions, so they don&apos;t have their own. The quiz is
           worth Pick × Points for the group.
         </P>
+        <P>
+          Right after Add to Canvas, Canvas may show the quiz with blank
+          points. It fills them in when the quiz is saved: after Update in
+          Canvas, a save in Canvas, or publishing.
+        </P>
         <Example>{`
 Group: Ports
 Pick: 2
