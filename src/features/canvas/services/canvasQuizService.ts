@@ -3,7 +3,10 @@ import { canvasApi, paginatedRequest } from "./canvasServiceUtils";
 import { axiosClient } from "@/services/axiosUtils";
 import { getDateFromStringOrThrow } from "@/features/local/utils/timeUtils";
 import { canvasAssignmentService } from "./canvasAssignmentService";
-import { CanvasQuizQuestion } from "@/features/canvas/models/quizzes/canvasQuizQuestionModel";
+import {
+  CanvasQuizGroup,
+  CanvasQuizQuestion,
+} from "@/features/canvas/models/quizzes/canvasQuizQuestionModel";
 import { LocalQuiz } from "@/features/local/quizzes/models/localQuiz";
 import {
   LocalQuizQuestion,
@@ -122,7 +125,8 @@ const createQuestionOnly = async (
   canvasQuizId: number,
   question: LocalQuizQuestion,
   position: number,
-  settings: LocalCourseSettings
+  settings: LocalCourseSettings,
+  quizGroupId?: number
 ) => {
   console.log("Creating individual question"); //, question);
 
@@ -138,6 +142,7 @@ const createQuestionOnly = async (
       question_type: getQuestionTypeForCanvas(question),
       points_possible: question.points,
       position,
+      ...(quizGroupId !== undefined && { quiz_group_id: quizGroupId }),
       ...(question.questionType === QuestionType.MATCHING &&
       question.matchDistractors.length > 0
         ? {
@@ -168,13 +173,60 @@ const hackFixQuestionOrdering = async (
 ) => {
   console.log("Fixing question order");
 
-  const order = questionAndPositions.map((qp) => ({
-    type: "question",
-    id: qp.question.id.toString(),
-  }));
+  // a group takes one place in the quiz's order, where its first question is;
+  // its questions are ordered inside it
+  const order: { type: "question" | "group"; id: string }[] = [];
+  const groupOrders = new Map<number, { type: "question"; id: string }[]>();
+  for (const { question } of questionAndPositions) {
+    const groupId: number | null | undefined = question.quiz_group_id;
+    const item = { type: "question" as const, id: question.id.toString() };
+    if (!groupId) {
+      order.push(item);
+      continue;
+    }
+    if (!groupOrders.has(groupId)) {
+      groupOrders.set(groupId, []);
+      order.push({ type: "group", id: groupId.toString() });
+    }
+    groupOrders.get(groupId)!.push(item);
+  }
 
-  const url = `${canvasApi}/courses/${canvasCourseId}/quizzes/${canvasQuizId}/reorder`;
-  await rateLimitAwarePost(url, { order });
+  const url = `${canvasApi}/courses/${canvasCourseId}/quizzes/${canvasQuizId}`;
+  await rateLimitAwarePost(`${url}/reorder`, { order });
+  for (const [groupId, groupOrder] of groupOrders)
+    await rateLimitAwarePost(`${url}/groups/${groupId}/reorder`, {
+      order: groupOrder,
+    });
+};
+
+/** Creates the quiz's question groups in Canvas, by group name. */
+const createQuestionGroups = async (
+  canvasCourseId: number,
+  canvasQuizId: number,
+  localQuiz: LocalQuiz
+) => {
+  const groups = new Map<string, number>();
+  for (const question of localQuiz.questions) {
+    if (!question.group || groups.has(question.group.name)) continue;
+    const { data } = await rateLimitAwarePost<
+      { quiz_groups?: CanvasQuizGroup[] } | CanvasQuizGroup
+    >(`${canvasApi}/courses/${canvasCourseId}/quizzes/${canvasQuizId}/groups`, {
+      quiz_groups: [
+        {
+          name: question.group.name,
+          pick_count: question.group.pickCount,
+          question_points: question.points,
+        },
+      ],
+    });
+    // Canvas answers with { quiz_groups: [group] }
+    const created: CanvasQuizGroup | undefined =
+      "quiz_groups" in data ? data.quiz_groups?.[0] : (data as CanvasQuizGroup);
+    if (!created?.id)
+      throw new Error(`Canvas did not create question group "${question.group.name}"`);
+    groups.set(question.group.name, created.id);
+  }
+  return groups;
 };
 
 const verifyQuestionOrder = async (
@@ -224,8 +276,9 @@ const verifyQuestionOrder = async (
         return false;
       }
 
-      // Verify position is correct
+      // Verify position is correct (a group's questions are numbered inside it)
       if (
+        !localQuestion.group &&
         canvasQuestion.position !== undefined &&
         canvasQuestion.position !== i + 1
       ) {
@@ -277,6 +330,11 @@ const createQuizQuestions = async (
 ) => {
   console.log("Creating quiz questions"); //, localQuiz);
 
+  const groupIds = await createQuestionGroups(
+    canvasCourseId,
+    canvasQuizId,
+    localQuiz
+  );
   const tasks = localQuiz.questions.map(
     async (question, index) =>
       await createQuestionOnly(
@@ -284,7 +342,8 @@ const createQuizQuestions = async (
         canvasQuizId,
         question,
         index,
-        settings
+        settings,
+        question.group ? groupIds.get(question.group.name) : undefined
       )
   );
   const questionAndPositions = await Promise.all(tasks);
@@ -345,6 +404,48 @@ const quizSettingsForCanvas = (
   assignment_group_id: canvasAssignmentGroupId,
 });
 
+/**
+ * The questions with their groups, in quiz order. Canvas has no call that
+ * lists a quiz's groups, so each is fetched by the id on its questions; a
+ * question's position counts inside its group, and the group's in the quiz.
+ */
+export const withQuizGroups = async (
+  canvasCourseId: number,
+  canvasQuizId: number,
+  questions: CanvasQuizQuestion[]
+) => {
+  const groupIds = [
+    ...new Set(questions.map((q) => q.quiz_group_id).filter((id) => !!id)),
+  ] as number[];
+  const groups = new Map(
+    await Promise.all(
+      groupIds.map(
+        async (id) =>
+          [
+            id,
+            (
+              await axiosClient.get<CanvasQuizGroup>(
+                `${canvasApi}/courses/${canvasCourseId}/quizzes/${canvasQuizId}/groups/${id}`
+              )
+            ).data,
+          ] as const
+      )
+    )
+  );
+  const withGroups = questions.map((q) => {
+    const group = q.quiz_group_id ? groups.get(q.quiz_group_id) : undefined;
+    return group ? { ...q, quiz_group: group } : q;
+  });
+  const placeInQuiz = (q: CanvasQuizQuestion) =>
+    q.quiz_group ? (q.quiz_group.position ?? 0) : (q.position ?? 0);
+  return withGroups.sort(
+    (a, b) =>
+      placeInQuiz(a) - placeInQuiz(b) ||
+      (a.quiz_group ? (a.position ?? 0) : 0) -
+        (b.quiz_group ? (b.position ?? 0) : 0)
+  );
+};
+
 export const canvasQuizService = {
   async getAll(canvasCourseId: number): Promise<CanvasQuiz[]> {
     try {
@@ -381,8 +482,7 @@ export const canvasQuizService = {
     try {
       const url = `${canvasApi}/courses/${canvasCourseId}/quizzes/${canvasQuizId}/questions`;
       const questions = await paginatedRequest<CanvasQuizQuestion[]>({ url });
-      // Sort by position to ensure correct order
-      return questions.sort((a, b) => (a.position || 0) - (b.position || 0));
+      return withQuizGroups(canvasCourseId, canvasQuizId, questions);
     } catch (error) {
       console.error("Error fetching quiz questions from Canvas:", error);
       throw error;
@@ -480,6 +580,12 @@ export const canvasQuizService = {
     onStep(`Removing ${oldQuestions.length} questions from Canvas`);
     await Promise.all(
       oldQuestions.map((q) => rateLimitAwareDelete(`${url}/questions/${q.id}`))
+    );
+    const oldGroupIds = [
+      ...new Set(oldQuestions.map((q) => q.quiz_group_id).filter((id) => !!id)),
+    ];
+    await Promise.all(
+      oldGroupIds.map((id) => rateLimitAwareDelete(`${url}/groups/${id}`))
     );
 
     onStep(`Adding ${localQuiz.questions.length} questions from the file`);

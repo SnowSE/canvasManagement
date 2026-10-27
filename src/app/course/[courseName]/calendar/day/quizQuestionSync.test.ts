@@ -405,3 +405,65 @@ What is 10/4?
     expect(checkQuizQuestions(local, [canvas(0, 0)], settings)[0].same).toBe(false);
   });
 });
+
+describe("question groups", () => {
+  const local = questionsOf(`Group: Ports
+Pick: 1
+Points: 2
+---
+What port does HTTP use?
+*a) 80
+b) 443
+---
+What port does SSH use?
+*a) 22
+b) 21
+---
+EndGroup`);
+  const canvasPortQuestion = (text: string, right: string, wrong: string, group?: { name: string; pick_count: number }) =>
+    canvasQuestion({
+      question_text: `<p>${text}</p>`,
+      points_possible: 2,
+      answers: [
+        { id: 1, text: right, html: `<p>${right}</p>`, weight: 100 },
+        { id: 2, text: wrong, html: `<p>${wrong}</p>`, weight: 0 },
+      ],
+      ...(group && { quiz_group_id: 5, quiz_group: { id: 5, question_points: 2, ...group } }),
+    });
+  const ports = { name: "Ports", pick_count: 1 };
+
+  it("match when Canvas has the same group", () => {
+    const canvas = [
+      canvasPortQuestion("What port does HTTP use?", "80", "443", ports),
+      canvasPortQuestion("What port does SSH use?", "22", "21", ports),
+    ];
+    expect(checkQuizQuestions(local, canvas, settings).every((f) => f.same)).toBe(true);
+  });
+
+  it("differ when Canvas has the questions outside the group, or picks a different number", () => {
+    const outside = checkQuizQuestions(local, [
+      canvasPortQuestion("What port does HTTP use?", "80", "443"),
+      canvasPortQuestion("What port does SSH use?", "22", "21"),
+    ], settings);
+    expect(outside[0].same).toBe(false);
+    expect(outside[0].message).toContain("group");
+    expect(outside[0].local).toContain("group: Ports, pick 1");
+
+    const pickTwo = checkQuizQuestions(local, [
+      canvasPortQuestion("What port does HTTP use?", "80", "443", { name: "Ports", pick_count: 2 }),
+      canvasPortQuestion("What port does SSH use?", "22", "21", { name: "Ports", pick_count: 2 }),
+    ], settings);
+    expect(pickTwo.every((f) => f.same)).toBe(false);
+  });
+
+  it("don't count a question a student's attempt wasn't picked as missing", () => {
+    const attempt = [canvasPortQuestion("What port does SSH use?", "22", "21")];
+    const fields = checkQuizQuestions(local, attempt, settings, { ignoreAnswerOrder: true, isAttempt: true });
+    expect(fields.every((f) => f.same)).toBe(true);
+  });
+
+  it("score a group once per question picked when checking the point total", () => {
+    const attempt = [canvasQuestion({ points_possible: 2 })];
+    expect(pointTotalChangeError(local, attempt)).toBeUndefined();
+  });
+});

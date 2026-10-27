@@ -361,6 +361,7 @@ const VersionSection: FC<{
       questions &&
       checkQuizQuestions(quiz.questions, questions, settings, {
         ignoreAnswerOrder: true,
+        isAttempt: true,
       }),
     [questions, quiz.questions, settings],
   );

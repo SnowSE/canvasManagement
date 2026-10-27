@@ -351,6 +351,36 @@ describe("canvasQuizToLocal", () => {
     expect(quizMarkdownUtils.parseMarkdown(markdown, item.name)).toEqual(item);
   });
 
+  it("keeps question groups, with the group's points, and a file that reads back the same", () => {
+    const ports = { id: 5, name: "Ports", pick_count: 1, question_points: 3, position: 2 };
+    const essay = (id: number, text: string, group?: typeof ports) =>
+      question({
+        id,
+        question_type: "essay_question",
+        question_text: `<p>${text}</p>`,
+        points_possible: 1,
+        ...(group && { quiz_group_id: group.id, quiz_group: group }),
+      });
+    const { item, warnings } = convert([
+      essay(1, "HTTP?", ports),
+      essay(2, "Before"),
+      essay(3, "SSH?", ports),
+      essay(4, "Duplicate name", { ...ports, id: 6, pick_count: 4 }),
+    ]);
+    expect(item.questions.map((q) => [q.text, q.group?.name, q.points])).toEqual([
+      ["HTTP?", "Ports", 3],
+      ["SSH?", "Ports", 3],
+      ["Before", undefined, 1],
+      ["Duplicate name", "Ports (2)", 3],
+    ]);
+    expect(item.questions[3].group?.pickCount).toBe(1);
+    expect(warnings).toEqual([
+      'group "Ports (2)" picks 4 but has 1 questions, so each student gets all of them',
+    ]);
+    const markdown = quizMarkdownUtils.toMarkdown(item);
+    expect(quizMarkdownUtils.parseMarkdown(markdown, item.name)).toEqual(item);
+  });
+
   it("imports a file upload question as one", () => {
     const { item, warnings } = convert([
       question({ question_type: "file_upload_question", points_possible: 3 }),

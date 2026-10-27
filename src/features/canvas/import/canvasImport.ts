@@ -588,16 +588,60 @@ function questionToLocal(
   }
 }
 
+/** A group's questions together, where its first question is. */
+const inGroupOrder = (questions: CanvasQuizQuestion[]) => {
+  const groupKey = (q: CanvasQuizQuestion) => q.quiz_group?.id;
+  return questions.filter(
+    (q, i) =>
+      !groupKey(q) || questions.findIndex((o) => groupKey(o) === groupKey(q)) === i,
+  ).flatMap((q) =>
+    groupKey(q) ? questions.filter((o) => groupKey(o) === groupKey(q)) : [q],
+  );
+};
+
+/** The file's group on each question Canvas has in one, with the group's points. */
+function withGroups(
+  canvasQuestions: CanvasQuizQuestion[],
+  questions: LocalQuizQuestion[],
+  warnings: string[],
+): LocalQuizQuestion[] {
+  const names = new Map<number, string>();
+  const sizes = new Map<number, number>();
+  for (const q of canvasQuestions)
+    if (q.quiz_group) sizes.set(q.quiz_group.id, (sizes.get(q.quiz_group.id) ?? 0) + 1);
+  return questions.map((question, i) => {
+    const group = canvasQuestions[i].quiz_group;
+    if (!group) return question;
+    if (!names.has(group.id)) {
+      // the file finds a group by its name, so each needs its own
+      const wanted = group.name.trim() || `Group ${names.size + 1}`;
+      const taken = new Set(names.values());
+      let name = wanted;
+      for (let n = 2; taken.has(name); n++) name = `${wanted} (${n})`;
+      names.set(group.id, name);
+      if (group.pick_count > sizes.get(group.id)!)
+        warnings.push(
+          `group "${name}" picks ${group.pick_count} but has ${sizes.get(group.id)} questions, so each student gets all of them`,
+        );
+    }
+    return {
+      ...question,
+      points: group.question_points,
+      group: {
+        name: names.get(group.id)!,
+        pickCount: Math.min(group.pick_count, sizes.get(group.id)!),
+      },
+    };
+  });
+}
+
 export function canvasQuizToLocal(
   canvasQuiz: CanvasQuiz,
   canvasQuestions: CanvasQuizQuestion[],
   context: ImportContext,
 ): Converted<LocalQuiz> {
   const warnings: string[] = [];
-  if (canvasQuestions.some((q) => q.quiz_group_id))
-    warnings.push(
-      "some questions are in question groups, which the file doesn't have; every question is listed",
-    );
+  const ordered = inGroupOrder(canvasQuestions);
   const quiz: LocalQuiz = {
     name: canvasQuiz.title,
     description: canvasHtmlToMarkdown(canvasQuiz.description),
@@ -611,7 +655,11 @@ export function canvasQuizToLocal(
     localAssignmentGroupName: context.assignmentGroupName ?? "",
     allowedAttempts: canvasQuiz.allowed_attempts ?? 1,
     ...(canvasQuiz.time_limit ? { timeLimit: canvasQuiz.time_limit } : {}),
-    questions: canvasQuestions.map((q, i) => questionToLocal(q, i + 1, warnings)),
+    questions: withGroups(
+      ordered,
+      ordered.map((q, i) => questionToLocal(q, i + 1, warnings)),
+      warnings,
+    ),
   };
   // throws when the description would break the file's settings section
   quizMarkdownUtils.assertCanRoundTrip(quiz);

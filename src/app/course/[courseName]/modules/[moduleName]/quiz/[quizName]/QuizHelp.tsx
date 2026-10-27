@@ -221,6 +221,35 @@ file_upload
 `}</Example>
       </HelpSection>
 
+      <HelpSection title="Question groups (pick some at random)">
+        <P>
+          A <C>Group:</C> section gives each student <C>Pick</C> of the
+          questions after it, chosen at random, up to an <C>EndGroup</C>{" "}
+          section. The group&apos;s <C>Points</C> line sets the points of each
+          of its questions, so they don&apos;t have their own. The quiz is
+          worth Pick × Points for the group.
+        </P>
+        <Example>{`
+Group: Ports
+Pick: 2
+Points: 1
+---
+What port does HTTP use?
+*a) 80
+b) 443
+---
+What port does SSH use?
+*a) 22
+b) 21
+---
+What port does DNS use?
+*a) 53
+b) 25
+---
+EndGroup
+`}</Example>
+      </HelpSection>
+
       <HelpSection title="Short answer (fill in the blank)">
         <P>
           End with <C>short_answer</C> (or <C>short answer</C>) for a manually

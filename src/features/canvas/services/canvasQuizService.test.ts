@@ -717,3 +717,106 @@ describe("fill in multiple blanks", () => {
     ]);
   });
 });
+
+describe("question groups", () => {
+  beforeEach(() => {
+    // other tests spy on getQuizQuestions, which these need to run for real
+    vi.restoreAllMocks();
+    vi.clearAllMocks();
+  });
+
+  const base = { quiz_id: 7, question_name: "", question_type: "essay_question", question_text: "", correct_comments: "", incorrect_comments: "", neutral_comments: "" };
+  const group = (id: number, position: number) => ({ id, name: `G${id}`, pick_count: 1, question_points: 2, position });
+
+  it("looks up each group and lists its questions where the group is in the quiz", async () => {
+    const { paginatedRequest } = await import("./canvasServiceUtils");
+    const { axiosClient } = await import("@/services/axiosUtils");
+    vi.mocked(paginatedRequest).mockResolvedValue([
+      { ...base, id: 1, position: 1 },
+      { ...base, id: 3, position: 3 },
+      { ...base, id: 21, position: 2, quiz_group_id: 50 },
+      { ...base, id: 20, position: 1, quiz_group_id: 50 },
+    ]);
+    vi.mocked(axiosClient.get).mockResolvedValue({ data: group(50, 2) });
+
+    const questions = await canvasQuizService.getQuizQuestions(42, 7);
+
+    expect(vi.mocked(axiosClient.get).mock.calls.map(([url]) => url)).toEqual([
+      "https://test.instructure.com/api/v1/courses/42/quizzes/7/groups/50",
+    ]);
+    expect(questions.map((q) => q.id)).toEqual([1, 20, 21, 3]);
+    expect(questions[1].quiz_group).toEqual(group(50, 2));
+  });
+
+  it("creates the groups first, puts their questions in them, and orders the group as one place in the quiz", async () => {
+    const { rateLimitAwarePost } = await import("./canvasWebRequestUtils");
+    vi.spyOn(canvasQuizService, "getQuizQuestions").mockResolvedValue([]);
+    let nextId = 100;
+    vi.mocked(rateLimitAwarePost).mockImplementation(async (url, body) => {
+      if (url.endsWith("/groups"))
+        return { data: { quiz_groups: [{ id: 50 }] } } as never;
+      const question = (body as { question?: { quiz_group_id?: number } }).question;
+      return { data: { id: nextId++, quiz_group_id: question?.quiz_group_id ?? null } } as never;
+    });
+    const essay = (text: string, extra = {}) => ({ text, questionType: QuestionType.ESSAY, points: 2, answers: [], matchDistractors: [], ...extra });
+    const ports = { name: "Ports", pickCount: 1 };
+
+    await canvasQuizService.create(
+      42,
+      {
+        name: "Grouped",
+        description: "",
+        dueAt: "2023-12-01T23:59:00Z",
+        shuffleAnswers: false,
+        showCorrectAnswers: true,
+        oneQuestionAtATime: false,
+        allowedAttempts: 1,
+        questions: [essay("before"), essay("a", { group: ports }), essay("b", { group: ports }), essay("after")],
+      } as unknown as LocalQuiz,
+      {} as never,
+    );
+
+    const calls = vi.mocked(rateLimitAwarePost).mock.calls;
+    const groupCall = calls.find(([url]) => url.endsWith("/quizzes/100/groups"));
+    expect(groupCall?.[1]).toEqual({
+      quiz_groups: [{ name: "Ports", pick_count: 1, question_points: 2 }],
+    });
+    const questionGroups = calls
+      .filter(([url]) => url.endsWith("/questions"))
+      .map(([, body]) => (body as { question: { quiz_group_id?: number } }).question.quiz_group_id);
+    expect(questionGroups).toEqual([undefined, 50, 50, undefined]);
+    const reorder = calls.find(([url]) => url.endsWith("/quizzes/100/reorder"));
+    expect(reorder?.[1]).toEqual({
+      order: [
+        { type: "question", id: "101" },
+        { type: "group", id: "50" },
+        { type: "question", id: "104" },
+      ],
+    });
+    const groupReorder = calls.find(([url]) => url.endsWith("/groups/50/reorder"));
+    expect(groupReorder?.[1]).toEqual({
+      order: [
+        { type: "question", id: "102" },
+        { type: "question", id: "103" },
+      ],
+    });
+  });
+
+  it("removes the old groups along with the old questions on update", async () => {
+    const { axiosClient } = await import("@/services/axiosUtils");
+    const { rateLimitAwarePost, rateLimitAwareDelete } = await import("./canvasWebRequestUtils");
+    vi.mocked(axiosClient.put).mockResolvedValue({ data: { published: false } });
+    vi.mocked(rateLimitAwarePost).mockResolvedValue({ data: { id: 9 } } as never);
+    vi.spyOn(canvasQuizService, "getQuizQuestions").mockResolvedValue([
+      { id: 101, quiz_group_id: 50 },
+      { id: 102, quiz_group_id: 50 },
+      { id: 103 },
+    ] as CanvasQuizQuestion[]);
+
+    await canvasQuizService.update(42, 7, { questions: [] } as unknown as LocalQuiz, {} as never);
+
+    expect(vi.mocked(rateLimitAwareDelete).mock.calls.map(([url]) => url)).toContain(
+      "https://test.instructure.com/api/v1/courses/42/quizzes/7/groups/50",
+    );
+  });
+});

@@ -31,6 +31,16 @@ export const QuestionType = {
 
 export type QuestionType = z.infer<typeof zodQuestionType>;
 
+export const zodQuestionGroup = z.object({
+  name: z.string(),
+  pickCount: z
+    .number()
+    .int()
+    .positive()
+    .describe("How many of the group's questions each student gets"),
+});
+export type QuestionGroup = z.infer<typeof zodQuestionGroup>;
+
 export const zodLocalQuizQuestion = z.object({
   text: z.string(),
   questionType: zodQuestionType,
@@ -45,5 +55,10 @@ export const zodLocalQuizQuestion = z.object({
     .string()
     .optional()
     .describe("Feedback shown regardless of answer"),
+  group: zodQuestionGroup
+    .optional()
+    .describe(
+      "Set on every question of a question group; Canvas picks pickCount of them at random for each student, each worth the group's points",
+    ),
 });
 export type LocalQuizQuestion = z.infer<typeof zodLocalQuizQuestion>;

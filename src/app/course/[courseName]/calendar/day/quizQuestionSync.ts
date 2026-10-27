@@ -5,6 +5,7 @@ import {
   getQuestionTypeForCanvas,
 } from "@/features/canvas/services/canvasQuizService";
 import { LocalCourseSettings } from "@/features/local/course/localCourseSettings";
+import { quizPointTotal } from "@/features/local/quizzes/models/quizPoints";
 import {
   LocalQuizQuestion,
   QuestionType,
@@ -142,6 +143,9 @@ interface Aspect {
   same: boolean;
 }
 
+const groupLabel = (group?: { name: string; pick: number }) =>
+  group ? `${group.name}, pick ${group.pick}` : UNSET;
+
 function compareQuestion(
   question: LocalQuizQuestion,
   canvasQuestion: CanvasQuizQuestion,
@@ -175,6 +179,18 @@ function compareQuestion(
     canvasQuestion.incorrect_comments,
     canvasQuestion.neutral_comments,
   );
+  const localGroup = groupLabel(
+    question.group && {
+      name: question.group.name,
+      pick: question.group.pickCount,
+    },
+  );
+  const canvasGroup = groupLabel(
+    canvasQuestion.quiz_group && {
+      name: canvasQuestion.quiz_group.name,
+      pick: canvasQuestion.quiz_group.pick_count,
+    },
+  );
 
   return [
     {
@@ -188,6 +204,12 @@ function compareQuestion(
       local: String(question.points),
       canvas: String(canvasQuestion.points_possible ?? UNSET),
       same: question.points === canvasQuestion.points_possible,
+    },
+    {
+      name: "group",
+      local: localGroup,
+      canvas: canvasGroup,
+      same: localGroup === canvasGroup,
     },
     {
       name: "text",
@@ -360,8 +382,11 @@ export function checkQuizQuestions(
   questions: LocalQuizQuestion[],
   canvasQuestions: CanvasQuizQuestion[],
   settings: LocalCourseSettings,
-  /** For a student's attempt, which stores its own shuffle of the answers. */
-  { ignoreAnswerOrder = false } = {},
+  /**
+   * For a student's attempt, which stores its own shuffle of the answers and
+   * only the questions it was picked from each group.
+   */
+  { ignoreAnswerOrder = false, isAttempt = false } = {},
 ): SyncField[] {
   const localHtml = questions.map((question) =>
     markdownToHTMLSafe({
@@ -388,6 +413,16 @@ export function checkQuizQuestions(
 
     if (row.canvas === undefined) {
       const number = row.local + 1;
+      const notPicked = isAttempt && questions[row.local].group;
+      if (notPicked)
+        return {
+          ...base,
+          label: `Question ${number}`,
+          local: excerpt(plainText(localHtml[row.local])),
+          canvas: `not picked from ${questions[row.local].group!.name}`,
+          same: true,
+          message: "",
+        };
       return {
         ...base,
         label: `Question ${number}`,
@@ -417,6 +452,12 @@ export function checkQuizQuestions(
       settings,
       ignoreAnswerOrder,
     );
+    // an attempt's questions don't say which group they came from
+    if (isAttempt) {
+      const group = aspects.find((a) => a.name === "group")!;
+      group.canvas = group.local;
+      group.same = true;
+    }
     if ("moved" in row && row.moved)
       aspects.unshift({
         name: "position",
@@ -454,9 +495,12 @@ function wholeQuestion(aspects: Aspect[], side: "local" | "canvas") {
   const points = part("points");
   const header = `type: ${type[side]} · points: ${points[side]}`;
   const position = aspects.find((a) => a.name === "position");
+  const group = part("group");
+  const showGroup = group.local !== UNSET || group.canvas !== UNSET;
   return [
     ...(position ? [`≠ position: ${position[side]}`] : []),
     type.same && points.same ? header : `≠ ${header}`,
+    ...(showGroup ? [`${group.same ? "" : "≠ "}group: ${group[side]}`] : []),
     ...lines(part("text")),
     ...lines(part("answers")),
     ...lines(part("feedback")),
@@ -472,7 +516,7 @@ export function pointTotalChangeError(
   questions: LocalQuizQuestion[],
   studentsGot: CanvasQuizQuestion[],
 ): string | undefined {
-  const fileTotal = questions.reduce((sum, q) => sum + q.points, 0);
+  const fileTotal = quizPointTotal(questions);
   const studentsTotal = studentsGot.reduce(
     (sum, q) => sum + (q.points_possible ?? 0),
     0,

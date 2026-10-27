@@ -5,6 +5,7 @@ import {
   QuestionType,
 } from "@/features/local/quizzes/models/localQuizQuestion";
 import { useQuizQuery } from "@/features/local/quizzes/quizHooks";
+import { quizPointTotal } from "@/features/local/quizzes/models/quizPoints";
 import { escapeMatchingText } from "@/services/utils/questionHtmlUtils";
 
 export default function QuizPreview({
@@ -23,9 +24,7 @@ export default function QuizPreview({
       </div>
       <div className="columns-2">
         <div className="text-end">Points</div>
-        <div>
-          {quiz.questions.reduce((sum, question) => sum + question.points, 0)}
-        </div>
+        <div>{quizPointTotal(quiz.questions)}</div>
       </div>
       <div className="columns-2">
         <div className="text-end">Unlock At</div>
@@ -63,9 +62,29 @@ export default function QuizPreview({
       </div>
       <MarkdownDisplay markdown={quiz.description} className="p-3" />
       <div className="p-3 rounded-md bg-slate-950 m-5 flex flex-col gap-3">
-        {quiz.questions.map((question, i) => (
-          <QuizQuestionPreview key={i} question={question} number={i + 1} />
-        ))}
+        {quiz.questions.map((question, i) => {
+          const startsGroup =
+            question.group &&
+            quiz.questions[i - 1]?.group?.name !== question.group.name;
+          const groupSize = quiz.questions.filter(
+            (q) => q.group?.name === question.group?.name,
+          ).length;
+          return (
+            <div key={i} className="flex flex-col gap-3">
+              {startsGroup && question.group && (
+                <div className="text-slate-300 border-b border-slate-700">
+                  <span className="font-bold">Group: {question.group.name}</span>{" "}
+                  · each student gets {question.group.pickCount} of these{" "}
+                  {groupSize}, {question.points}{" "}
+                  {question.points === 1 ? "point" : "points"} each
+                </div>
+              )}
+              <div className={question.group ? "ms-4" : ""}>
+                <QuizQuestionPreview question={question} number={i + 1} />
+              </div>
+            </div>
+          );
+        })}
       </div>
       <br />
       <br />
