@@ -89,21 +89,8 @@ export const getAnswersForCanvas = (
   }
 
   if (question.questionType === QuestionType.NUMERICAL) {
-    // if (question.answers[0].numericalAnswerType === "range_answer") {
-    //   console.log(
-    //     "answer range",
-    //     question.answers.map((answer) => ({
-    //       numerical_answer_type: answer.numericalAnswerType,
-    //       start: answer.numericAnswerRangeMin,
-    //       end: answer.numericAnswerRangeMax,
-    //     }))
-    //   );
-    //   return question.answers.map((answer) => ({
-    //     numerical_answer_type: answer.numericalAnswerType,
-    //     start: answer.numericAnswerRangeMin + "",
-    //     end: answer.numericAnswerRangeMax + "",
-    //   }));
-    // }
+    // Canvas reads answer_exact, not the exact it sends back; a missing field
+    // is quietly saved as 0
     return question.answers.map((answer) => {
       if (answer.numericalAnswerType === "range_answer")
         return {
@@ -113,7 +100,8 @@ export const getAnswersForCanvas = (
         };
       return {
         numerical_answer_type: answer.numericalAnswerType,
-        exact: answer.numericAnswer,
+        answer_exact: answer.numericAnswer,
+        answer_error_margin: answer.numericAnswerMargin ?? 0,
       };
     });
   }

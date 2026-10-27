@@ -292,6 +292,7 @@ describe("canvasQuizToLocal", () => {
       }),
       question({ question_type: "numerical_question", answers: [
         { id: 1, text: "", weight: 100, numerical_answer_type: "exact_answer", exact: 42, margin: 0 },
+        { id: 3, text: "", weight: 100, numerical_answer_type: "exact_answer", exact: 9.8, margin: 0.2 },
         { id: 2, text: "", weight: 100, numerical_answer_type: "range_answer", start: 1, end: 3 },
       ] }),
       question({
@@ -333,6 +334,11 @@ describe("canvasQuizToLocal", () => {
     });
     expect(item.questions[1].answers[1].text).toBe("`B`");
     expect(item.questions[5].matchDistractors).toEqual(["delete", "nothing"]);
+    expect(item.questions[6].answers.map((a) => a.text)).toEqual([
+      "= 42",
+      "= 9.8 +- 0.2",
+      "= [1, 3]",
+    ]);
     expect(item.questions[7].text).toBe("The [verb_1] method reads; [verb2] writes.");
     expect(item.questions[8].text).toBe("Match each status.");
     expect(item.questions[8].answers.filter((a) => a.text).map((a) => a.text)).toEqual([

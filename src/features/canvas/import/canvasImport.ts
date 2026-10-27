@@ -502,11 +502,16 @@ function convertQuestion(question: CanvasQuizQuestion): LocalQuizQuestion {
           );
           if (Number.isNaN(exact))
             throw new UnsupportedQuestion("a numerical answer with no value");
+          const margin =
+            a.numerical_answer_type === "precision_answer"
+              ? 0
+              : Number(a.margin ?? 0);
           return {
             correct: true,
-            text: `= ${exact}`,
+            text: margin > 0 ? `= ${exact} +- ${margin}` : `= ${exact}`,
             numericalAnswerType: "exact_answer",
             numericAnswer: exact,
+            ...(margin > 0 && { numericAnswerMargin: margin }),
           };
         }),
       };
@@ -564,11 +569,6 @@ function questionToLocal(
   try {
     const converted = convertQuestion(question);
     if (question.question_type === "numerical_question") {
-      const margins = (question.answers ?? []).filter((a) => a.margin);
-      if (margins.length > 0)
-        warnings.push(
-          `question ${number}: the file has no margin of error, so the answer must be exact`,
-        );
       if (
         (question.answers ?? []).some(
           (a) => a.numerical_answer_type === "precision_answer",

@@ -34,13 +34,16 @@ const parseNumericalAnswer = (input: string): LocalQuizQuestionAnswer => {
     return answer;
   }
 
-  // Otherwise, it's an exact answer
-  const numericValue = parseFloat(trimmedInput);
+  // Otherwise, it's an exact answer, maybe with a margin: = 2.5 +- 0.1
+  const [value, margin] = trimmedInput.split(/\s*(?:\+-|±)\s*/);
+  const numericValue = parseFloat(value);
+  const numericMargin = margin === undefined ? NaN : parseFloat(margin);
   const answer: LocalQuizQuestionAnswer = {
     correct: true,
     text: input.trim(),
     numericalAnswerType: "exact_answer",
     numericAnswer: numericValue,
+    ...(numericMargin > 0 && { numericAnswerMargin: numericMargin }),
   };
   return answer;
 };
@@ -407,7 +410,9 @@ export const quizQuestionAnswerMarkdownUtils = {
       if (answer.numericalAnswerType === "range_answer") {
         return `= [${answer.numericAnswerRangeMin}, ${answer.numericAnswerRangeMax}]`;
       }
-      return `= ${answer.numericAnswer}`;
+      return answer.numericAnswerMargin
+        ? `= ${answer.numericAnswer} +- ${answer.numericAnswerMargin}`
+        : `= ${answer.numericAnswer}`;
     } else {
       const questionLetter = String.fromCharCode(97 + index);
       const correctIndicator = answer.correct ? "*" : "";

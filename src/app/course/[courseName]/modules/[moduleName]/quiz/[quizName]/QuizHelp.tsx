@@ -249,13 +249,18 @@ Roses are [color1], violets are [color2].
       <HelpSection title="Numerical">
         <P>
           Answer lines starting with <C>=</C> make a numeric answer box. Use a
-          single value for an exact answer or <C>[min, max]</C> for a range.
-          List several lines to accept any of them.
+          single value for an exact answer, <C>value +- margin</C> to accept
+          anything that close, or <C>[min, max]</C> for a range. List several
+          lines to accept any of them.
         </P>
         <Example>{`
 What is 10 / 4?
 = 2.5
 = [2.4, 2.6]
+`}</Example>
+        <Example>{`
+What is pi to two places?
+= 3.14 +- 0.005
 `}</Example>
       </HelpSection>
 

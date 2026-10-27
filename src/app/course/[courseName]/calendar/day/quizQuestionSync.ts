@@ -41,6 +41,9 @@ const correctMark = (correct: boolean) => (correct ? "✓ " : "");
  * Each answer as one comparable line, built the same way for the file (from
  * what Update in Canvas would send) and for Canvas (from what it returns).
  */
+const exactLine = (exact: number, margin: number) =>
+  margin ? `= ${exact} +- ${margin}` : `= ${exact}`;
+
 function localAnswerLines(
   question: LocalQuizQuestion,
   settings: LocalCourseSettings,
@@ -77,7 +80,7 @@ function localAnswerLines(
       return sent.map((a) =>
         a.numerical_answer_type === "range_answer"
           ? `[${Number(a.answer_range_start)}, ${Number(a.answer_range_end)}]`
-          : `= ${Number(a.exact)}`,
+          : exactLine(Number(a.answer_exact), Number(a.answer_error_margin)),
       );
     default:
       return sent.map(
@@ -115,7 +118,7 @@ function canvasAnswerLines(question: CanvasQuizQuestion): string[] {
       return answers.map((a) =>
         a.numerical_answer_type === "range_answer"
           ? `[${Number(a.start)}, ${Number(a.end)}]`
-          : `= ${Number(a.exact)}`,
+          : exactLine(Number(a.exact), Number(a.margin)),
       );
     default:
       return answers.map(

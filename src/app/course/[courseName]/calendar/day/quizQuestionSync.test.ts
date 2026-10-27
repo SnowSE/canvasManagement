@@ -381,3 +381,27 @@ describe("pointTotalChangeError", () => {
     );
   });
 });
+
+describe("numerical questions", () => {
+  const local = questionsOf(`Points: 1
+What is 10/4?
+= 2.5 +- 0.1
+= [2.4, 2.6]`);
+  const canvas = (exact: number, margin: number) =>
+    canvasQuestion({
+      question_type: "numerical_question",
+      question_text: "<p>What is 10/4?</p>",
+      answers: [
+        { id: 1, text: "", weight: 100, numerical_answer_type: "exact_answer", exact, margin },
+        { id: 2, text: "", weight: 100, numerical_answer_type: "range_answer", start: 2.4, end: 2.6 },
+      ],
+    });
+
+  it("match when Canvas has the same values and margin", () => {
+    expect(checkQuizQuestions(local, [canvas(2.5, 0.1)], settings)[0].same).toBe(true);
+  });
+
+  it("differ when Canvas saved the exact answer as 0", () => {
+    expect(checkQuizQuestions(local, [canvas(0, 0)], settings)[0].same).toBe(false);
+  });
+});

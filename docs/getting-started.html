@@ -310,7 +310,7 @@ Next week you&#x27;ll implement primary-backup replication...
 <tr><td>Multiple answers</td><td><code>[*] right</code> and <code>[ ] wrong</code> checkboxes</td></tr>
 <tr><td>Essay</td><td>a last line of <code>essay</code></td></tr>
 <tr><td>Short answer</td><td>a last line of <code>short_answer</code> (graded by hand), or starred answers followed by <code>short_answer=</code> to auto-grade</td></tr>
-<tr><td>Numerical</td><td><code>= 2.5</code> for an exact answer, <code>= [2.4, 2.6]</code> for a range</td></tr>
+<tr><td>Numerical</td><td><code>= 2.5</code> for an exact answer, <code>= 2.5 +- 0.1</code> for an answer with a margin of error, <code>= [2.4, 2.6]</code> for a range</td></tr>
 <tr><td>Matching</td><td><code>^ left - right</code> lines; <code>^ - extra</code> adds a distractor</td></tr>
 <tr><td>Multiple dropdowns</td><td>matching lines split into groups by blank lines; each prompt gets its own dropdown of its group's answers</td></tr>
 <tr><td>Fill in multiple blanks</td><td><code>[ans1]</code> placeholders in the question, then <code>[ans1] = answer</code> for each blank; more accepted answers for the same blank go on the next lines as <code>= answer</code></td></tr>
@@ -486,6 +486,7 @@ AddToHome: true
 <h2 id="changes">Recent changes</h2>
 <div class="tw"><table>
 <tr><th>When</th><th>What changed</th></tr>
+<tr><td style="white-space:nowrap">Oct 2026</td><td>Numerical quiz answers: an exact answer like <code>= 2.5</code> reached Canvas as 0, so students typing the right number were marked wrong; it now arrives as written. An answer can also carry a margin of error, <code>= 2.5 +- 0.1</code>, and Import from Canvas keeps a quiz&rsquo;s margins instead of dropping them. <a href="#compare">Compare with Canvas</a> shows any quiz uploaded with the old 0.</td></tr>
 <tr><td style="white-space:nowrap">Oct 2026</td><td>Each browser tab is titled with what it shows, like <em>Quiz: W02 Reading &middot; Telemetry &mdash; Canvas Manager</em> or <em>Lecture Tue Oct 27 &middot; Telemetry &mdash; Canvas Manager</em>, instead of every tab reading &ldquo;Canvas Manager 2.0&rdquo;.</td></tr>
 <tr><td style="white-space:nowrap">Oct 2026</td><td>The course page is much quicker: each item is compared with Canvas once, not again on every redraw, so the module list and calendar settle in a moment instead of many seconds, and coming back to the course page is instant.</td></tr>
 <tr><td style="white-space:nowrap">Oct 2026</td><td>Until Canvas has answered, the module list says <em>Checking Canvas&hellip;</em> instead of counts that would change; its filters and counts appear once they are right.</td></tr>
