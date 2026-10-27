@@ -748,6 +748,24 @@ describe("question groups", () => {
     expect(questions[1].quiz_group).toEqual(group(50, 2));
   });
 
+  // what Canvas really sends: positions all null, listed by hidden positions
+  // that count a group's questions inside the group and the rest in the quiz
+  it("puts the questions back in quiz order when Canvas leaves their positions out", async () => {
+    const { paginatedRequest } = await import("./canvasServiceUtils");
+    const { axiosClient } = await import("@/services/axiosUtils");
+    const q = (id: number, quiz_group_id: number | null = null) => ({ ...base, id, position: null, quiz_group_id });
+    vi.mocked(paginatedRequest).mockResolvedValue([
+      q(254), q(255, 6), q(259, 7), q(256, 6), q(260, 7), q(257), q(258, 6), q(261),
+    ] as never);
+    vi.mocked(axiosClient.get).mockImplementation(async (url: string) => ({
+      data: url.endsWith("/6") ? group(6, 2) : group(7, 4),
+    }));
+
+    const questions = await canvasQuizService.getQuizQuestions(42, 7);
+
+    expect(questions.map((q) => q.id)).toEqual([254, 255, 256, 258, 257, 259, 260, 261]);
+  });
+
   it("creates the groups first, puts their questions in them, and orders the group as one place in the quiz", async () => {
     const { rateLimitAwarePost } = await import("./canvasWebRequestUtils");
     vi.spyOn(canvasQuizService, "getQuizQuestions").mockResolvedValue([]);

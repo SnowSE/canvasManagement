@@ -279,7 +279,7 @@ const verifyQuestionOrder = async (
       // Verify position is correct (a group's questions are numbered inside it)
       if (
         !localQuestion.group &&
-        canvasQuestion.position !== undefined &&
+        canvasQuestion.position != null &&
         canvasQuestion.position !== i + 1
       ) {
         console.error(
@@ -436,14 +436,36 @@ export const withQuizGroups = async (
     const group = q.quiz_group_id ? groups.get(q.quiz_group_id) : undefined;
     return group ? { ...q, quiz_group: group } : q;
   });
-  const placeInQuiz = (q: CanvasQuizQuestion) =>
-    q.quiz_group ? (q.quiz_group.position ?? 0) : (q.position ?? 0);
-  return withGroups.sort(
-    (a, b) =>
-      placeInQuiz(a) - placeInQuiz(b) ||
-      (a.quiz_group ? (a.position ?? 0) : 0) -
-        (b.quiz_group ? (b.position ?? 0) : 0)
+  if (groups.size === 0)
+    return withGroups.sort((a, b) => (a.position || 0) - (b.position || 0));
+
+  // Canvas answers with every question's position null, listed by the
+  // position it keeps hidden: a group's questions numbered inside the group,
+  // the rest numbered in the quiz along with the groups. So the questions
+  // outside groups take the quiz's places the groups don't, in the order
+  // listed, and each group's questions keep theirs.
+  const loose = withGroups.filter((q) => !q.quiz_group);
+  const groupPlaces = new Set([...groups.values()].map((g) => g.position));
+  const looseCount = loose.length;
+  const places = Array.from(
+    { length: looseCount + groups.size },
+    (_, i) => i + 1
+  ).filter((place) => !groupPlaces.has(place));
+  const placeOf = new Map(
+    loose.map((q, i) => [q, q.position ?? places[i] ?? looseCount + i] as const)
   );
+  const placeInQuiz = (q: CanvasQuizQuestion) =>
+    q.quiz_group ? (q.quiz_group.position ?? 0) : placeOf.get(q)!;
+  return withGroups
+    .map((q, listed) => ({ q, listed }))
+    .sort(
+      (a, b) =>
+        placeInQuiz(a.q) - placeInQuiz(b.q) ||
+        (a.q.quiz_group ? (a.q.position ?? 0) : 0) -
+          (b.q.quiz_group ? (b.q.position ?? 0) : 0) ||
+        a.listed - b.listed
+    )
+    .map(({ q }) => q);
 };
 
 export const canvasQuizService = {
