@@ -1,3 +1,4 @@
+import { pageTitle, itemTitle, titleHead } from "@/services/titleUtils";
 import { createFileRoute } from "@tanstack/react-router";
 import { UnparsableItemFallback } from "@/app/course/[courseName]/modules/[moduleName]/unparsable/UnparsableItemFallback";
 import EditQuiz from "@/app/course/[courseName]/modules/[moduleName]/quiz/[quizName]/EditQuiz";
@@ -5,6 +6,13 @@ import EditQuiz from "@/app/course/[courseName]/modules/[moduleName]/quiz/[quizN
 export const Route = createFileRoute(
   "/course/$courseName/modules/$moduleName/quiz/$quizName",
 )({
+  head: ({ params }) =>
+    titleHead(
+      pageTitle({
+        thing: itemTitle("Quiz: ", params.quizName),
+        courseName: params.courseName,
+      }),
+    ),
   component: QuizPage,
 });
 

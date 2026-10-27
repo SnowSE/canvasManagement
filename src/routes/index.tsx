@@ -1,3 +1,4 @@
+import { pageTitle, titleHead } from "@/services/titleUtils";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { Toggle } from "@/components/form/Toggle";
@@ -9,6 +10,7 @@ import TodaysLectures from "@/app/todaysLectures/TodaysLectures";
 import UpdateAvailableBanner from "@/app/UpdateAvailableBanner";
 
 export const Route = createFileRoute("/")({
+  head: () => titleHead(pageTitle({})),
   component: Home,
 });
 
@@ -34,12 +36,16 @@ function Home() {
                 {openForm === "new" ? "Hide Form" : "Add New Course"}
               </button>
               <button onClick={() => toggleForm("existing")}>
-                {openForm === "existing" ? "Hide Form" : "Import Existing Course"}
+                {openForm === "existing"
+                  ? "Hide Form"
+                  : "Import Existing Course"}
               </button>
             </div>
           </div>
           <AddCourseToGlobalSettings showForm={openForm === "new"} />
-          <AddExistingCourseToGlobalSettings showForm={openForm === "existing"} />
+          <AddExistingCourseToGlobalSettings
+            showForm={openForm === "existing"}
+          />
         </div>
         <div className=" flex justify-center">
           <CourseList isDeleting={isDeleting} />

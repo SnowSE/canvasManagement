@@ -1,3 +1,4 @@
+import { pageTitle, titleHead } from "@/services/titleUtils";
 import { createFileRoute } from "@tanstack/react-router";
 import CourseCalendar from "@/app/course/[courseName]/calendar/CourseCalendar";
 import DraggingContextProvider from "@/app/course/[courseName]/context/drag/DraggingContextProvider";
@@ -10,6 +11,7 @@ import { SyncStatusProvider } from "@/app/course/[courseName]/calendar/day/useIt
 import CalendarQuizQuestionsProvider from "@/app/course/[courseName]/context/CalendarQuizQuestionsProvider";
 
 export const Route = createFileRoute("/course/$courseName/")({
+  head: ({ params }) => titleHead(pageTitle({ courseName: params.courseName })),
   component: CoursePage,
 });
 

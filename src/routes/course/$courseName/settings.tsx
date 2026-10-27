@@ -1,7 +1,10 @@
+import { pageTitle, titleHead } from "@/services/titleUtils";
 import { createFileRoute } from "@tanstack/react-router";
 import AllSettings from "@/app/course/[courseName]/settings/AllSettings";
 
 export const Route = createFileRoute("/course/$courseName/settings")({
+  head: ({ params }) =>
+    titleHead(pageTitle({ thing: "Settings", courseName: params.courseName })),
   component: SettingsPage,
 });
 

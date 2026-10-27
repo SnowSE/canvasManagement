@@ -24,6 +24,7 @@ import appCss from "@/app/globals.css?url";
 import { useEffect } from "react";
 import { watchForNewBuild } from "@/app/staleBuild/staleBuildReload";
 import { courseInPath } from "@/app/initialData/courseInPath";
+import { getTitle } from "@/services/titleUtils";
 
 type InitialData = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -46,8 +47,7 @@ const fetchInitialData = createServerFn({ method: "GET" })
       console.error("Canvas Manager failed to load initial data:", e);
       return { startupError: e instanceof Error ? e.message : String(e) };
     }
-  },
-);
+  });
 
 const prefetchCourseData = async (courseName: string | undefined) => {
   const { trpcAppRouter } =
@@ -108,7 +108,7 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Canvas Manager 2.0" },
+      { title: getTitle("Canvas Manager") },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -133,7 +133,10 @@ function ErrorShell({ title, message }: { title: string; message: string }) {
       <head>
         <HeadContent />
       </head>
-      <body className="flex justify-center min-h-screen" suppressHydrationWarning>
+      <body
+        className="flex justify-center min-h-screen"
+        suppressHydrationWarning
+      >
         <div className="bg-gray-950 min-h-screen text-slate-300 w-screen p-6 sm:p-10">
           <h1 className="text-2xl font-bold text-rose-400 mb-4">{title}</h1>
           <pre className="whitespace-pre-wrap bg-gray-900 border border-rose-900 rounded-md p-4 mb-4 text-sm">

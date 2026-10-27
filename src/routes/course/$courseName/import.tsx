@@ -1,3 +1,4 @@
+import { pageTitle, titleHead } from "@/services/titleUtils";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import ImportFromCanvas from "@/app/course/[courseName]/import/ImportFromCanvas";
 import { useCourseContext } from "@/app/course/[courseName]/context/courseContext";
@@ -5,6 +6,8 @@ import { useLocalCourseSettingsQuery } from "@/features/local/course/localCourse
 import { getCourseUrl } from "@/services/urlUtils";
 
 export const Route = createFileRoute("/course/$courseName/import")({
+  head: ({ params }) =>
+    titleHead(pageTitle({ thing: "Import", courseName: params.courseName })),
   component: ImportPage,
 });
 

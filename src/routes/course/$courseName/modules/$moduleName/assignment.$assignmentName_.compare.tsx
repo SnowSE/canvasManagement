@@ -1,3 +1,4 @@
+import { pageTitle, itemTitle, titleHead } from "@/services/titleUtils";
 import { createFileRoute } from "@tanstack/react-router";
 import ClientOnly from "@/components/ClientOnly";
 import { SuspenseAndErrorHandling } from "@/components/SuspenseAndErrorHandling";
@@ -8,6 +9,14 @@ import { CompareAssignmentWithCanvas } from "@/app/course/[courseName]/modules/[
 export const Route = createFileRoute(
   "/course/$courseName/modules/$moduleName/assignment/$assignmentName_/compare",
 )({
+  head: ({ params }) =>
+    titleHead(
+      pageTitle({
+        thing: itemTitle("Compare: ", params.assignmentName),
+        courseName: params.courseName,
+        withAppName: false,
+      }),
+    ),
   component: CompareAssignmentPage,
 });
 

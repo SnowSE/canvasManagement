@@ -1,3 +1,4 @@
+import { pageTitle, lectureTitle, titleHead } from "@/services/titleUtils";
 import { createFileRoute } from "@tanstack/react-router";
 import EditLecture from "@/app/course/[courseName]/lecture/[lectureDay]/EditLecture";
 import {
@@ -8,6 +9,13 @@ import {
 export const Route = createFileRoute(
   "/course/$courseName/lecture/$lectureDay/",
 )({
+  head: ({ params }) =>
+    titleHead(
+      pageTitle({
+        thing: lectureTitle(params.lectureDay),
+        courseName: params.courseName,
+      }),
+    ),
   component: LecturePage,
 });
 
