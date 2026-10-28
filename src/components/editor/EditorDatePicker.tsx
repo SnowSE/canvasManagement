@@ -1,5 +1,5 @@
 "use client";
-import { FC, useEffect, useState } from "react";
+import { FC, useState } from "react";
 import {
   DayOfWeek,
   getDayOfWeek,
@@ -33,9 +33,12 @@ export const EditorDatePicker: FC<{
   const [viewMonth, setViewMonth] = useState<Date>(() =>
     firstOfMonth(value ?? startingPoint(calendar))
   );
-  useEffect(() => {
+  // a new value (typed, or picked here) shows its month
+  const [shownValue, setShownValue] = useState(value);
+  if (value !== shownValue) {
+    setShownValue(value);
     if (value) setViewMonth(firstOfMonth(value));
-  }, [value]);
+  }
 
   const today = new Date();
   const semesterStart = getDateFromString(calendar.startDate);

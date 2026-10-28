@@ -1,7 +1,7 @@
 "use client";
 
 import { useTRPC } from "@/services/serverFunctions/trpcClient";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect } from "react";
 import { io, Socket } from "socket.io-client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useGlobalSettingsQuery } from "@/features/local/globalSettings/globalSettingsHooks";
@@ -46,13 +46,8 @@ function getCourseNameByPath(
 export function ClientCacheInvalidation() {
   const invalidateCache = useFilePathInvalidation();
   const invalidateModuleNames = useModuleNamesInvalidation();
-  const [connectionAttempted, setConnectionAttempted] = useState(false);
+  // io() connects on its own; after a connect_error it stays disconnected
   useEffect(() => {
-    if (!connectionAttempted) {
-      socket.connect();
-      setConnectionAttempted(true);
-    }
-
     socket.on("connect", () => {
       console.log("Socket connected successfully.");
     });
@@ -76,7 +71,7 @@ export function ClientCacheInvalidation() {
       socket.off("folderChanged");
       socket.off("connect_error");
     };
-  }, [connectionAttempted, invalidateCache, invalidateModuleNames]);
+  }, [invalidateCache, invalidateModuleNames]);
 
   return <></>;
 }

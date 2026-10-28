@@ -10,7 +10,6 @@ import {
   CheckMarkIcon,
   CompareIcon,
   ExternalLinkIcon,
-  HelpIcon,
   HistoryIcon,
   NextIcon,
   PreviousIcon,
@@ -64,7 +63,6 @@ export function EditorFooter({
   onViewInCanvas,
   problem,
   extraActions = [],
-  toggleHelp,
   previousUrl,
   nextUrl,
   children,
@@ -87,7 +85,6 @@ export function EditorFooter({
   problem?: string;
   /** Classroom 50, the deletes: always in the ⋯ menu. */
   extraActions?: FooterAction[];
-  toggleHelp?: () => void;
   previousUrl: string | null;
   nextUrl: string | null;
   /** Dialogs the actions open. */
@@ -249,16 +246,6 @@ export function EditorFooter({
           />
         ))}
         <div className="h-px bg-slate-700 my-1 mx-2" />
-        {toggleHelp && (
-          <ActionControl
-            action={{
-              label: "Toggle help",
-              icon: <HelpIcon />,
-              onClick: toggleHelp,
-            }}
-            className="btn"
-          />
-        )}
         {previousUrl && (
           <ActionControl
             action={{
@@ -287,16 +274,6 @@ export function EditorFooter({
   return (
     <div className="px-5 py-3 flex flex-row flex-wrap items-center justify-between gap-3">
       <div className="flex flex-row items-center gap-1">
-        {toggleHelp && (
-          <button
-            className={iconOnly}
-            onClick={toggleHelp}
-            aria-label="Toggle help"
-            title="Toggle help"
-          >
-            <HelpIcon />
-          </button>
-        )}
         {/* the arrows keep their spots on the first and last item, so
             clicking through never lands on a different button */}
         {previousUrl ? (

@@ -1,10 +1,19 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from "vitest";
+import { marked } from "marked";
+// registers the list-table extension (and the rest of the app's markdown) on marked
 import { markdownToHtmlNoImages } from "./htmlMarkdownUtils";
 import { listTableExample } from "@/components/editor/help/MarkdownHelpSections";
 
+// These tests are about the table the list-table extension makes, so they
+// read marked's output and parse it back without its inline styles. The test
+// DOM parses every inline style, which makes sanitizing a table and parsing it
+// back take hundreds of milliseconds; the one test that sanitizes checks that
+// the table comes through it intact.
+const parseBack = (html: string) =>
+  new DOMParser().parseFromString(html.replace(/ style="[^"]*"/g, ""), "text/html");
 const render = (markdown: string) =>
-  new DOMParser().parseFromString(markdownToHtmlNoImages(markdown), "text/html");
+  parseBack(marked.parse(markdown, { async: false }) as string);
 
 const texts = (nodes: Iterable<Element>) =>
   [...nodes].map((n) => n.textContent?.trim() ?? "");
@@ -154,11 +163,14 @@ describe("list tables", () => {
     ).toEqual(rowsOf(doc));
   });
 
-  it("keeps the layout's calc() and #rgba colors through sanitizing", () => {
-    const html = markdownToHtmlNoImages(schedule);
+  it("comes through sanitizing intact, the layout's calc() and #rgba colors included", () => {
+    // one row: each inline style costs the test DOM a few milliseconds to sanitize
+    const table = "<!-- table -->\n- Date: Wed 8/26\n  - Topic: bool\n";
+    const sanitized = markdownToHtmlNoImages(table);
 
-    expect(html).toMatch(/style="[^"]*calc\(/);
-    expect(html).toMatch(/style="[^"]*#8887/);
+    expect(rowsOf(parseBack(sanitized))).toEqual([["Wed 8/26", "bool"]]);
+    expect(sanitized).toMatch(/style="[^"]*calc\(/);
+    expect(sanitized).toMatch(/style="[^"]*#8887/);
   });
 
   it("has no empty divs, which Canvas's editor would delete", () => {

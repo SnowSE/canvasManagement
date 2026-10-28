@@ -53,7 +53,6 @@ export default function EditAssignment({
   });
 
   const [error, setError] = useState("");
-  const [showHelp, setShowHelp] = useState(false);
 
   useEffect(() => {
     const delay = 500;
@@ -127,14 +126,11 @@ export default function EditAssignment({
         />
       }
       Help={
-        showHelp ? (
-          <AssignmentHelp
-            settings={settings}
-            groupSetNames={groupSetsData?.groupSets.map((g) => g.name) ?? []}
-          />
-        ) : undefined
+        <AssignmentHelp
+          settings={settings}
+          groupSetNames={groupSetsData?.groupSets.map((g) => g.name) ?? []}
+        />
       }
-      onCloseHelp={() => setShowHelp(false)}
       Editor={<MonacoEditor key={monacoKey} value={text} onChange={textUpdate} />}
       Preview={
         <>
@@ -155,7 +151,6 @@ export default function EditAssignment({
             <AssignmentFooterButtons
               moduleName={moduleName}
               assignmentName={assignmentName}
-              toggleHelp={() => setShowHelp((h) => !h)}
             />
           </SuspenseAndErrorHandling>
         </ClientOnly>

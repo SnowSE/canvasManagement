@@ -22,13 +22,13 @@ export default function CourseCalendar() {
     () => getMonthsBetweenDates(startDateTime, endDateTime),
     [endDateTime, startDateTime]
   );
-  const scroll = usePersistedScroll(`courseScroll-${settings.name}`);
+  const scrollRef = usePersistedScroll(`courseScroll-${settings.name}`);
 
   return (
     <div
       className="
-        min-h-0
-        flex-grow
+        min-h-0 min-w-0
+        flex-1
         border-2
         border-gray-900
         rounded-lg
@@ -38,11 +38,7 @@ export default function CourseCalendar() {
         sm:p-1
       "
     >
-      <div
-        className="h-full overflow-y-scroll sm:pe-1"
-        onScroll={scroll.onScroll}
-        ref={scroll.ref}
-      >
+      <div className="h-full overflow-y-scroll sm:pe-1" ref={scrollRef}>
         {months.map((month) => (
           <CalendarMonth key={month.month + "" + month.year} month={month} />
         ))}

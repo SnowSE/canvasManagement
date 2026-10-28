@@ -35,13 +35,9 @@ the app. Do these first.
 ```bash
 npx tsc --noEmit                              # clean
 npx vitest run                                # 0 failures, 200+ tests, 35+ files
-npx eslint . --config eslint.config.mjs       # 0 errors (around a couple dozen warnings)
+npx eslint . --config eslint.config.mjs       # 0 errors, 0 warnings
 npx vite build                                # nitro output in .output/
 ```
-
-The eslint warnings are React Compiler rules (`react-hooks/refs`, `purity`,
-`set-state-in-effect`) deliberately downgraded in `eslint.config.mjs`. Zero
-*errors* is the passing condition; the warning count is not.
 
 Numbers here are floors, not exact figures, so they stay true as the repo grows.
 Keep it that way — an exact count reads as a real failure once it drifts.

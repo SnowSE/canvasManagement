@@ -1,8 +1,10 @@
 "use client";
+import { useState } from "react";
 
 /** "synced 4 minutes ago" for a snapshot timestamp. */
 export function SyncedAgo({ iso }: { iso: string }) {
-  const seconds = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+  const [now] = useState(() => Date.now());
+  const seconds = Math.max(0, (now - new Date(iso).getTime()) / 1000);
   const text =
     seconds < 60
       ? "just now"

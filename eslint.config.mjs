@@ -34,12 +34,6 @@ export default tseslint.config(
       ],
       // intentional in debounced effects and test cleanup
       "no-empty": ["error", { allowEmptyCatch: true }],
-      // react compiler rules, new in eslint-plugin-react-hooks 7. they flag real
-      // issues in older components, but fixing them means reworking those
-      // components, so they stay warnings until someone does that
-      "react-hooks/refs": "warn",
-      "react-hooks/purity": "warn",
-      "react-hooks/set-state-in-effect": "warn",
     },
   }
 );

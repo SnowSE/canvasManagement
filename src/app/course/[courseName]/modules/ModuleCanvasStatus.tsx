@@ -13,14 +13,18 @@ export function ModuleCanvasStatus({ moduleName }: { moduleName: string }) {
   const canvasModule = canvasModules?.find((c) => c.name === moduleName);
 
   return (
-    <div className="text-slate-400 text-end">
-      {!canvasModule && <div className="text-rose-400">Not in Canvas</div>}
+    <div className="text-slate-400 text-xs font-normal flex items-center gap-2">
+      {!canvasModule && <span className="text-rose-400">Not in Canvas</span>}
       {!canvasModule && (
         <button
+          className="btn-thin"
           disabled={addToCanvas.isPending}
-          onClick={() => addToCanvas.mutate(moduleName)}
+          onClick={(e) => {
+            e.stopPropagation();
+            addToCanvas.mutate(moduleName);
+          }}
         >
-          {addToCanvas.isPending ? <Spinner /> : <div>Add</div>}
+          {addToCanvas.isPending ? <Spinner /> : "Add"}
         </button>
       )}
       {canvasModule && !canvasModule.published && <div>Not Published</div>}

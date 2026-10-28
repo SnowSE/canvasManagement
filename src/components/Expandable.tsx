@@ -4,16 +4,18 @@ import {
   Dispatch,
   SetStateAction,
   useEffect,
-  useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
+import { subscribeToStorage } from "./storage";
 
 export function Expandable({
   children,
   ExpandableElement,
   defaultExpanded = false,
   storageKey,
-  openRequests,
+  request,
+  forceOpen = false,
 }: {
   children: ReactNode;
   ExpandableElement: (props: {
@@ -23,53 +25,60 @@ export function Expandable({
   defaultExpanded?: boolean;
   // remember open/closed in localStorage under this key
   storageKey?: string;
-  // opens it each time this changes (from 0), like "expand all"
-  openRequests?: number;
+  // "expand all" and "collapse all": acted on each time `count` changes
+  request?: { open: boolean; count: number };
+  // open while a search is on, whatever was chosen
+  forceOpen?: boolean;
 }) {
-  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
-  useEffect(() => {
-    if (openRequests) setIsExpanded(true);
-  }, [openRequests]);
-  const expandRef = useRef<HTMLDivElement | null>(null);
-  const restored = useRef(false);
-
-  // read after mount: the server renders the default, and hydration keeps the
-  // server's markup, so starting from the stored value would never show
-  useEffect(() => {
-    if (!storageKey) return;
-    try {
-      const stored = localStorage.getItem(storageKey);
-      if (stored !== null) setIsExpanded(stored === "true");
-    } catch {
-      // storage unavailable: keep the default
-    }
-    restored.current = true;
-  }, [storageKey]);
+  // the server and hydration render the default, then the stored value
+  const stored = useSyncExternalStore(
+    subscribeToStorage,
+    () => readStored(storageKey),
+    () => null,
+  );
+  // opened or closed here since mount
+  const [choice, setChoice] = useState<boolean | null>(null);
+  const [seenRequest, setSeenRequest] = useState(request);
+  if (request !== seenRequest) {
+    setSeenRequest(request);
+    if (request) setChoice(request.open);
+  }
+  const isExpanded =
+    forceOpen || (choice ?? (stored === null ? defaultExpanded : stored === "true"));
 
   useEffect(() => {
-    if (!storageKey || !restored.current) return;
+    if (!storageKey || choice === null) return;
     try {
-      localStorage.setItem(storageKey, String(isExpanded));
+      localStorage.setItem(storageKey, String(choice));
     } catch {
       // storage unavailable: nothing to remember it in
     }
-  }, [isExpanded, storageKey]);
+  }, [choice, storageKey]);
+
+  const setIsExpanded: Dispatch<SetStateAction<boolean>> = (next) =>
+    setChoice((current) =>
+      typeof next === "function" ? next(current ?? isExpanded) : next,
+    );
 
   return (
     <>
-      <ExpandableElement
-        setIsExpanded={setIsExpanded}
-        isExpanded={isExpanded}
-      />
+      <ExpandableElement setIsExpanded={setIsExpanded} isExpanded={isExpanded} />
+      {/* grid rows animate between 0 and the content's height, whatever it is */}
       <div
-        ref={expandRef}
-        className={` overflow-hidden transition-all `}
-        style={{
-          maxHeight: isExpanded ? expandRef?.current?.scrollHeight : "0",
-        }}
+        className={"grid transition-all " + (isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]")}
       >
-        {children}
+        <div className="min-h-0 overflow-hidden">{children}</div>
       </div>
     </>
   );
+}
+
+function readStored(key: string | undefined) {
+  if (!key) return null;
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    // storage unavailable: keep the default
+    return null;
+  }
 }

@@ -1,5 +1,4 @@
 "use client";
-import { BreadCrumbs } from "@/components/BreadCrumbs";
 import { Spinner } from "@/components/Spinner";
 import {
   useCanvasAssignmentsQuery,
@@ -29,12 +28,9 @@ import { getCourseImportUrl, getCourseSettingsUrl } from "@/services/urlUtils";
 import { useCourseContext } from "./context/courseContext";
 import ClientOnly from "@/components/ClientOnly";
 import { GitStatusButton } from "./git/GitStatusButton";
+import { getTermName } from "@/features/local/utils/timeUtils";
 
-export function CourseNavigation({
-  onShowModules,
-}: {
-  onShowModules?: () => void;
-}) {
+export function CourseNavigation() {
   const { data: settings } = useLocalCourseSettingsQuery();
   const { courseName } = useCourseContext();
 
@@ -103,10 +99,7 @@ export function CourseNavigation({
   );
 
   return (
-    <div className="pb-1 flex flex-row items-center gap-x-3">
-      <div className="min-w-0 max-md:flex-auto">
-        <BreadCrumbs />
-      </div>
+    <>
       <div className="max-md:hidden flex flex-row items-center gap-3">
         {viewInCanvasLink}
         {importLink("Import")}
@@ -114,18 +107,16 @@ export function CourseNavigation({
         <ClientOnly>
           <GitStatusButton />
         </ClientOnly>
+        <Link className="btn" to={getCourseSettingsUrl(courseName)}>
+          Course Settings
+        </Link>
         {settings?.startDate && (
           <div className="my-auto text-slate-500">
-            {getSemesterName(settings.startDate)}
+            {getTermName(settings.startDate)}
           </div>
         )}
       </div>
       <MobileActionsMenu>
-        {onShowModules && (
-          <CloseMenuOnClick>
-            <button onClick={onShowModules}>Modules</button>
-          </CloseMenuOnClick>
-        )}
         <CloseMenuOnClick>{viewInCanvasLink}</CloseMenuOnClick>
         <CloseMenuOnClick>{importLink("Import From Canvas")}</CloseMenuOnClick>
         {reloadControl}
@@ -139,23 +130,10 @@ export function CourseNavigation({
         </CloseMenuOnClick>
         {settings?.startDate && (
           <div className="px-3 pt-2 text-sm text-slate-500">
-            {getSemesterName(settings.startDate)}
+            {getTermName(settings.startDate)}
           </div>
         )}
       </MobileActionsMenu>
-    </div>
+    </>
   );
-}
-function getSemesterName(startDate: string) {
-  const start = new Date(startDate);
-  const year = start.getFullYear();
-  const month = start.getMonth();
-
-  if (month < 4) {
-    return `Spring ${year}`;
-  } else if (month < 7) {
-    return `Summer ${year}`;
-  } else {
-    return `Fall ${year}`;
-  }
 }

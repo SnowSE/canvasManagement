@@ -1,10 +1,12 @@
 "use client";
 
+import { ReactNode } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import HomeIcon from "./icons/HomeIcon";
 import { RightSingleChevron } from "./icons/RightSingleChevron";
+import { CourseMenu } from "@/app/course/[courseName]/CourseMenu";
 
-export const BreadCrumbs = () => {
+export const BreadCrumbs = ({ afterHome }: { afterHome?: ReactNode }) => {
   const location = useLocation();
   const pathname = location.pathname;
 
@@ -68,6 +70,7 @@ export const BreadCrumbs = () => {
           </span>
         </Link>
       </span>
+      {afterHome}
 
       {courseName && (
         <>
@@ -83,11 +86,13 @@ export const BreadCrumbs = () => {
             <Link
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               to={`/course/${encodeURIComponent(courseName)}` as any}
-              className={sharedLinkClassNames + " min-w-0"}
+              className={sharedLinkClassNames + " min-w-0 pe-1"}
             >
               <span className="truncate">{courseName}</span>
             </Link>
           </span>
+          {/* outside the crumb, whose overflow is hidden, so its menu can drop below */}
+          <CourseMenu courseName={courseName} />
         </>
       )}
 

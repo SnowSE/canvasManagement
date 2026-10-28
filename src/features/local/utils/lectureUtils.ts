@@ -5,7 +5,6 @@ export function getLectureForDay(
   weeks: { weekName: string; lectures: Lecture[] }[],
   dayAsDate: Date
 ) {
-  return weeks
-    .flatMap((w) => w.lectures)
-    .find((l) => l.date == getDateOnlyMarkdownString(dayAsDate));
+  const date = getDateOnlyMarkdownString(dayAsDate);
+  return weeks.flatMap((w) => w.lectures).find((l) => l.date == date);
 }
