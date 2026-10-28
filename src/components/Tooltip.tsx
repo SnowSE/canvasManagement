@@ -18,7 +18,7 @@ export const Tooltip: React.FC<{
 
   useLayoutEffect(() => {
     const rect = targetRef.current?.getBoundingClientRect();
-    if (!visible || !tooltipRef.current || !rect) return;
+    if (!tooltipRef.current || !rect) return;
     const width = tooltipRef.current.offsetWidth;
     const center = rect.left + rect.width / 2;
     const left = center - width / 2;
@@ -36,6 +36,9 @@ export const Tooltip: React.FC<{
     });
   }, [visible, message, targetRef]);
 
+  // nothing is mounted until it's shown: a calendar has hundreds of these,
+  // each with a rendered preview
+  if (!visible) return null;
   return createPortal(
     <div
       ref={tooltipRef}
@@ -44,10 +47,8 @@ export const Tooltip: React.FC<{
         " absolute -translate-x-1/2 z-20 " +
         " bg-gray-900 text-slate-200 text-sm " +
         " rounded-md py-1 px-2 " +
-        " transition-opacity duration-150 " +
         " border border-slate-700 shadow-[0px_0px_10px_5px] shadow-slate-500/20 " +
-        " max-w-sm max-h-64 overflow-hidden " +
-        (visible ? " opacity-100 " : " opacity-0 pointer-events-none hidden ")
+        " max-w-sm max-h-64 overflow-hidden "
       }
       role="tooltip"
       onMouseEnter={onMouseEnter}
