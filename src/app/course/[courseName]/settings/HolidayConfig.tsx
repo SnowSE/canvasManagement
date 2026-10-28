@@ -116,23 +116,20 @@ function InnerHolidayConfig() {
 }
 
 function ParsedHolidaysDisplay({ value }: { value: string }) {
-  const [parsedHolidays, setParsedHolidays] = useState<
-    {
-      name: string;
-      days: string[];
-    }[]
-  >([]);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
+  // while a date is half typed, the last list that parsed stays on screen
+  const [parsed, setParsed] = useState({
+    value: "",
+    holidays: [] as { name: string; days: string[] }[],
+    error: "",
+  });
+  if (value !== parsed.value) {
     try {
-      const parsed = parseHolidays(value);
-      setParsedHolidays(parsed);
-      setError("");
-    } catch (error) {
-      setError(error + "");
+      setParsed({ value, holidays: parseHolidays(value), error: "" });
+    } catch (e) {
+      setParsed({ value, holidays: parsed.holidays, error: e + "" });
     }
-  }, [value]);
+  }
+  const { holidays: parsedHolidays, error } = parsed;
 
   return (
     <div>

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Modal, { useModal } from "@/components/Modal";
 import { Spinner } from "@/components/Spinner";
 import {
@@ -94,13 +94,9 @@ function GitPanel({
   const commit = useGitCommitMutation();
   const sync = useGitSyncMutation();
   const setCommitOnPublish = useSetCommitOnPublishMutation();
-  const [message, setMessage] = useState(status.suggestedMessage);
-  const [edited, setEdited] = useState(false);
-
-  // follow the suggestion as files change, until the message is edited
-  useEffect(() => {
-    if (!edited) setMessage(status.suggestedMessage);
-  }, [edited, status.suggestedMessage]);
+  // follows the suggestion as files change, until the message is edited
+  const [edited, setEdited] = useState<string | null>(null);
+  const message = edited ?? status.suggestedMessage;
 
   const needsIdentity = !status.identity.name || !status.identity.email;
 
@@ -141,10 +137,7 @@ function GitPanel({
             id="git-message"
             className="bg-gray-950 border border-slate-700 rounded p-2 text-sm font-mono h-28"
             value={message}
-            onChange={(e) => {
-              setEdited(true);
-              setMessage(e.target.value);
-            }}
+            onChange={(e) => setEdited(e.target.value)}
           />
           <div className="flex items-center gap-2">
             <button
@@ -153,7 +146,7 @@ function GitPanel({
               onClick={() =>
                 commit.mutate(
                   { courseName, message },
-                  { onSuccess: () => setEdited(false) },
+                  { onSuccess: () => setEdited(null) },
                 )
               }
             >

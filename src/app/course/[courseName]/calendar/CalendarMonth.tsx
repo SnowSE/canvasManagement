@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import { CalendarMonthModel, isMonthPast } from "./calendarMonthUtils";
 import { Expandable } from "@/components/Expandable";
 import { CalendarWeek } from "./CalendarWeek";
@@ -20,10 +21,11 @@ export const CalendarMonth = ({ month }: { month: CalendarMonthModel }) => {
     "week calculation start date"
   );
 
-  const isPastSemester = Date.now() > new Date(settings.endDate).getTime();
+  // when the page opened; it only picks which months start collapsed
+  const [now] = useState(() => new Date());
+  const isPastSemester = now > new Date(settings.endDate);
 
-  const shouldCollapse =
-    isMonthPast(startDate, month, new Date()) && !isPastSemester;
+  const shouldCollapse = isMonthPast(startDate, month, now) && !isPastSemester;
 
   const monthName = new Date(month.year, month.month - 1, 1).toLocaleString(
     "default",

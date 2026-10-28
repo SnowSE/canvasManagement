@@ -16,16 +16,19 @@ export function StoragePathSelector({
   setLastTypedValue?: (value: string) => void;
 }) {
   const [path, setPath] = useState(value);
+  const [shownValue, setShownValue] = useState(value);
+  if (value !== shownValue) {
+    setShownValue(value);
+    setPath(value);
+  }
   const { data: directoryContents } = useDirectoryContentsQuery(value);
   const [isFocused, setIsFocused] = useState(false);
+  // under the input, measured when it's focused
+  const [dropdownPosition, setDropdownPosition] = useState({});
   const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
   const [arrowUsed, setArrowUsed] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setPath(value);
-  }, [value]);
 
   useEffect(() => {
     if (setLastTypedValue) setLastTypedValue(path);
@@ -66,19 +69,6 @@ export function StoragePathSelector({
       e.preventDefault();
     }
   };
-
-  // Calculate dropdown position style
-  const dropdownPositionStyle = (() => {
-    if (inputRef.current) {
-      const rect = inputRef.current.getBoundingClientRect();
-      return {
-        top: rect.bottom + window.scrollY,
-        left: rect.left + window.scrollX,
-        width: rect.width,
-      };
-    }
-    return {};
-  })();
 
   // Get last part of the path
   const lastPart = path.split("/")[path.split("/").length - 1] || "";
@@ -134,7 +124,15 @@ export function StoragePathSelector({
             setTimeout(() => inputRef.current?.focus(), 0);
           }
         }}
-        onFocus={() => setIsFocused(true)}
+        onFocus={(e) => {
+          const rect = e.currentTarget.getBoundingClientRect();
+          setDropdownPosition({
+            top: rect.bottom + window.scrollY,
+            left: rect.left + window.scrollX,
+            width: rect.width,
+          });
+          setIsFocused(true);
+        }}
         onBlur={() => setTimeout(() => setIsFocused(false), 100)}
         onKeyDown={handleKeyDown}
         autoComplete="off"
@@ -148,7 +146,7 @@ export function StoragePathSelector({
                 " text-slate-300  border border-slate-500 " +
                 "absolute bg-slate-900 rounded-md mt-1 w-full max-h-96 overflow-y-auto pointer-events-auto"
               }
-              style={dropdownPositionStyle}
+              style={dropdownPosition}
             >
               {filteredFolders.map((option, idx) => (
                 <div

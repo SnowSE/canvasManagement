@@ -23,7 +23,7 @@ export default function CollapsableSidebar({
   const [isMobile, setIsMobile] = useState(false);
   const { courseName } = useCourseContext();
   // after the remembered modules have re-expanded (and their open animation)
-  const scroll = usePersistedScroll(`moduleListScroll-${courseName}`, 500);
+  const scrollRef = usePersistedScroll(`moduleListScroll-${courseName}`, 500);
   const [userCollapsed, setUserCollapsed] = useState<
     "unset" | "collapsed" | "uncollapsed"
   >("unset");
@@ -95,8 +95,7 @@ export default function CollapsableSidebar({
       <div
         // never sideways: collapsed, it's 0 wide but its content isn't
         className={`${widthClass} flex-1 sm:p-3 overflow-y-auto overflow-x-hidden transition-all ${visibilityClass}`}
-        ref={scroll.ref}
-        onScroll={scroll.onScroll}
+        ref={scrollRef}
       >
         <ModuleList />
       </div>

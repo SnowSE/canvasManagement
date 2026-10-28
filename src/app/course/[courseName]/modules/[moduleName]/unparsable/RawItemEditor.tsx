@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { EditLayout } from "@/components/EditLayout";
 import { MonacoEditor } from "@/components/editor/MonacoEditor";
@@ -68,8 +68,6 @@ export function RawItemEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [text]);
 
-  // MonacoEditor remounts when onChange changes identity
-  const onChange = useCallback((value: string) => setText(value), []);
 
   return (
     <EditLayout
@@ -90,7 +88,7 @@ export function RawItemEditor({
       }
       Help={showHelp ? <RawItemHelp type={type} /> : undefined}
       onCloseHelp={() => setShowHelp(false)}
-      Editor={<MonacoEditor value={initialText} onChange={onChange} />}
+      Editor={<MonacoEditor value={initialText} onChange={setText} />}
       Preview={
         <div className="p-4 flex flex-col gap-3">
           <h4 className="text-rose-300">This file doesn&rsquo;t parse</h4>

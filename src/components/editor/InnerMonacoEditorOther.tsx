@@ -76,8 +76,13 @@ export default function InnerMonacoEditorOther({
   onChange,
 }: {
   value: string;
-  onChange: (value: string) => void; // must be memoized
+  onChange: (value: string) => void;
 }) {
+  // the editor's change listener is set once, at mount, so it calls the latest
+  const onChangeRef = useRef(onChange);
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  });
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -182,7 +187,7 @@ export default function InnerMonacoEditorOther({
     }
 
     ed.onDidChangeModelContent(() => {
-      onChange(ed.getModel()?.getValue() ?? "");
+      onChangeRef.current(ed.getModel()?.getValue() ?? "");
       refreshMarkers();
     });
     ed.onDidChangeCursorPosition(() => updateFromCursor(ed));

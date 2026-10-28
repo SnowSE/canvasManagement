@@ -1,7 +1,8 @@
 "use client";
-import { FC, ReactNode, useEffect, useRef, useState } from "react";
+import { FC, ReactNode, useRef, useState } from "react";
 import { MobileActionsMenu } from "./MobileActionsMenu";
 import { jumpToClickedText } from "./editor/previewJump";
+import { clamp, ResizeHandle } from "./ResizeHandle";
 
 const helpSplitStorageKey = "editorHelpSplit";
 const helpWidthStorageKey = "editorHelpWidth";
@@ -17,42 +18,10 @@ export const EditLayout: FC<{
   Footer: ReactNode;
 }> = ({ Header, HeaderActions, Help, onCloseHelp, Editor, Preview, Footer }) => {
   const [mobileView, setMobileView] = useState<"edit" | "preview">("edit");
-  // mobile-only: height of the help pane, adjustable via the drag handle
-  const [helpHeight, setHelpHeight] = useState<number | null>(() => {
-    if (typeof window === "undefined") return null;
-    const stored = parseInt(localStorage.getItem(helpSplitStorageKey) ?? "");
-    return Number.isNaN(stored) ? null : stored;
-  });
-  // desktop-only: width of the help pane, adjustable via the drag handle
-  const [helpWidth, setHelpWidth] = useState<number | null>(() => {
-    if (typeof window === "undefined") return null;
-    const stored = parseInt(localStorage.getItem(helpWidthStorageKey) ?? "");
-    return Number.isNaN(stored) ? null : stored;
-  });
-  // desktop-only: editor's share (0..1) of the editor+preview area
-  const [editorFraction, setEditorFraction] = useState<number | null>(() => {
-    if (typeof window === "undefined") return null;
-    const stored = parseFloat(
-      localStorage.getItem(previewSplitStorageKey) ?? "",
-    );
-    return Number.isNaN(stored) ? null : stored;
-  });
   const bodyRef = useRef<HTMLDivElement | null>(null);
+
   const editorRef = useRef<HTMLDivElement | null>(null);
 
-  // applied imperatively: React adopts server-rendered attributes during
-  // hydration, so a style prop set from localStorage-initialized state would
-  // never reach the DOM
-  useEffect(() => {
-    const body = bodyRef.current;
-    if (!body) return;
-    if (helpHeight !== null) body.style.setProperty("--help-h", `${helpHeight}px`);
-    if (helpWidth !== null) body.style.setProperty("--help-w", `${helpWidth}px`);
-    if (editorFraction !== null) {
-      body.style.setProperty("--editor-fr", String(editorFraction));
-      body.style.setProperty("--preview-fr", String(1 - editorFraction));
-    }
-  }, [helpHeight, helpWidth, editorFraction]);
 
   const toggleButtonClass = (active: boolean) =>
     "unstyled btn-thin px-2 py-0.5 text-sm " +
@@ -106,60 +75,26 @@ export const EditLayout: FC<{
           </div>
         )}
         {Help && (
-          <div
-            className="md:hidden flex-none h-4 my-0.5 cursor-row-resize touch-none flex items-center justify-center"
-            onPointerDown={(e) => {
-              e.currentTarget.setPointerCapture(e.pointerId);
-            }}
-            onPointerMove={(e) => {
-              if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
-              const body = bodyRef.current;
-              if (!body) return;
-              const rect = body.getBoundingClientRect();
-              const newHeight = e.clientY - rect.top;
-              const clamped = Math.min(
-                Math.max(newHeight, 80),
-                rect.height - 80,
-              );
-              setHelpHeight(clamped);
-              localStorage.setItem(helpSplitStorageKey, String(clamped));
-            }}
-            onPointerUp={(e) => {
-              e.currentTarget.releasePointerCapture(e.pointerId);
-            }}
-            aria-label="resize help"
-            role="separator"
-          >
-            <div className="w-16 h-1.5 rounded bg-slate-600" />
-          </div>
+          <ResizeHandle
+            axis="row"
+            className="md:hidden"
+            target={bodyRef}
+            storageKey={helpSplitStorageKey}
+            size={(e, rect) => clamp(e.clientY - rect.top, 80, rect.height - 80)}
+            apply={(body, h) => body.style.setProperty("--help-h", `${h}px`)}
+            label="resize help"
+          />
         )}
         {Help && (
-          <div
-            className="max-md:hidden flex-none w-4 mx-0.5 cursor-col-resize touch-none flex items-center justify-center"
-            onPointerDown={(e) => {
-              e.currentTarget.setPointerCapture(e.pointerId);
-            }}
-            onPointerMove={(e) => {
-              if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
-              const body = bodyRef.current;
-              if (!body) return;
-              const rect = body.getBoundingClientRect();
-              const newWidth = e.clientX - rect.left;
-              const clamped = Math.min(
-                Math.max(newWidth, 200),
-                rect.width * 0.5,
-              );
-              setHelpWidth(clamped);
-              localStorage.setItem(helpWidthStorageKey, String(clamped));
-            }}
-            onPointerUp={(e) => {
-              e.currentTarget.releasePointerCapture(e.pointerId);
-            }}
-            aria-label="resize help"
-            role="separator"
-          >
-            <div className="h-16 w-1.5 rounded bg-slate-600" />
-          </div>
+          <ResizeHandle
+            axis="col"
+            className="max-md:hidden"
+            target={bodyRef}
+            storageKey={helpWidthStorageKey}
+            size={(e, rect) => clamp(e.clientX - rect.left, 200, rect.width * 0.5)}
+            apply={(body, w) => body.style.setProperty("--help-w", `${w}px`)}
+            label="resize help"
+          />
         )}
         <div
           ref={editorRef}
@@ -170,34 +105,21 @@ export const EditLayout: FC<{
         >
           {Editor}
         </div>
-        <div
-          className="max-md:hidden flex-none w-4 mx-0.5 cursor-col-resize touch-none flex items-center justify-center"
-          onPointerDown={(e) => {
-            e.currentTarget.setPointerCapture(e.pointerId);
+        <ResizeHandle
+          axis="col"
+          className="max-md:hidden"
+          target={bodyRef}
+          storageKey={previewSplitStorageKey}
+          size={(e, rect) => {
+            const left = editorRef.current?.getBoundingClientRect().left ?? rect.left;
+            return clamp((e.clientX - left) / (rect.right - left || 1), 0.15, 0.85);
           }}
-          onPointerMove={(e) => {
-            if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
-            const body = bodyRef.current;
-            const editor = editorRef.current;
-            if (!body || !editor) return;
-            const left = editor.getBoundingClientRect().left;
-            const total = body.getBoundingClientRect().right - left;
-            if (total <= 0) return;
-            const fraction = Math.min(
-              Math.max((e.clientX - left) / total, 0.15),
-              0.85,
-            );
-            setEditorFraction(fraction);
-            localStorage.setItem(previewSplitStorageKey, String(fraction));
+          apply={(body, fraction) => {
+            body.style.setProperty("--editor-fr", String(fraction));
+            body.style.setProperty("--preview-fr", String(1 - fraction));
           }}
-          onPointerUp={(e) => {
-            e.currentTarget.releasePointerCapture(e.pointerId);
-          }}
-          aria-label="resize editor and preview"
-          role="separator"
-        >
-          <div className="h-16 w-1.5 rounded bg-slate-600" />
-        </div>
+          label="resize editor and preview"
+        />
         <div
           className={
             "flex-1 md:flex-[var(--preview-fr,1)_1_0%] h-full min-w-0 max-md:overflow-y-auto " +
