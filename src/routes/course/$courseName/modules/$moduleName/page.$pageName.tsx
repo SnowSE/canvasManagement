@@ -13,6 +13,8 @@ export const Route = createFileRoute(
         courseName: params.courseName,
       }),
     ),
+  // the page has a help pane; the course frame shows its toggle
+  staticData: { help: true },
   component: PageEditorPage,
 });
 

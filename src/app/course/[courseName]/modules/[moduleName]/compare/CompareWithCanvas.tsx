@@ -2,7 +2,7 @@
 import { FC, ReactNode, useEffect, useMemo, useState } from "react";
 import { Link, useRouter } from "@tanstack/react-router";
 import DOMPurify from "isomorphic-dompurify";
-import { BreadCrumbs } from "@/components/BreadCrumbs";
+import { CoursePageLayout } from "@/app/course/[courseName]/CoursePageLayout";
 import { RightSingleChevron } from "@/components/icons/RightSingleChevron";
 import { Spinner } from "@/components/Spinner";
 import { useCourseContext } from "@/app/course/[courseName]/context/courseContext";
@@ -422,19 +422,20 @@ const CompareLayout: FC<{
   const differenceCount = report.differences.length;
 
   return (
-    <div className="h-full flex flex-col max-w-[1400px] mx-auto bg-gray-900 rounded">
-      <div className="py-1 px-1 flex flex-row items-center min-w-0 flex-none">
-        <BreadCrumbs />
-        <Chevron />
-        <Link to={editUrl} className="truncate text-slate-300 hover:text-slate-100 px-2 text-sm font-bold">
-          {itemName}
-        </Link>
-        <Chevron />
-        <span className="px-2 text-sm font-bold text-slate-100 whitespace-nowrap">
-          Compare with Canvas
-        </span>
-      </div>
-
+    <CoursePageLayout
+      topBar={
+        <div className="min-w-0 flex-auto flex flex-row items-center">
+          <Chevron />
+          <Link to={editUrl} className="truncate text-slate-300 hover:text-slate-100 px-2 text-sm font-bold">
+            {itemName}
+          </Link>
+          <Chevron />
+          <span className="px-2 text-sm font-bold text-slate-100 whitespace-nowrap">
+            Compare with Canvas
+          </span>
+        </div>
+      }
+    >
       <div className="min-h-0 flex-1 overflow-y-auto px-3 sm:px-5">
         <div className="flex flex-row flex-wrap justify-between items-end gap-3 pt-3 pb-4">
           <div className="min-w-0">
@@ -526,7 +527,7 @@ const CompareLayout: FC<{
           </button>
         </div>
       </div>
-    </div>
+    </CoursePageLayout>
   );
 };
 

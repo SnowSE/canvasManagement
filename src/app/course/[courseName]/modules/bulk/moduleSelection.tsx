@@ -19,14 +19,18 @@ export const keyOf = ({ type, item, moduleName }: ModuleItemRef) =>
 function useSelectionState() {
   const [selected, setSelected] = useState<Record<string, ModuleItemRef>>({});
   const [filters, setFilters] = useState<Kind[]>([]);
+  // the pane's search: modules and items whose name has it
+  const [search, setSearch] = useState("");
   const [visibleBy, setVisibleBy] = useState<Record<string, ModuleItemRef[]>>({});
   // every kind each module's items match: a filter with nothing to show is
   // replaced by "All Synced" and the like, and counts as off if it was on
   const [kindsBy, setKindsBy] = useState<Record<string, Kind[]>>({});
   const present = Object.values(kindsBy).flat();
-  // using a filter or "select all shown" opens every module, to show them
-  const [expandRequests, setExpandRequests] = useState(0);
-  const expandAll = () => setExpandRequests((n) => n + 1);
+  // "expand all" and "collapse all"; using a filter or "select all shown"
+  // opens every module too, to show them
+  const [request, setRequest] = useState({ open: true, count: 0 });
+  const setAllOpen = (open: boolean) => setRequest((r) => ({ open, count: r.count + 1 }));
+  const expandAll = () => setAllOpen(true);
   const [menuAt, setMenuAt] = useState<{ x: number; y: number }>();
   const visible = Object.values(visibleBy).flat();
   const isSelected = (ref: ModuleItemRef) => keyOf(ref) in selected;
@@ -55,7 +59,10 @@ function useSelectionState() {
       expandAll();
       setSelected((s) => toggleAll(s, Object.fromEntries(visible.map((r) => [keyOf(r), r]))));
     },
-    expandRequests,
+    request,
+    setAllOpen,
+    search,
+    setSearch,
     menuAt,
     openMenu: setMenuAt,
     closeMenu: () => setMenuAt(undefined),

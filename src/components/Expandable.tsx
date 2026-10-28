@@ -14,7 +14,8 @@ export function Expandable({
   ExpandableElement,
   defaultExpanded = false,
   storageKey,
-  openRequests,
+  request,
+  forceOpen = false,
 }: {
   children: ReactNode;
   ExpandableElement: (props: {
@@ -24,8 +25,10 @@ export function Expandable({
   defaultExpanded?: boolean;
   // remember open/closed in localStorage under this key
   storageKey?: string;
-  // opens it each time this changes (from 0), like "expand all"
-  openRequests?: number;
+  // "expand all" and "collapse all": acted on each time `count` changes
+  request?: { open: boolean; count: number };
+  // open while a search is on, whatever was chosen
+  forceOpen?: boolean;
 }) {
   // the server and hydration render the default, then the stored value
   const stored = useSyncExternalStore(
@@ -35,12 +38,13 @@ export function Expandable({
   );
   // opened or closed here since mount
   const [choice, setChoice] = useState<boolean | null>(null);
-  const [seenRequests, setSeenRequests] = useState(openRequests);
-  if (openRequests !== seenRequests) {
-    setSeenRequests(openRequests);
-    if (openRequests) setChoice(true);
+  const [seenRequest, setSeenRequest] = useState(request);
+  if (request !== seenRequest) {
+    setSeenRequest(request);
+    if (request) setChoice(request.open);
   }
-  const isExpanded = choice ?? (stored === null ? defaultExpanded : stored === "true");
+  const isExpanded =
+    forceOpen || (choice ?? (stored === null ? defaultExpanded : stored === "true"));
 
   useEffect(() => {
     if (!storageKey || choice === null) return;

@@ -1,5 +1,6 @@
 "use client";
 import { RefObject, useEffect } from "react";
+import { remember } from "./storage";
 
 /**
  * A drag handle that sizes a pane. The size is remembered in localStorage and
@@ -37,16 +38,20 @@ export function ResizeHandle({
   return (
     <div
       className={
-        "flex-none touch-none flex items-center justify-center " +
+        "flex-none touch-none flex items-center justify-center rounded hover:bg-slate-700/50 " +
         (col ? "w-4 mx-0.5 cursor-col-resize " : "h-4 my-0.5 cursor-row-resize ") +
         className
       }
-      onPointerDown={(e) => e.currentTarget.setPointerCapture(e.pointerId)}
+      onPointerDown={(e) => {
+        // no text selection or native drag of what the pointer crosses
+        e.preventDefault();
+        e.currentTarget.setPointerCapture(e.pointerId);
+      }}
       onPointerMove={(e) => {
         if (!e.currentTarget.hasPointerCapture(e.pointerId) || !target.current) return;
         const value = size(e, target.current.getBoundingClientRect());
         apply(target.current, value);
-        localStorage.setItem(storageKey, String(value));
+        remember(storageKey, String(value));
       }}
       onPointerUp={(e) => e.currentTarget.releasePointerCapture(e.pointerId)}
       aria-label={label}

@@ -50,7 +50,6 @@ export default function EditQuiz({
     });
 
   const [error, setError] = useState("");
-  const [showHelp, setShowHelp] = useState(false);
 
   const bankPaths = useMemo(() => quizMarkdownUtils.bankPaths(text), [text]);
   const { data: bankFiles } = useQuizBanksQuery(moduleName, bankPaths);
@@ -135,12 +134,7 @@ export default function EditQuiz({
       HeaderActions={
         <UpdateQuizName quizName={quizName} moduleName={moduleName} />
       }
-      Help={
-        showHelp ? (
-          <QuizHelp settings={settings} feedbackDelimiters={feedbackDelimiters} />
-        ) : undefined
-      }
-      onCloseHelp={() => setShowHelp(false)}
+      Help={<QuizHelp settings={settings} feedbackDelimiters={feedbackDelimiters} />}
       Editor={<MonacoEditor key={monacoKey} value={text} onChange={textUpdate} />}
       Preview={
         <>
@@ -154,7 +148,6 @@ export default function EditQuiz({
             <QuizButtons
               moduleName={moduleName}
               quizName={quizName}
-              toggleHelp={() => setShowHelp((h) => !h)}
             />
           </SuspenseAndErrorHandling>
         </ClientOnly>

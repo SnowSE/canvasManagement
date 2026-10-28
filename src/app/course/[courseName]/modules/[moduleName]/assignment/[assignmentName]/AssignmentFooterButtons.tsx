@@ -37,11 +37,9 @@ import {
 export function AssignmentFooterButtons({
   moduleName,
   assignmentName,
-  toggleHelp,
 }: {
   assignmentName: string;
   moduleName: string;
-  toggleHelp: () => void;
 }) {
   const navigate = useNavigate();
   const router = useRouter();
@@ -183,7 +181,6 @@ export function AssignmentFooterButtons({
         }
       }}
       extraActions={extraActions}
-      toggleHelp={toggleHelp}
       previousUrl={previousUrl}
       nextUrl={nextUrl}
     >

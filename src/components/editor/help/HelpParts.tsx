@@ -1,6 +1,7 @@
 "use client";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { copyTextToClipboard } from "@/components/CopyableCommand";
+import { PaneHeader, SectionTitle } from "@/components/SidePane";
 
 // The app's --font-mono is DM Sans, which is proportional. Examples need real
 // monospace so indentation (rubric ratings, Schedule) lines up the way it does
@@ -96,31 +97,11 @@ export function HelpPanel({ children }: { children: ReactNode }) {
 
   return (
     <div className="text-sm leading-relaxed pe-2 pb-6">
-      <div className="md:sticky md:top-0 z-10 bg-gray-900 py-2 flex flex-row items-center gap-3 border-b border-slate-800">
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => filter(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") filter("");
-          }}
-          placeholder="Search help"
-          aria-label="Search help"
-          className="min-w-0 flex-1 rounded border border-slate-700 bg-gray-950 px-2 py-1 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
-        />
-        <button
-          className="unstyled flex-none !px-1 !font-normal text-xs text-blue-400 hover:text-blue-300 underline"
-          onClick={() => setAllOpen(true)}
-        >
-          Expand all
-        </button>
-        <button
-          className="unstyled flex-none !px-1 !font-normal text-xs text-blue-400 hover:text-blue-300 underline"
-          onClick={() => setAllOpen(false)}
-        >
-          Collapse all
-        </button>
-      </div>
+      <PaneHeader
+        title="Help"
+        setAllOpen={setAllOpen}
+        search={{ label: "Search help", value: query, onChange: filter }}
+      />
       <div ref={sectionsRef}>{children}</div>
       {noMatches && (
         <div className="py-3 text-slate-400 italic">
@@ -141,15 +122,8 @@ export function HelpSection({
 }) {
   return (
     <details data-help-section className="group border-b border-slate-800">
-      <summary className="cursor-pointer select-none py-2 font-semibold text-slate-200 hover:text-white list-none flex items-center gap-2">
-        <svg
-          viewBox="0 0 16 16"
-          className="size-3 flex-none fill-slate-500 transition-transform group-open:rotate-90"
-          aria-hidden
-        >
-          <path d="M5 3l6 5-6 5z" />
-        </svg>
-        {title}
+      <summary className="list-none">
+        <SectionTitle title={title} />
       </summary>
       <div className="pb-3 ps-5 space-y-2 text-slate-300">{children}</div>
     </details>

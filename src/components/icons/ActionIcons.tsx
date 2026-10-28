@@ -29,6 +29,13 @@ export const HelpIcon = () => (
   </ActionIcon>
 );
 
+export const ModulesIcon = () => (
+  <ActionIcon>
+    <rect x="3" y="4" width="18" height="6" rx="1" />
+    <rect x="3" y="14" width="18" height="6" rx="1" />
+  </ActionIcon>
+);
+
 export const PreviousIcon = () => (
   <ActionIcon strokeWidth={2.2}>
     <path d="m15 6-6 6 6 6" />

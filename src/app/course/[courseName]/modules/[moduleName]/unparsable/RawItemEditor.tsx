@@ -9,7 +9,6 @@ import { useCourseContext } from "@/app/course/[courseName]/context/courseContex
 import { getCourseUrl, getModuleItemUrl } from "@/services/urlUtils";
 import { useGitStatusQuery } from "@/features/local/git/gitHooks";
 import { ItemTypeIcon } from "@/app/course/[courseName]/ItemTypeIcon";
-import { BreadCrumbs } from "@/components/BreadCrumbs";
 import { RightSingleChevron } from "@/components/icons/RightSingleChevron";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import { useGlobalSettingsQuery } from "@/features/local/globalSettings/globalSettingsHooks";
@@ -48,7 +47,6 @@ export function RawItemEditor({
   const { courseName } = useCourseContext();
   const [text, setText] = useState(initialText);
   const [error, setError] = useState(initialError);
-  const [showHelp, setShowHelp] = useState(true);
   const save = useSaveRawItemMutation(moduleName, type, name);
   const { data: git } = useGitStatusQuery();
   const firstRender = useRef(true);
@@ -73,7 +71,6 @@ export function RawItemEditor({
     <EditLayout
       Header={
         <div className="flex flex-row items-center min-w-0">
-          <BreadCrumbs />
           <span className="text-slate-500 cursor-default select-none my-auto">
             <RightSingleChevron />
           </span>
@@ -86,8 +83,7 @@ export function RawItemEditor({
           </div>
         </div>
       }
-      Help={showHelp ? <RawItemHelp type={type} /> : undefined}
-      onCloseHelp={() => setShowHelp(false)}
+      Help={<RawItemHelp type={type} />}
       Editor={<MonacoEditor value={initialText} onChange={setText} />}
       Preview={
         <div className="p-4 flex flex-col gap-3">
@@ -111,12 +107,6 @@ export function RawItemEditor({
       }
       Footer={
         <div className="flex items-center gap-3 px-2 py-1">
-          <button
-            className="unstyled btn-outline btn-thin"
-            onClick={() => setShowHelp((h) => !h)}
-          >
-            {showHelp ? "Hide" : "Show"} syntax help
-          </button>
           <Link className="btn btn-thin" to={getCourseUrl(courseName)}>
             Back to calendar
           </Link>

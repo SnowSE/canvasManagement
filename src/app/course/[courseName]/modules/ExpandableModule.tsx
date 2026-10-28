@@ -12,12 +12,12 @@ import Modal, { useModal } from "../../../../components/Modal";
 import NewItemForm from "./NewItemForm";
 import { ModuleCanvasStatus } from "./ModuleCanvasStatus";
 import ClientOnly from "@/components/ClientOnly";
-import ExpandIcon from "../../../../components/icons/ExpandIcon";
 import { useDraggingContext } from "../context/drag/draggingContext";
 import { Link } from "@tanstack/react-router";
 import { getModuleItemUrl } from "@/services/urlUtils";
 import { useCourseContext } from "../context/courseContext";
 import { Expandable } from "../../../../components/Expandable";
+import { SectionTitle } from "@/components/SidePane";
 import { useQuizzesQueries } from "@/features/local/quizzes/quizHooks";
 import { useAssignmentsQueries } from "@/features/local/assignments/assignmentHooks";
 import { useReorderCanvasModuleItemsMutation } from "@/features/canvas/hooks/canvasModuleHooks";
@@ -92,9 +92,14 @@ export default function ExpandableModule({
     "expandable module week grouping",
   );
 
+  // the pane's search: a module whose name has it shows everything, another
+  // only the items whose name has it; one with nothing to show is hidden
+  const query = selection.search.trim().toLowerCase();
+  const has = (name: string) => name.toLowerCase().includes(query);
+  const searched = !query || has(moduleName) ? moduleItems : moduleItems.filter((i) => has(i.item.name));
   // what the bar's filters let through (everything with none on); a module
   // with nothing to show is hidden
-  const shownItems = moduleItems.filter(({ type, item }) =>
+  const shownItems = searched.filter(({ type, item }) =>
     shown(kindsOf(statusOf(type, item, moduleName)), selection.filters),
   );
   const shownRefs = shownItems.map(({ type, item }) => ({ type, item, moduleName }));
@@ -154,52 +159,45 @@ export default function ExpandableModule({
     [],
   );
 
-  const shownInvalid = showsErrors(selection.filters) ? (invalidItems ?? []) : [];
-  if (selection.filters.length > 0 && shownItems.length === 0 && shownInvalid.length === 0)
+  const shownInvalid = (showsErrors(selection.filters) ? (invalidItems ?? []) : []).filter(
+    (i) => !query || has(moduleName) || has(i.name),
+  );
+  if ((selection.filters.length > 0 || query) && shownItems.length === 0 && shownInvalid.length === 0)
     return null;
 
   return (
     <div
-      className="bg-slate-800 rounded-lg border border-slate-600 mb-3 "
+      className="border-b border-slate-800"
       onDrop={(e) => itemDropOnModule(e, moduleName)}
       onDragOver={(e) => e.preventDefault()}
     >
-      <div className="draggingModule ">
-        <div className=" p-3 ">
+      <div className="draggingModule">
+        <div>
           <Expandable
             storageKey={`moduleExpanded-${courseName}-${moduleName}`}
-            openRequests={selection.expandRequests}
+            request={selection.request}
+            forceOpen={!!query}
             ExpandableElement={({ setIsExpanded, isExpanded }) => (
-              <div
-                className="font-bold flex flex-row justify-between cursor-pointer "
-                role="button"
+              <SectionTitle
+                title={moduleName}
+                open={isExpanded}
                 onClick={() => setIsExpanded((e) => !e)}
               >
-                <div className="flex-1">{moduleName}</div>
-                <div className=" flex flex-row justify-end">
-                  {errorCount > 0 && (
-                    <span
-                      className="me-2 rounded-full bg-rose-900 px-2 text-sm text-rose-100"
-                      title={`${errorCount} file${errorCount === 1 ? "" : "s"} in this module can't be read or sent to Canvas`}
-                    >
-                      ⚠ {errorCount}
-                    </span>
-                  )}
-                  <ClientOnly>
-                    <ModuleCanvasStatus moduleName={moduleName} />
-                  </ClientOnly>
-                  <ExpandIcon
-                    style={{
-                      ...(isExpanded
-                        ? { rotate: "90deg" }
-                        : { rotate: "180deg" }),
-                    }}
-                  />
-                </div>
-              </div>
+                {errorCount > 0 && (
+                  <span
+                    className="rounded-full bg-rose-900 px-2 text-xs text-rose-100"
+                    title={`${errorCount} file${errorCount === 1 ? "" : "s"} in this module can't be read or sent to Canvas`}
+                  >
+                    ⚠ {errorCount}
+                  </span>
+                )}
+                <ClientOnly>
+                  <ModuleCanvasStatus moduleName={moduleName} />
+                </ClientOnly>
+              </SectionTitle>
             )}
           >
-            <>
+            <div className="pb-3 ps-5 space-y-2 text-slate-300">
               {!reorderMutation.isPending && (
                 <button
                   className={" me-3 " + (canvasOutOfOrder ? " text-amber-300! " : "")}
@@ -320,7 +318,7 @@ export default function ExpandableModule({
                   </div>
                 ))}
               </div>
-            </>
+            </div>
           </Expandable>
         </div>
       </div>

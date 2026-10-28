@@ -27,8 +27,8 @@ export default function CourseCalendar() {
   return (
     <div
       className="
-        min-h-0
-        flex-grow
+        min-h-0 min-w-0
+        flex-1
         border-2
         border-gray-900
         rounded-lg

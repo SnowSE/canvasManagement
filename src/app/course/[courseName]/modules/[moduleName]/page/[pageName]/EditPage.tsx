@@ -40,7 +40,6 @@ export default function EditPage({
     });
 
   const [error, setError] = useState("");
-  const [showHelp, setShowHelp] = useState(false);
   const { data: settings } = useLocalCourseSettingsQuery();
 
   useEffect(() => {
@@ -105,8 +104,7 @@ export default function EditPage({
       HeaderActions={
         <UpdatePageName pageName={pageName} moduleName={moduleName} />
       }
-      Help={showHelp ? <PageHelp /> : undefined}
-      onCloseHelp={() => setShowHelp(false)}
+      Help={<PageHelp />}
       Editor={<MonacoEditor key={monacoKey} value={text} onChange={textUpdate} />}
       Preview={
         <div className="h-full flex flex-col overflow-hidden">
@@ -124,7 +122,6 @@ export default function EditPage({
               <EditPageButtons
                 pageName={pageName}
                 moduleName={moduleName}
-                toggleHelp={() => setShowHelp((h) => !h)}
               />
             </ClientOnly>
           )}

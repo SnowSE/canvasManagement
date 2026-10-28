@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import { Link, useRouter } from "@tanstack/react-router";
 import { diffLines } from "diff";
-import { BreadCrumbs } from "@/components/BreadCrumbs";
+import { CoursePageLayout } from "@/app/course/[courseName]/CoursePageLayout";
 import { RightSingleChevron } from "@/components/icons/RightSingleChevron";
 import { Spinner } from "@/components/Spinner";
 import { useCourseContext } from "@/app/course/[courseName]/context/courseContext";
@@ -70,22 +70,23 @@ export function ItemHistory({
   };
 
   return (
-    <div className="h-full flex flex-col max-w-[1400px] mx-auto bg-gray-900 rounded">
-      <div className="py-1 px-1 flex flex-row items-center min-w-0 flex-none">
-        <BreadCrumbs />
-        <Chevron />
-        <Link
-          to={editUrl}
-          className="truncate text-slate-300 hover:text-slate-100 px-2 text-sm font-bold"
-        >
-          {name}
-        </Link>
-        <Chevron />
-        <span className="px-2 text-sm font-bold text-slate-100 whitespace-nowrap">
-          File history
-        </span>
-      </div>
-
+    <CoursePageLayout
+      topBar={
+        <div className="min-w-0 flex-auto flex flex-row items-center">
+          <Chevron />
+          <Link
+            to={editUrl}
+            className="truncate text-slate-300 hover:text-slate-100 px-2 text-sm font-bold"
+          >
+            {name}
+          </Link>
+          <Chevron />
+          <span className="px-2 text-sm font-bold text-slate-100 whitespace-nowrap">
+            File history
+          </span>
+        </div>
+      }
+    >
       <div className="min-h-0 flex-1 flex flex-col md:flex-row gap-4 px-3 sm:px-5 pt-3">
         <div className="md:w-80 flex-none md:overflow-y-auto">
           <div className="text-sm uppercase tracking-wider text-slate-400 font-semibold pb-2">
@@ -178,7 +179,7 @@ export function ItemHistory({
           </button>
         </div>
       </div>
-    </div>
+    </CoursePageLayout>
   );
 }
 
