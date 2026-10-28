@@ -16,6 +16,8 @@
 
 :root {
   @apply text-base sm:text-lg;
+  /* every scrollbar like the editor's: a translucent grey thumb, no track */
+  scrollbar-color: rgb(121 121 121 / 0.4) transparent;
 }
 
 h1 {
