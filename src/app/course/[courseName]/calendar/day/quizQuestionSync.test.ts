@@ -1,11 +1,25 @@
 import { describe, it, expect } from "vitest";
-import { checkQuizQuestions, pointTotalChangeError, questionsMatchCanvas } from "./quizQuestionSync";
+import {
+  checkQuizQuestions,
+  describeQuestionPlan,
+  planQuestionUpdates,
+  pointTotalChangeError,
+} from "./quizQuestionSync";
 import { CanvasQuizQuestion } from "@/features/canvas/models/quizzes/canvasQuizQuestionModel";
 import {
   DayOfWeek,
   LocalCourseSettings,
 } from "@/features/local/course/localCourseSettings";
 import { quizMarkdownUtils } from "@/features/local/quizzes/models/utils/quizMarkdownUtils";
+import {
+  LocalQuizQuestion,
+  QuestionType,
+} from "@/features/local/quizzes/models/localQuizQuestion";
+import {
+  getAnswersForCanvas,
+  getQuestionTextForCanvas,
+} from "@/features/canvas/services/canvasQuizService";
+import { markdownToHTMLSafe } from "@/services/htmlMarkdownUtils";
 
 const settings: LocalCourseSettings = {
   name: "test course",
@@ -68,18 +82,6 @@ const canvasMultipleChoice = canvasQuestion({
     { id: 1, text: "Bound the blast radius", html: themed("<p>Bound the blast radius</p>"), weight: 100 },
     { id: 2, text: "Save bandwidth", html: themed("<p>Save bandwidth</p>"), weight: 0 },
   ],
-});
-
-describe("questionsMatchCanvas", () => {
-  it("is true when Canvas has the file's questions, so updating leaves them alone", () => {
-    expect(questionsMatchCanvas(questionsOf(multipleChoice), [canvasMultipleChoice], settings)).toBe(true);
-  });
-
-  it("is false when a question differs, or one is missing", () => {
-    const changed = canvasQuestion({ ...canvasMultipleChoice, correct_comments: "Wrong." });
-    expect(questionsMatchCanvas(questionsOf(multipleChoice), [changed], settings)).toBe(false);
-    expect(questionsMatchCanvas(questionsOf(multipleChoice), [], settings)).toBe(false);
-  });
 });
 
 describe("checkQuizQuestions", () => {
@@ -362,6 +364,57 @@ describe("checkQuizQuestions - lining questions up", () => {
     expect(fields[0].canvas).toContain("position: 5");
     expect(fields.slice(1).every((f) => f.same)).toBe(true);
   });
+  describe("planQuestionUpdates", () => {
+    it("leaves alone a quiz whose questions match the file", () => {
+      expect(
+        planQuestionUpdates(questionsOf(multipleChoice), [canvasMultipleChoice], settings),
+      ).toEqual([{ local: 0, canvas: 0, same: true, moved: false }]);
+    });
+
+    it("pairs an edited question with its old version, adds a new one and deletes a removed one", () => {
+      const file = [essays[0], `${essays[1]} Give an example.`, essays[3], "What does idempotency buy a retrying client? Explain."];
+      const canvas = [essays[0], essays[1], essays[2], essays[3]];
+      expect(planQuestionUpdates(fileOf(file), canvasOf(canvas), settings)).toEqual([
+        { local: 0, canvas: 0, same: true, moved: false },
+        { local: 1, canvas: 1, same: false, moved: false },
+        { local: undefined, canvas: 2, same: false, moved: false },
+        { local: 2, canvas: 3, same: true, moved: false },
+        { local: 3, canvas: undefined, same: false, moved: false },
+      ]);
+    });
+
+    it("replaces every question of a quiz with groups", () => {
+      const plan = planQuestionUpdates(
+        fileOf([essays[0], essays[1]]),
+        canvasOf([essays[0], essays[1]]).map((q) => canvasQuestion({ ...q, quiz_group_id: 5 })),
+        settings,
+      );
+      expect(describeQuestionPlan(plan)).toBe("all 2 questions replaced");
+    });
+
+    it("replaces every question of a quiz that uses a question bank, which is always in a group", () => {
+      const quiz = quizMarkdownUtils.parseMarkdown(
+        `ShuffleAnswers: true\nOneQuestionAtATime: false\nDueAt: 08/21/2023 23:59:00\nLockAt: 08/21/2023 23:59:00\nAssignmentGroup: Assignments\nAllowedAttempts: -1\nDescription:\n---\nGroup: Ports\nPick: 1\nPoints: 2\nBank: ../banks/ports.md\n---\nEndGroup\n---\nPoints: 5\n${essays[0]}\nessay`,
+        "Test Quiz",
+        undefined,
+        { "../banks/ports.md": "What port does HTTP use?\n*a) 80\nb) 443\n---\nWhat port does HTTPS use?\na) 80\n*b) 443" },
+      );
+      const plan = planQuestionUpdates(quiz.questions, canvasOf([essays[0]]), settings);
+      expect(describeQuestionPlan(plan)).toBe(
+        "all 3 questions replaced",
+      );
+    });
+
+    it("only moves a question that moved", () => {
+      const plan = planQuestionUpdates(
+        fileOf([essays[4], essays[0], essays[1], essays[2], essays[3]]),
+        canvasOf(essays),
+        settings,
+      );
+      expect(plan[0]).toEqual({ local: 0, canvas: 4, same: true, moved: true });
+      expect(plan.every((r) => r.same)).toBe(true);
+    });
+  });
 });
 
 describe("pointTotalChangeError", () => {
@@ -465,5 +518,73 @@ EndGroup`);
   it("score a group once per question picked when checking the point total", () => {
     const attempt = [canvasQuestion({ points_possible: 2 })];
     expect(pointTotalChangeError(local, attempt)).toBeUndefined();
+  });
+});
+
+describe("describeQuestionPlan", () => {
+  const row = (local?: number, canvas?: number, same = false, moved = false) => ({ local, canvas, same, moved });
+
+  it("names each question it touches and counts the rest", () => {
+    expect(
+      describeQuestionPlan([
+        row(0, 0, true),
+        row(1, 1),
+        row(2, 2),
+        row(undefined, 3),
+        row(3, 4, true, true),
+        row(4),
+      ]),
+    ).toBe("questions 2 and 3 replaced, question 5 added, Canvas question 4 removed, question 4 moved; 1 left alone");
+  });
+
+  it("is empty when nothing needs doing", () => {
+    expect(describeQuestionPlan([row(0, 0, true), row(1, 1, true)])).toBe("");
+  });
+});
+
+describe("multiple dropdowns in a student's attempt", () => {
+  const question = {
+    text: "Run Kruskal's algorithm.\n",
+    questionType: QuestionType.MULTIPLE_DROPDOWNS,
+    points: 5,
+    matchDistractors: [],
+    answers: [
+      { correct: true, text: "total weight", matchedText: "9", dropdownGroup: 0 },
+      { correct: false, text: "", matchedText: "8", dropdownGroup: 0 },
+      { correct: true, text: "first edge rejected", matchedText: "A–C", dropdownGroup: 1 },
+      { correct: false, text: "", matchedText: "C–E", dropdownGroup: 1 },
+    ],
+  } as LocalQuizQuestion;
+  const html = markdownToHTMLSafe({ markdownString: getQuestionTextForCanvas(question), settings });
+  const answers = (getAnswersForCanvas(question, settings) as { blank_id: string; answer_text: string; answer_weight: number }[])
+    .map((a, id) => ({ id, blank_id: a.blank_id, text: a.answer_text, weight: a.answer_weight }));
+
+  // an attempt has each [dropdownN] drawn as the menu the student saw,
+  // named by a hash, with its options listed as Canvas leaves them
+  const menu = (hash: string, options: string[]) =>
+    `<select class="question_input" name="question_85056816_${hash}">\n  <option value="">\n    [ Select ]\n  </option>\n  [${options
+      .map((o, i) => `"<option value="${i}">${o}</option>"`)
+      .join(", ")}]\n</select>`;
+  const attempt = canvasQuestion({
+    question_type: "multiple_dropdowns_question",
+    points_possible: 5,
+    question_text: themed(
+      html
+        .replace("[dropdown1]", menu("7361526813c0e3d54e8c1c1d93244c72", ["9", "8"]))
+        .replace("[dropdown2]", menu("dc20a2f594616a7e6ef43f99654f25d7", ["C–E", "A–C"])),
+    ),
+    answers,
+  });
+
+  it("match the file, reading each menu as its [dropdown]", () => {
+    const [field] = checkQuizQuestions([question], [attempt], settings, { ignoreAnswerOrder: true, isAttempt: true });
+    expect(field.message).toBe("");
+    expect(field.canvas).toContain("[dropdown1]");
+  });
+
+  it("still differ when the text around the menus changed", () => {
+    const changed = { ...question, text: "Run Prim's algorithm.\n" };
+    const [field] = checkQuizQuestions([changed], [attempt], settings, { ignoreAnswerOrder: true, isAttempt: true });
+    expect(field.message).toContain("text different");
   });
 });

@@ -7,6 +7,7 @@ import {
 } from "./canvasQuizService";
 import { CanvasQuizQuestion } from "@/features/canvas/models/quizzes/canvasQuizQuestionModel";
 import { LocalQuiz } from "@/features/local/quizzes/models/localQuiz";
+import type { QuestionPlanRow } from "@/app/course/[courseName]/calendar/day/quizQuestionSync";
 import {
   LocalQuizQuestion,
   QuestionType,
@@ -514,10 +515,11 @@ describe("canvasQuizService", () => {
         { text: "second", questionType: QuestionType.ESSAY, points: 1, answers: [] },
       ],
     } as unknown as LocalQuiz;
+    const url = "https://test.instructure.com/api/v1/courses/42/quizzes/7";
 
     const updateWithCanvasPublished = async (
       published: boolean,
-      questionsMatch = false,
+      planQuestions?: () => QuestionPlanRow[],
     ) => {
       const { axiosClient } = await import("@/services/axiosUtils");
       const { rateLimitAwarePost, rateLimitAwareDelete } = await import(
@@ -534,19 +536,27 @@ describe("canvasQuizService", () => {
 
       const summary = await canvasQuizService.update(42, 7, quiz, {} as never, {
         onStep: (step) => steps.push(step),
-        questionsMatch: () => questionsMatch,
+        planQuestions,
       });
       return { summary, steps, axiosClient, rateLimitAwarePost, rateLimitAwareDelete };
     };
+    const allSame = () => [0, 1].map((i) => ({ local: i, canvas: i, same: true, moved: false }));
+    // the first question edited, Canvas's second deleted, the file's second new
+    const oneOfEach = () => [
+      { local: 0, canvas: 0, same: false, moved: false },
+      { canvas: 1, same: false, moved: false },
+      { local: 1, same: false, moved: false },
+      { canvas: 2, same: false, moved: false },
+    ];
 
-    it("replaces the Canvas questions with the file's questions", async () => {
+    it("without a plan, replaces the Canvas questions with the file's questions", async () => {
       const { rateLimitAwarePost, rateLimitAwareDelete } =
         await updateWithCanvasPublished(false);
 
       expect(vi.mocked(rateLimitAwareDelete).mock.calls.map(([url]) => url)).toEqual([
-        "https://test.instructure.com/api/v1/courses/42/quizzes/7/questions/101",
-        "https://test.instructure.com/api/v1/courses/42/quizzes/7/questions/102",
-        "https://test.instructure.com/api/v1/courses/42/quizzes/7/questions/103",
+        `${url}/questions/101`,
+        `${url}/questions/102`,
+        `${url}/questions/103`,
       ]);
       const created = vi
         .mocked(rateLimitAwarePost)
@@ -554,34 +564,78 @@ describe("canvasQuizService", () => {
       expect(created).toHaveLength(2);
     });
 
+    it("replaces a changed question, adds new ones and deletes removed ones, then orders them", async () => {
+      const { axiosClient, rateLimitAwarePost, rateLimitAwareDelete, summary } =
+        await updateWithCanvasPublished(false, oneOfEach);
+
+      // only the quiz's settings; a changed question is replaced, not edited
+      expect(vi.mocked(axiosClient.put).mock.calls.map(([url]) => url)).toEqual([url]);
+      expect(vi.mocked(rateLimitAwareDelete).mock.calls.map(([url]) => url)).toEqual([
+        `${url}/questions/101`,
+        `${url}/questions/102`,
+        `${url}/questions/103`,
+      ]);
+      const posts = vi.mocked(rateLimitAwarePost).mock.calls;
+      expect(posts.filter(([u]) => u.endsWith("/questions"))).toHaveLength(2);
+      expect(summary).toEqual({ plan: oneOfEach(), needsSaveInCanvas: false });
+    });
+
+    it("keeps a question that is exactly the same, with its id, and orders the new ones around it", async () => {
+      const { rateLimitAwarePost, rateLimitAwareDelete } = await updateWithCanvasPublished(
+        false,
+        () => [
+          { local: 0, canvas: 0, same: true, moved: false },
+          { canvas: 1, same: false, moved: false },
+          { canvas: 2, same: false, moved: false },
+          { local: 1, same: false, moved: false },
+        ],
+      );
+
+      expect(vi.mocked(rateLimitAwareDelete).mock.calls.map(([url]) => url)).toEqual([
+        `${url}/questions/102`,
+        `${url}/questions/103`,
+      ]);
+      expect(
+        vi.mocked(rateLimitAwarePost).mock.calls.find(([u]) => u.endsWith("/reorder"))?.[1],
+      ).toEqual({
+        order: [
+          { type: "question", id: "101" },
+          { type: "question", id: "9" },
+        ],
+      });
+    });
+
+    it("only reorders questions that moved", async () => {
+      const { axiosClient, rateLimitAwarePost, rateLimitAwareDelete } =
+        await updateWithCanvasPublished(false, () => [
+          { local: 0, canvas: 1, same: true, moved: true },
+          { local: 1, canvas: 0, same: true, moved: false },
+        ]);
+
+      expect(axiosClient.put).toHaveBeenCalledTimes(1);
+      expect(rateLimitAwareDelete).not.toHaveBeenCalled();
+      expect(vi.mocked(rateLimitAwarePost).mock.calls.map(([u]) => u)).toEqual([
+        `${url}/reorder`,
+      ]);
+    });
+
     // Canvas only rebuilds what students see when a quiz's published state
     // changes or its web form is saved; no API call does it (re-sending
     // published: true is a no-op), so the caller must ask for "Save it now".
     it("reports that a published quiz needs Save it now in Canvas", async () => {
-      const { axiosClient, summary } = await updateWithCanvasPublished(true);
+      const { summary } = await updateWithCanvasPublished(true, oneOfEach);
 
-      expect(vi.mocked(axiosClient.put).mock.calls).toHaveLength(1);
-      expect(summary).toEqual({
-        questionsReplaced: true,
-        questionsRemoved: 3,
-        questionsAdded: 2,
-        needsSaveInCanvas: true,
-      });
+      expect(summary.needsSaveInCanvas).toBe(true);
     });
 
     it("leaves the questions alone when they already match the file", async () => {
       const { summary, steps, rateLimitAwarePost, rateLimitAwareDelete } =
-        await updateWithCanvasPublished(true, true);
+        await updateWithCanvasPublished(true, allSame);
 
       expect(rateLimitAwareDelete).not.toHaveBeenCalled();
       expect(rateLimitAwarePost).not.toHaveBeenCalled();
       // so a published quiz doesn't need Save it now after a settings change
-      expect(summary).toEqual({
-        questionsReplaced: false,
-        questionsRemoved: 0,
-        questionsAdded: 0,
-        needsSaveInCanvas: false,
-      });
+      expect(summary.needsSaveInCanvas).toBe(false);
       expect(steps).toEqual([
         "Updating quiz settings",
         "Questions already match the file",
@@ -589,18 +643,17 @@ describe("canvasQuizService", () => {
     });
 
     it("needs nothing more for an unpublished quiz", async () => {
-      const { summary } = await updateWithCanvasPublished(false);
+      const { summary } = await updateWithCanvasPublished(false, oneOfEach);
 
       expect(summary.needsSaveInCanvas).toBe(false);
     });
 
     it("reports each step as it goes", async () => {
-      const { steps } = await updateWithCanvasPublished(true);
+      const { steps } = await updateWithCanvasPublished(true, oneOfEach);
 
       expect(steps).toEqual([
         "Updating quiz settings",
-        "Removing 3 questions from Canvas",
-        "Adding 2 questions from the file",
+        "Updating the questions that differ",
       ]);
     });
   });
