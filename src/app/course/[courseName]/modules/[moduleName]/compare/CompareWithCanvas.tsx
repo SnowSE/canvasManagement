@@ -368,7 +368,7 @@ const VersionSection: FC<{
   const differing = fields?.filter((f) => !f.same).length ?? 0;
   const title = `What students got · version ${version.version}${latest ? " (latest)" : ""} · ${version.attempts} attempt${version.attempts === 1 ? "" : "s"}${fields ? ` · ${differing === 0 ? "matches the file" : `${differing} question${differing === 1 ? "" : "s"} differ`}` : ""}`;
   return fields ? (
-    <FieldsTable fields={fields} title={title} canvasLabel="students got" />
+    <FieldsTable fields={fields} title={title} canvasLabel="students got" collapseSame />
   ) : (
     <div className="pb-6 text-sm text-slate-400">
       {title} <Spinner />
@@ -586,8 +586,14 @@ const FieldsTable: FC<{
   title?: ReactNode;
   /** What the right-hand column is, e.g. what students got. */
   canvasLabel?: string;
-}> = ({ fields, title, canvasLabel = "Canvas now" }) => {
+  /** Fold each run of matching rows into one row that opens on a click. */
+  collapseSame?: boolean;
+}> = ({ fields, title, canvasLabel = "Canvas now", collapseSame = false }) => {
+  const [opened, setOpened] = useState<Set<string>>(new Set());
   const rows = fields.filter((f) => f.section !== "description");
+  // a folded run is shown as its first row's key, standing for `count` rows
+  const folded = (i: number) =>
+    collapseSame && rows[i].same && !opened.has(runStart(rows, i));
   return (
     <section className="pb-6">
       <div className="flex flex-row flex-wrap justify-between items-baseline gap-3 pb-2">
@@ -623,6 +629,24 @@ const FieldsTable: FC<{
           <tbody>
             {rows.map((f, i) => {
               const newSection = i === 0 || rows[i - 1].section !== f.section;
+              if (folded(i)) {
+                if (i > 0 && rows[i - 1].same) return null;
+                let count = 0;
+                while (rows[i + count]?.same) count++;
+                return (
+                  <tr key={f.key} className="text-slate-500">
+                    <td colSpan={5}>
+                      <button
+                        className="unstyled hover:text-slate-300"
+                        onClick={() => setOpened((o) => new Set(o).add(f.key))}
+                      >
+                        ▸ {count} identical {f.section === "questions" ? "question" : "row"}
+                        {count === 1 ? "" : "s"}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              }
               return (
                 <tr
                   key={f.key}
@@ -659,6 +683,12 @@ const FieldsTable: FC<{
       </div>
     </section>
   );
+};
+
+/** The key of the first row of the run of matching rows that row `i` is in. */
+const runStart = (rows: SyncField[], i: number) => {
+  while (i > 0 && rows[i - 1].same) i--;
+  return rows[i].key;
 };
 
 // every question shows in full, answers included; "≠ " marks what differs
