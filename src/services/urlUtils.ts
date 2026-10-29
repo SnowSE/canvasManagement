@@ -163,3 +163,11 @@ function rewriteRelativeMdHrefs(
     return newHref ? `href="${newHref}"` : fullMatch;
   });
 }
+
+/** The view an item page is showing, as a suffix for another item's url: "/compare", "/history" or "" (the editor). */
+export const itemView = (pathname: string) =>
+  /\/modules\/[^/]+\/(?:assignment|quiz|page)\/[^/]+(\/compare|\/history)$/.exec(pathname)?.[1] ?? "";
+
+/** The course page showing, as a suffix for another course's url: "/settings", "/import" or "" (the calendar; an item has no counterpart in another course). */
+export const courseView = (pathname: string) =>
+  /^\/course\/[^/]+(\/settings|\/import)$/.exec(pathname)?.[1] ?? "";
