@@ -124,7 +124,7 @@ What students should do, in markdown.
             },
             {
               name: "Schedule",
-              children: "Different due dates for some students. See below.",
+              children: "Different due dates for some students, or only some students. See below.",
             },
             {
               name: "Classroom50Slug",
@@ -184,6 +184,17 @@ Schedule:
           The file stores each student&apos;s Canvas id (no names in the repo);
           the editor shows the name next to it.
         </P>
+        <P>
+          <C>Schedule: only</C> gives the assignment to the listed students
+          alone; no one else gets it. Compare with Canvas can pull an
+          assignment&apos;s students and dates from Canvas into the file.
+        </P>
+        <Example>{`
+Schedule: only
+  09/09/2026:
+    - 100202
+    - 100203
+`}</Example>
       </HelpSection>
 
       <HelpSection title="Rubric">

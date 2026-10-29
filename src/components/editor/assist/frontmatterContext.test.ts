@@ -75,6 +75,13 @@ describe("frontmatter line context", () => {
     ]);
   });
 
+  it("reads students under Schedule: only too", () => {
+    const only = ["DueAt: 09/09/2026 13:30:00", "Schedule: only", "  09/09/2026:", "    - 100202", "---"];
+    expect(scheduleStudentLines(only)).toEqual([
+      { lineIndex: 3, label: "100202", date: "09/09/2026", column: 7 },
+    ]);
+  });
+
   it("detects quizzes and pages", () => {
     expect(itemTypeFromFrontmatter(["DueDateForOrdering: 1/1/2026", "---"])).toBe("page");
     expect(itemTypeFromFrontmatter(["DateForOrdering: 1/1/2026", "---"])).toBe("page");

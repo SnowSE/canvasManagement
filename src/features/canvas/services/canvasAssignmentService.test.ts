@@ -67,6 +67,26 @@ describe("canvasAssignmentService.update", () => {
   });
 });
 
+describe("canvasAssignmentService.update, who gets it", () => {
+  const sent = () =>
+    (vi.mocked(axiosClient.put).mock.calls[0][1] as { assignment: Record<string, unknown> }).assignment;
+
+  it("gives it to the scheduled students alone for Schedule: only", async () => {
+    await canvasAssignmentService.update(42, 5, { ...assignment, schedule: [], scheduleOnly: true }, settings);
+    expect(sent().only_visible_to_overrides).toBe(true);
+  });
+
+  it("gives it to everyone for a plain Schedule", async () => {
+    await canvasAssignmentService.update(42, 5, { ...assignment, schedule: [] }, settings);
+    expect(sent().only_visible_to_overrides).toBe(false);
+  });
+
+  it("leaves who gets it alone without a Schedule", async () => {
+    await canvasAssignmentService.update(42, 5, assignment, settings);
+    expect(sent()).not.toHaveProperty("only_visible_to_overrides");
+  });
+});
+
 describe("canvasAssignmentService.getAll", () => {
   it("reads each assignment's own dates, not the ones its overrides give students", async () => {
     vi.mocked(paginatedRequest).mockResolvedValue([]);

@@ -42,9 +42,13 @@ const parseFileUploadExtensions = (input: string) => {
 // further. The block ends at the first line that is not indented. Without a
 // Schedule: line there is no schedule; an empty one is a schedule with no
 // dates, which still says the file sets the per-student dates.
+// "Schedule: only" gives the assignment to the scheduled students alone.
+const scheduleLine = /^Schedule:[ \t]*(only)?[ \t]*$/;
+const parseScheduleOnly = (input: string) =>
+  input.split("\n").some((line) => scheduleLine.exec(line)?.[1] === "only");
 const parseSchedule = (input: string): AssignmentScheduleEntry[] | undefined => {
   const lines = input.split("\n");
-  const start = lines.findIndex((line) => /^Schedule:\s*$/.test(line));
+  const start = lines.findIndex((line) => scheduleLine.test(line));
   if (start === -1) return undefined;
 
   const entries: AssignmentScheduleEntry[] = [];
@@ -128,6 +132,7 @@ const parseSettings = (input: string) => {
     "GradeIndividually"
   );
   const schedule = parseSchedule(input);
+  const scheduleOnly = parseScheduleOnly(input);
 
   const dueAt = verifyDateOrThrow(rawDueAt, "DueAt");
   const lockAt = verifyDateStringOrUndefined(rawLockAt);
@@ -146,6 +151,7 @@ const parseSettings = (input: string) => {
     groupSet,
     gradeIndividually,
     schedule,
+    scheduleOnly,
   };
 };
 
@@ -231,6 +237,7 @@ export const assignmentMarkdownParser = {
       groupSet,
       gradeIndividually,
       schedule,
+      scheduleOnly,
     } = parseSettings(settingsString);
 
     const description = input
@@ -270,6 +277,7 @@ export const assignmentMarkdownParser = {
     if (schedule) {
       assignment.schedule = schedule;
     }
+    if (scheduleOnly) assignment.scheduleOnly = true;
     return assignment;
   },
 };

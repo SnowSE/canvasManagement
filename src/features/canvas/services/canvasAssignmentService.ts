@@ -81,6 +81,7 @@ export const canvasAssignmentService = {
         points_possible: assignmentPoints(localAssignment.rubric),
         assignment_group_id: canvasAssignmentGroupId,
         ...groupFields(publishOptions),
+        ...visibilityFields(localAssignment),
         ...externalToolFields(localAssignment),
       },
     };
@@ -138,6 +139,7 @@ export const canvasAssignmentService = {
         points_possible: assignmentPoints(localAssignment.rubric),
         assignment_group_id: canvasAssignmentGroupId,
         ...groupFields(publishOptions),
+        ...visibilityFields(localAssignment),
         ...externalToolFields(localAssignment),
       },
     };
@@ -199,6 +201,13 @@ const externalToolFields = (assignment: LocalAssignment) =>
   assignment.externalToolUrl &&
   assignment.submissionTypes.includes(AssignmentSubmissionType.EXTERNAL_TOOL)
     ? { external_tool_tag_attributes: { url: assignment.externalToolUrl } }
+    : {};
+
+// With a Schedule the file says who gets the assignment: only the scheduled
+// students ("Schedule: only") or everyone. Without one, Canvas's choice stays.
+const visibilityFields = (assignment: LocalAssignment) =>
+  assignment.schedule
+    ? { only_visible_to_overrides: !!assignment.scheduleOnly }
     : {};
 
 const groupFields = (options?: CanvasAssignmentPublishOptions) => ({

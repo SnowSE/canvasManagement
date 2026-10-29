@@ -42,7 +42,8 @@ export const DATE_KEYS = [
 ];
 
 const keyWithValue = /^([A-Za-z][A-Za-z0-9]*):(\s*)(.*)$/;
-const bareKey = /^([A-Za-z][A-Za-z0-9]*):\s*$/;
+// a key with no value, or "Schedule: only", heads a block of lines under it
+const bareKey = /^([A-Za-z][A-Za-z0-9]*):\s*(?:only\s*)?$/;
 const listItem = /^(\s*-\s?)(.*)$/;
 const dateKey = /^(\s+)(\d{1,2}\/\d{1,2}\/\d{4})?:?\s*$/;
 

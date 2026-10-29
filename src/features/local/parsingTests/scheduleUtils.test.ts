@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  scheduleFromCanvas,
   studentDisplayName,
   studentFileToken,
   overrideMatches,
@@ -85,5 +86,22 @@ describe("schedule utils", () => {
     expect(
       overrideMatches({ student_ids: [1], due_at: o.due_at }, o)
     ).toBe(false);
+  });
+});
+
+describe("scheduleFromCanvas", () => {
+  it("writes each date's students from Canvas's student overrides, one date per day", () => {
+    expect(
+      scheduleFromCanvas([
+        { student_ids: [100203, 100202], due_at: "2026-09-09T19:30:00Z" },
+        { student_ids: [100208], due_at: "2026-09-09T19:30:00Z" },
+        { student_ids: [100211], due_at: "2026-10-09T19:30:00Z" },
+        // a section override isn't a student's
+        { student_ids: [], due_at: "2026-09-01T19:30:00Z" },
+      ]),
+    ).toEqual([
+      { date: "09/09/2026", students: ["100202", "100203", "100208"] },
+      { date: "10/09/2026", students: ["100211"] },
+    ]);
   });
 });

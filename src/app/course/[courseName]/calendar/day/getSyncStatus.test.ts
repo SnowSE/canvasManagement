@@ -690,3 +690,54 @@ describe("getSyncStatus - dates Canvas won't save, not in Canvas yet", () => {
     expect(status.problem).toMatch(/^DueAt .* is after LockAt/);
   });
 });
+
+describe("getSyncReport - assigned only to some students", () => {
+  const roster = {
+    students: {
+      students: [
+        { id: 100202, name: "Priya Anand", sortableName: "Anand, Priya", email: "priya.anand@example.edu" },
+        { id: 100203, name: "Owen Brennan", sortableName: "Brennan, Owen", email: "owen.brennan@example.edu" },
+      ],
+      syncedAt: "",
+    },
+  };
+  // Canvas: two students, no "everyone else" date, so no due date of its own
+  const canvasItem: CanvasAssignment = {
+    ...baseCanvasAssignment,
+    due_at: undefined as never,
+    only_visible_to_overrides: true,
+    has_overrides: true,
+    overrides: [
+      { id: 9, assignment_id: 1, course_section_id: 0, title: "2 students", student_ids: [100202, 100203], due_at: "2023-08-22T05:59:00Z" },
+    ],
+  } as never;
+  const report = (item: LocalAssignment) =>
+    getSyncReport({ item, canvasItem, type: "assignment", settings: baseSettings, roster });
+
+  it("says Canvas gives it only to some students, not that its due date is missing", () => {
+    const { differences } = report(baseLocalAssignment);
+    expect(differences.map((d) => d.message)).not.toContain("due date not in canvas");
+    expect(differences.find((d) => d.key === "assignedTo")).toMatchObject({
+      local: "everyone",
+      canvas: "only 2 students",
+    });
+  });
+
+  it("matches a file whose Schedule: only lists those students", () => {
+    const item = {
+      ...baseLocalAssignment,
+      schedule: [{ date: "08/21/2023", students: ["100202", "100203"] }],
+      scheduleOnly: true,
+    };
+    expect(report(item).differences).toEqual([]);
+  });
+
+  it("differs when the file says only and Canvas gives it to everyone", () => {
+    const item = { ...baseLocalAssignment, schedule: [], scheduleOnly: true };
+    const { differences } = getSyncReport({ item, canvasItem: baseCanvasAssignment, type: "assignment", settings: baseSettings, roster });
+    expect(differences.find((d) => d.key === "assignedTo")).toMatchObject({
+      local: "only scheduled students",
+      canvas: "everyone",
+    });
+  });
+});

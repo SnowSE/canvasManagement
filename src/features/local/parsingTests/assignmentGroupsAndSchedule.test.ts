@@ -44,6 +44,17 @@ describe("group set and schedule frontmatter", () => {
     expect(parsed).toEqual(assignment);
   });
 
+  it("round trips a schedule for only the scheduled students", () => {
+    const assignment: LocalAssignment = {
+      ...base,
+      schedule: [{ date: "09/09/2026", students: ["100202", "100203"] }],
+      scheduleOnly: true,
+    };
+    const markdown = assignmentMarkdownSerializer.toMarkdown(assignment);
+    expect(markdown).toContain("Schedule: only\n  09/09/2026:\n    - 100202\n");
+    expect(assignmentMarkdownParser.parseMarkdown(markdown, base.name)).toEqual(assignment);
+  });
+
   it("leaves files without the new fields unchanged", () => {
     // (an empty Schedule: is different, see below)
     const markdown = assignmentMarkdownSerializer.toMarkdown(base);

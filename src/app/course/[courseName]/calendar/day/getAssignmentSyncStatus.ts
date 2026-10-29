@@ -583,6 +583,33 @@ export function getScheduleEntryStatus(
   };
 }
 
+/** Whether everyone gets the assignment, or only the students its overrides name ("Schedule: only"). */
+function checkAssignedTo(
+  assignment: LocalAssignment,
+  canvasAssignment: CanvasAssignment,
+): SyncField | undefined {
+  const local = assignment.scheduleOnly ? "only scheduled students" : "everyone";
+  const students = new Set(
+    (canvasAssignment.overrides ?? []).flatMap((o) => o.student_ids ?? []),
+  ).size;
+  const canvas = canvasAssignment.only_visible_to_overrides
+    ? students > 0
+      ? `only ${students} student${students === 1 ? "" : "s"}`
+      : "only some sections"
+    : "everyone";
+  const same = !!assignment.scheduleOnly === !!canvasAssignment.only_visible_to_overrides;
+  if (same) return undefined;
+  return field({
+    key: "assignedTo",
+    label: "Assigned to",
+    section: "schedule",
+    local,
+    canvas,
+    same: false,
+    message: `assigned to ${local} vs ${canvas} in canvas`,
+  });
+}
+
 function checkSchedule(
   assignment: LocalAssignment,
   canvasAssignment: CanvasAssignment,
@@ -661,14 +688,19 @@ function checkAssignment(
   if (unlock) fields.push(unlock);
   fields.push(...checkGroupSet(assignment, canvasAssignment, roster));
   fields.push(...checkSchedule(assignment, canvasAssignment, roster));
-  fields.push(
-    ...checkDueDateAndLock(
-      assignment.dueAt,
-      assignment.lockAt,
-      canvasAssignment.due_at,
-      canvasAssignment.lock_at,
-    ),
-  );
+  const assignedTo = checkAssignedTo(assignment, canvasAssignment);
+  if (assignedTo) fields.push(assignedTo);
+  // given only to some students, Canvas keeps no dates of its own: the
+  // overrides carry them, and the schedule compares those
+  if (!canvasAssignment.only_visible_to_overrides)
+    fields.push(
+      ...checkDueDateAndLock(
+        assignment.dueAt,
+        assignment.lockAt,
+        canvasAssignment.due_at,
+        canvasAssignment.lock_at,
+      ),
+    );
   const group = checkAssignmentGroup(
     assignment.localAssignmentGroupName,
     canvasAssignment.assignment_group_id,

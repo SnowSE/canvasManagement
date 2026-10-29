@@ -4,6 +4,7 @@
 import {
   dateToMarkdownString,
   getDateFromString,
+  getDateOnlyMarkdownString,
 } from "@/features/local/utils/timeUtils";
 import { AssignmentScheduleEntry, LocalAssignment } from "../localAssignment";
 
@@ -191,4 +192,26 @@ export function overrideMatches(
   const toMinute = (iso: string) =>
     dateToMarkdownString(new Date(iso)).slice(0, -3);
   return toMinute(override.due_at) === toMinute(spec.due_at);
+}
+
+/**
+ * A Schedule from Canvas's student overrides: each override's students
+ * under the day it is due, overrides due the same day together. Section
+ * overrides have no students and are left out.
+ */
+export function scheduleFromCanvas(
+  overrides: { student_ids?: number[]; due_at?: string }[]
+): AssignmentScheduleEntry[] {
+  const byDate = new Map<string, number[]>();
+  for (const o of overrides) {
+    if (!o.student_ids?.length || !o.due_at) continue;
+    const date = getDateOnlyMarkdownString(new Date(o.due_at));
+    byDate.set(date, [...(byDate.get(date) ?? []), ...o.student_ids]);
+  }
+  return [...byDate]
+    .sort(([a], [b]) => getDateFromString(a)!.getTime() - getDateFromString(b)!.getTime())
+    .map(([date, ids]) => ({
+      date,
+      students: [...ids].sort((a, b) => a - b).map(String),
+    }));
 }

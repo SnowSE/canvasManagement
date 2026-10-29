@@ -47,7 +47,7 @@ const settingsToMarkdown = (assignment: LocalAssignment) => {
   // an empty Schedule: is kept: it says the file sets the per-student dates
   const scheduleLines = assignment.schedule
     ? [
-        "Schedule:",
+        assignment.scheduleOnly ? "Schedule: only" : "Schedule:",
         ...assignment.schedule.map(
           (entry) =>
             `  ${entry.date}:` + entry.students.map((s) => `\n    - ${s}`).join("")

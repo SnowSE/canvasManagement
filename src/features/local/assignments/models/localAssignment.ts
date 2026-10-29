@@ -25,6 +25,8 @@ export interface LocalAssignment extends IModuleItem {
   groupSet?: string;
   gradeIndividually?: boolean;
   schedule?: AssignmentScheduleEntry[];
+  /** Only the scheduled students get the assignment ("Schedule: only"). */
+  scheduleOnly?: boolean;
 }
 
 /** One batch of students who share a due date that differs from the assignment's DueAt. */
@@ -82,6 +84,10 @@ export const zodLocalAssignment = z.object({
     .array()
     .optional()
     .describe("Per-student due dates, published as Canvas assignment overrides"),
+  scheduleOnly: z
+    .boolean()
+    .optional()
+    .describe("Only the scheduled students get the assignment, no one else"),
 });
 
 export const localAssignmentMarkdown = {

@@ -7,7 +7,15 @@ import { RightSingleChevron } from "@/components/icons/RightSingleChevron";
 import { Spinner } from "@/components/Spinner";
 import { useCourseContext } from "@/app/course/[courseName]/context/courseContext";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
-import { useAssignmentQuery } from "@/features/local/assignments/assignmentHooks";
+import {
+  useAssignmentQuery,
+  useUpdateAssignmentMutation,
+} from "@/features/local/assignments/assignmentHooks";
+import { LocalAssignment } from "@/features/local/assignments/models/localAssignment";
+import { CanvasAssignment } from "@/features/canvas/models/assignments/canvasAssignment";
+import { scheduleFromCanvas } from "@/features/local/assignments/models/utils/scheduleUtils";
+import toast from "react-hot-toast";
+import { showErrorToast } from "@/app/MyToaster";
 import { useQuizQuery } from "@/features/local/quizzes/quizHooks";
 import { usePageQuery } from "@/features/local/pages/pageHooks";
 import {
@@ -152,7 +160,73 @@ export function CompareAssignmentWithCanvas({
       }
       updating={update.isPending}
       updateNote="Update Canvas pushes the file's dates, group settings, rubric and description, and moves the assignment to the file's module. Submissions and grades are untouched."
-    />
+    >
+      {canvasAssignment && (
+        <PullSchedule
+          moduleName={moduleName}
+          assignment={assignment}
+          canvasAssignment={canvasAssignment}
+          scheduleDiffers={report.fields.some(
+            (f) => f.section === "schedule" && !f.same,
+          )}
+        />
+      )}
+    </CompareLayout>
+  );
+}
+
+/**
+ * When Canvas gives the assignment its own per-student dates (or only to some
+ * students), offers to write them into the file as its Schedule.
+ */
+function PullSchedule({
+  moduleName,
+  assignment,
+  canvasAssignment,
+  scheduleDiffers,
+}: {
+  moduleName: string;
+  assignment: LocalAssignment;
+  canvasAssignment: CanvasAssignment;
+  scheduleDiffers: boolean;
+}) {
+  const { courseName } = useCourseContext();
+  const save = useUpdateAssignmentMutation();
+  const schedule = scheduleFromCanvas(canvasAssignment.overrides ?? []);
+  if (!scheduleDiffers || schedule.length === 0) return null;
+  const only = canvasAssignment.only_visible_to_overrides;
+  const students = schedule.reduce((n, e) => n + e.students.length, 0);
+  const dates = schedule.map((e) => e.date).join(", ");
+  return (
+    <div className="mt-3 flex flex-row flex-wrap items-center justify-between gap-3 rounded border border-slate-700 px-3 py-2">
+      <span className="text-sm">
+        Canvas gives this {only && "only "}to {students} student{students === 1 ? "" : "s"} on{" "}
+        {dates}
+        {only ? ", and no one else." : ", and everyone else on its due date."}
+      </span>
+      <button
+        disabled={save.isPending}
+        title="Writes Canvas's students and dates into the file's Schedule, so the file matches Canvas"
+        onClick={() =>
+          save.mutate(
+            {
+              courseName,
+              moduleName,
+              previousModuleName: moduleName,
+              assignmentName: assignment.name,
+              previousAssignmentName: assignment.name,
+              assignment: { ...assignment, schedule, scheduleOnly: only || undefined },
+            },
+            {
+              onSuccess: () => toast.success(`Wrote Canvas's schedule into ${assignment.name}`),
+              onError: (e) => showErrorToast(`Couldn't write the schedule: ${e.message}`),
+            },
+          )
+        }
+      >
+        Pull Schedule From Canvas
+      </button>
+    </div>
   );
 }
 
@@ -248,7 +322,7 @@ export function CompareQuizWithCanvas({
         update.mutate({ quiz, canvasQuizId: canvasQuiz.id, moduleName })
       }
       updating={update.isPending}
-      updateNote="Update Canvas pushes the file's settings, moves the quiz to the file's module and, if any question differs, replaces the questions in Canvas with the file's. When it replaces them on a published quiz, students keep getting the old questions until you click Save it now on the quiz page in Canvas (the API can't do that). If students have started, it warns first: they keep the questions they got and are not regraded. It refuses to change the point total they were scored out of."
+      updateNote="Update Canvas pushes the file's settings, moves the quiz to the file's module and replaces the questions that differ from the file's, leaving the rest alone. When it changes questions on a published quiz, students keep getting the old ones until you click Save it now on the quiz page in Canvas (the API can't do that). If students have started, it warns first: they keep the questions they got and are not regraded. It refuses to change the point total they were scored out of."
     >
       {versions?.map((v, i) => (
         <VersionSection
