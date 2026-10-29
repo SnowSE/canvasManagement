@@ -11,6 +11,15 @@ import {
   LocalCourseSettings,
 } from "@/features/local/course/localCourseSettings";
 import { quizMarkdownUtils } from "@/features/local/quizzes/models/utils/quizMarkdownUtils";
+import {
+  LocalQuizQuestion,
+  QuestionType,
+} from "@/features/local/quizzes/models/localQuizQuestion";
+import {
+  getAnswersForCanvas,
+  getQuestionTextForCanvas,
+} from "@/features/canvas/services/canvasQuizService";
+import { markdownToHTMLSafe } from "@/services/htmlMarkdownUtils";
 
 const settings: LocalCourseSettings = {
   name: "test course",
@@ -530,5 +539,52 @@ describe("describeQuestionPlan", () => {
 
   it("is empty when nothing needs doing", () => {
     expect(describeQuestionPlan([row(0, 0, true), row(1, 1, true)])).toBe("");
+  });
+});
+
+describe("multiple dropdowns in a student's attempt", () => {
+  const question = {
+    text: "Run Kruskal's algorithm.\n",
+    questionType: QuestionType.MULTIPLE_DROPDOWNS,
+    points: 5,
+    matchDistractors: [],
+    answers: [
+      { correct: true, text: "total weight", matchedText: "9", dropdownGroup: 0 },
+      { correct: false, text: "", matchedText: "8", dropdownGroup: 0 },
+      { correct: true, text: "first edge rejected", matchedText: "A–C", dropdownGroup: 1 },
+      { correct: false, text: "", matchedText: "C–E", dropdownGroup: 1 },
+    ],
+  } as LocalQuizQuestion;
+  const html = markdownToHTMLSafe({ markdownString: getQuestionTextForCanvas(question), settings });
+  const answers = (getAnswersForCanvas(question, settings) as { blank_id: string; answer_text: string; answer_weight: number }[])
+    .map((a, id) => ({ id, blank_id: a.blank_id, text: a.answer_text, weight: a.answer_weight }));
+
+  // an attempt has each [dropdownN] drawn as the menu the student saw,
+  // named by a hash, with its options listed as Canvas leaves them
+  const menu = (hash: string, options: string[]) =>
+    `<select class="question_input" name="question_85056816_${hash}">\n  <option value="">\n    [ Select ]\n  </option>\n  [${options
+      .map((o, i) => `"<option value="${i}">${o}</option>"`)
+      .join(", ")}]\n</select>`;
+  const attempt = canvasQuestion({
+    question_type: "multiple_dropdowns_question",
+    points_possible: 5,
+    question_text: themed(
+      html
+        .replace("[dropdown1]", menu("7361526813c0e3d54e8c1c1d93244c72", ["9", "8"]))
+        .replace("[dropdown2]", menu("dc20a2f594616a7e6ef43f99654f25d7", ["C–E", "A–C"])),
+    ),
+    answers,
+  });
+
+  it("match the file, reading each menu as its [dropdown]", () => {
+    const [field] = checkQuizQuestions([question], [attempt], settings, { ignoreAnswerOrder: true, isAttempt: true });
+    expect(field.message).toBe("");
+    expect(field.canvas).toContain("[dropdown1]");
+  });
+
+  it("still differ when the text around the menus changed", () => {
+    const changed = { ...question, text: "Run Prim's algorithm.\n" };
+    const [field] = checkQuizQuestions([changed], [attempt], settings, { ignoreAnswerOrder: true, isAttempt: true });
+    expect(field.message).toContain("text different");
   });
 });

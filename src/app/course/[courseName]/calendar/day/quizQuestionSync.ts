@@ -146,6 +146,26 @@ interface Aspect {
 const groupLabel = (group?: { name: string; pick: number }) =>
   group ? `${group.name}, pick ${group.pick}` : UNSET;
 
+/**
+ * A student's attempt has each [dropdownN] of a multiple dropdowns question
+ * drawn as the menu they saw, named by a hash; put the file's blank names
+ * back, in order, so the text compares with the file's. The menus' options
+ * are compared as the answers.
+ */
+function withBlankNames(
+  question: LocalQuizQuestion,
+  localHtml: string,
+  canvasHtml: string,
+) {
+  if (question.questionType !== QuestionType.MULTIPLE_DROPDOWNS) return canvasHtml;
+  const blankIds = localHtml.match(/\[dropdown\d+\]/g) ?? [];
+  let next = 0;
+  return canvasHtml.replace(
+    /<select class="question_input"[\s\S]*?<\/select>/g,
+    (menu) => blankIds[next++] ?? menu,
+  );
+}
+
 function compareQuestion(
   question: LocalQuizQuestion,
   canvasQuestion: CanvasQuizQuestion,
@@ -156,6 +176,11 @@ function compareQuestion(
     markdownString: getQuestionTextForCanvas(question),
     settings,
   });
+  const canvasHtml = withBlankNames(
+    question,
+    localHtml,
+    canvasQuestion.question_text ?? "",
+  );
   const localType = getQuestionTypeForCanvas(question);
   const localAnswers = localAnswerLines(question, settings);
   const canvasAnswers = ignoreAnswerOrder
@@ -214,10 +239,8 @@ function compareQuestion(
     {
       name: "text",
       local: plainText(localHtml),
-      canvas: plainText(canvasQuestion.question_text),
-      same:
-        removeHtmlDetails(localHtml) ===
-        removeHtmlDetails(canvasQuestion.question_text ?? ""),
+      canvas: plainText(canvasHtml),
+      same: removeHtmlDetails(localHtml) === removeHtmlDetails(canvasHtml),
     },
     {
       name: "answers",
