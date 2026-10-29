@@ -1,7 +1,7 @@
 "use client";
 import { IModuleItem } from "@/features/local/modules/IModuleItem";
-import { getModuleItemUrl } from "@/services/urlUtils";
-import { Link } from "@tanstack/react-router";
+import { getModuleItemUrl, itemView } from "@/services/urlUtils";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { FC, ReactNode } from "react";
 import { useCourseContext } from "../../../context/courseContext";
 import { useTooltip } from "@/components/useTooltip";
@@ -44,6 +44,8 @@ export const ItemInDay: FC<{
   scheduleEntry,
 }) => {
   const { courseName } = useCourseContext();
+  // from an item's compare or history page, another item opens in the same view
+  const view = useRouterState({ select: (s) => itemView(s.location.pathname) });
   const { setIsDragging } = useDragStyleContext();
   const { visible, targetRef, showTooltip, hideTooltip, tooltipProps } =
     useTooltip(500);
@@ -59,7 +61,7 @@ export const ItemInDay: FC<{
   return (
     <div className={" relative group "}>
       <Link
-        to={getModuleItemUrl(courseName, moduleName, type, item.name)}
+        to={getModuleItemUrl(courseName, moduleName, type, item.name) + view}
         className={
           " border rounded-sm px-1 sm:mx-1 mb-1 truncate sm:text-wrap text-nowrap " +
           " bg-slate-800 " +
