@@ -371,13 +371,6 @@ export function alignQuestions(
  * Canvas has. Rows follow the file's order, with a question that is only in
  * Canvas (deleted from the file) shown where it sits in Canvas.
  */
-/** Whether Canvas already has the file's questions, so updating leaves them alone. */
-export const questionsMatchCanvas = (
-  questions: LocalQuizQuestion[],
-  canvasQuestions: CanvasQuizQuestion[],
-  settings: LocalCourseSettings,
-) => checkQuizQuestions(questions, canvasQuestions, settings).every((q) => q.same);
-
 export function checkQuizQuestions(
   questions: LocalQuizQuestion[],
   canvasQuestions: CanvasQuizQuestion[],
@@ -388,6 +381,80 @@ export function checkQuizQuestions(
    */
   { ignoreAnswerOrder = false, isAttempt = false } = {},
 ): SyncField[] {
+  return compareQuestions(questions, canvasQuestions, settings, {
+    ignoreAnswerOrder,
+    isAttempt,
+  }).map(({ field }) => field);
+}
+
+/**
+ * What Update in Canvas has to do, in file order: a row with both sides pairs
+ * a file question with its Canvas question (kept when `same`, else
+ * replaced), `local` alone is a question to add, `canvas` alone one to
+ * delete. `same` ignores position, which a reorder fixes without touching
+ * the question.
+ */
+export type QuestionPlanRow = {
+  local?: number;
+  canvas?: number;
+  same: boolean;
+  moved: boolean;
+};
+
+export function planQuestionUpdates(
+  questions: LocalQuizQuestion[],
+  canvasQuestions: CanvasQuizQuestion[],
+  settings: LocalCourseSettings,
+): QuestionPlanRow[] {
+  // a quiz with question groups has all its questions replaced
+  if (questions.some((q) => q.group) || canvasQuestions.some((q) => q.quiz_group_id))
+    return [
+      ...canvasQuestions.map((_, canvas) => ({ canvas, same: false, moved: false })),
+      ...questions.map((_, local) => ({ local, same: false, moved: false })),
+    ];
+  return compareQuestions(questions, canvasQuestions, settings).map(
+    ({ row, sameIgnoringPosition }) => ({
+      local: row.local,
+      canvas: row.canvas,
+      same: sameIgnoringPosition,
+      moved: "moved" in row && row.moved === true,
+    }),
+  );
+}
+
+/** What a plan does, in words: "question 3 replaced, question 7 added; 18 left alone". */
+export function describeQuestionPlan(plan: QuestionPlanRow[]) {
+  const paired = plan.filter((r) => r.local !== undefined && r.canvas !== undefined);
+  const added = plan.filter((r) => r.canvas === undefined).length;
+  if (paired.length === 0 && added > 0 && added < plan.length)
+    return `all ${added} questions replaced`;
+  const named = (rows: QuestionPlanRow[], what: string, canvas = false) => {
+    const numbers = rows.map((r) => (canvas ? r.canvas! : r.local!) + 1);
+    if (numbers.length === 0) return "";
+    const list =
+      numbers.length === 1
+        ? `${numbers[0]}`
+        : `${numbers.slice(0, -1).join(", ")} and ${numbers.at(-1)}`;
+    const noun = numbers.length === 1 ? "question" : "questions";
+    return `${canvas ? `Canvas ${noun}` : noun} ${list} ${what}`;
+  };
+  const changes = [
+    named(paired.filter((r) => !r.same), "replaced"),
+    named(plan.filter((r) => r.canvas === undefined), "added"),
+    named(plan.filter((r) => r.local === undefined), "removed", true),
+    named(paired.filter((r) => r.same && r.moved), "moved"),
+  ].filter(Boolean);
+  if (changes.length === 0) return "";
+  const untouched = paired.filter((r) => r.same && !r.moved).length;
+  return `${changes.join(", ")}; ${untouched} left alone`;
+}
+
+function compareQuestions(
+  questions: LocalQuizQuestion[],
+  canvasQuestions: CanvasQuizQuestion[],
+  settings: LocalCourseSettings,
+  { ignoreAnswerOrder = false, isAttempt = false } = {},
+): { row: AlignedRow; field: SyncField; sameIgnoringPosition: boolean }[] {
   const localHtml = questions.map((question) =>
     markdownToHTMLSafe({
       markdownString: getQuestionTextForCanvas(question),
@@ -405,7 +472,15 @@ export function checkQuizQuestions(
     })),
   );
 
-  return rows.map((row): SyncField => {
+  return rows.map((row) => {
+    const { field, sameIgnoringPosition = field.same } = compareRow(row);
+    return { row, field, sameIgnoringPosition };
+  });
+
+  function compareRow(row: AlignedRow): {
+    field: SyncField;
+    sameIgnoringPosition?: boolean;
+  } {
     const base = {
       key: `question:${row.local ?? "-"}:${row.canvas ?? "-"}`,
       section: "questions" as const,
@@ -416,31 +491,37 @@ export function checkQuizQuestions(
       const notPicked = isAttempt && questions[row.local].group;
       if (notPicked)
         return {
+          field: {
+            ...base,
+            label: `Question ${number}`,
+            local: excerpt(plainText(localHtml[row.local])),
+            canvas: `not picked from ${questions[row.local].group!.name}`,
+            same: true,
+            message: "",
+          },
+        };
+      return {
+        field: {
           ...base,
           label: `Question ${number}`,
           local: excerpt(plainText(localHtml[row.local])),
-          canvas: `not picked from ${questions[row.local].group!.name}`,
-          same: true,
-          message: "",
-        };
-      return {
-        ...base,
-        label: `Question ${number}`,
-        local: excerpt(plainText(localHtml[row.local])),
-        canvas: UNSET,
-        same: false,
-        message: `question ${number} not in canvas`,
+          canvas: UNSET,
+          same: false,
+          message: `question ${number} not in canvas`,
+        },
       };
     }
     if (row.local === undefined) {
       const number = row.canvas + 1;
       return {
-        ...base,
-        label: `Canvas question ${number}`,
-        local: UNSET,
-        canvas: excerpt(plainText(canvasQuestions[row.canvas].question_text)),
-        same: false,
-        message: `canvas question ${number} is not in the file`,
+        field: {
+          ...base,
+          label: `Canvas question ${number}`,
+          local: UNSET,
+          canvas: excerpt(plainText(canvasQuestions[row.canvas].question_text)),
+          same: false,
+          message: `canvas question ${number} is not in the file`,
+        },
       };
     }
 
@@ -468,17 +549,20 @@ export function checkQuizQuestions(
     const different = aspects.filter((a) => !a.same);
     const label = `Question ${number} · ${typeLabel(getQuestionTypeForCanvas(question))}`;
     return {
-      ...base,
-      label,
-      local: wholeQuestion(aspects, "local"),
-      canvas: wholeQuestion(aspects, "canvas"),
-      same: different.length === 0,
-      message:
-        different.length === 0
-          ? ""
-          : `question ${number} ${different.map((a) => a.name).join(", ")} different`,
+      field: {
+        ...base,
+        label,
+        local: wholeQuestion(aspects, "local"),
+        canvas: wholeQuestion(aspects, "canvas"),
+        same: different.length === 0,
+        message:
+          different.length === 0
+            ? ""
+            : `question ${number} ${different.map((a) => a.name).join(", ")} different`,
+      },
+      sameIgnoringPosition: different.every((a) => a.name === "position"),
     };
-  });
+  }
 }
 
 /**

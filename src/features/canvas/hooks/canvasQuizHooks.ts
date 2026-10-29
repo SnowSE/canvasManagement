@@ -18,7 +18,8 @@ import { showActionNeededToast, showErrorToast } from "@/app/MyToaster";
 import { baseCanvasUrl } from "../services/canvasServiceUtils";
 import {
   pointTotalChangeError,
-  questionsMatchCanvas,
+  describeQuestionPlan,
+  planQuestionUpdates,
 } from "@/app/course/[courseName]/calendar/day/quizQuestionSync";
 
 export const canvasQuizKeys = {
@@ -120,10 +121,10 @@ export const useAddQuizToCanvasMutation = () => {
   });
 };
 
-const submissionWarning = (count: number) =>
+const submissionWarning = (count: number, changes: string) =>
   `${count} student${count === 1 ? " has" : "s have"} already started this quiz in Canvas.
 
-Updating replaces its questions. Students who already started keep the questions and answer key they got, and Canvas will not regrade them.
+Updating changes its questions: ${changes}. Students who already started keep the questions and answer key they got, and Canvas will not regrade them.
 
 Update anyway?`;
 
@@ -165,17 +166,17 @@ export const useUpdateQuizInCanvasMutation = () => {
         );
         const pointsError = pointTotalChangeError(quiz.questions, studentsGot);
         if (pointsError) throw new Error(pointsError);
-        // the warning is about replacing the questions, which the update
+        // the warning is about changing the questions, which the update
         // skips when they already match the file
         const canvasQuestions = await canvasQuizService.getQuizQuestions(
           settings.canvasId,
           canvasQuizId
         );
         const submissions = versions.reduce((sum, v) => sum + v.attempts, 0);
-        if (
-          !questionsMatchCanvas(quiz.questions, canvasQuestions, publishSettings) &&
-          !window.confirm(submissionWarning(submissions))
-        )
+        const changes = describeQuestionPlan(
+          planQuestionUpdates(quiz.questions, canvasQuestions, publishSettings)
+        );
+        if (changes && !window.confirm(submissionWarning(submissions, changes)))
           return false;
       }
 
@@ -193,8 +194,8 @@ export const useUpdateQuizInCanvasMutation = () => {
             canvasAssignmentGroupId: assignmentGroup?.canvasId,
             canvasLinkTargets,
             onStep: (step) => toast.loading(`${step}…`, { id: progress }),
-            questionsMatch: (canvasQuestions) =>
-              questionsMatchCanvas(quiz.questions, canvasQuestions, publishSettings),
+            planQuestions: (canvasQuestions) =>
+              planQuestionUpdates(quiz.questions, canvasQuestions, publishSettings),
           }
         );
         await placeInModule(moduleName, {
@@ -202,8 +203,9 @@ export const useUpdateQuizInCanvasMutation = () => {
           id: canvasQuizId,
           title: quiz.name,
         });
-        const updated = summary.questionsReplaced
-          ? `Updated "${quiz.name}" in Canvas: settings, ${summary.questionsRemoved} questions removed, ${summary.questionsAdded} added.`
+        const changes = describeQuestionPlan(summary.plan);
+        const updated = changes
+          ? `Updated "${quiz.name}" in Canvas: settings, and ${changes}.`
           : `Updated "${quiz.name}" in Canvas: settings. Its questions already matched the file, so they were left alone.`;
         if (summary.needsSaveInCanvas) {
           toast.dismiss(progress);
@@ -214,7 +216,7 @@ export const useUpdateQuizInCanvasMutation = () => {
           );
         } else {
           toast.success(
-            summary.questionsReplaced
+            changes
               ? `${updated} Students will get them when you publish.`
               : updated,
             { id: progress, duration: 8_000 },

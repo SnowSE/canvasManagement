@@ -15,6 +15,7 @@ import {
 import { LocalCourseSettings } from "@/features/local/course/localCourseSettings";
 import { markdownToHTMLSafe } from "@/services/htmlMarkdownUtils";
 import { CanvasLinkTargets } from "@/services/urlUtils";
+import type { QuestionPlanRow } from "@/app/course/[courseName]/calendar/day/quizQuestionSync";
 import { escapeMatchingText } from "@/services/utils/questionHtmlUtils";
 import {
   rateLimitAwareDelete,
@@ -468,6 +469,14 @@ export const withQuizGroups = async (
     .map(({ q }) => q);
 };
 
+/** The plan that deletes every Canvas question and adds every file question. */
+const replaceAll =
+  (localQuiz: LocalQuiz) =>
+  (canvasQuestions: CanvasQuizQuestion[]): QuestionPlanRow[] => [
+    ...canvasQuestions.map((_, canvas) => ({ canvas, same: false, moved: false })),
+    ...localQuiz.questions.map((_, local) => ({ local, same: false, moved: false })),
+  ];
+
 export const canvasQuizService = {
   async getAll(canvasCourseId: number): Promise<CanvasQuiz[]> {
     try {
@@ -544,9 +553,12 @@ export const canvasQuizService = {
     return canvasQuiz.id;
   },
   /**
-   * Makes the Canvas quiz match the file: settings, then questions (Canvas's
-   * are deleted and the file's added). Students who already submitted keep
-   * the questions they answered; Canvas does not regrade them.
+   * Makes the Canvas quiz match the file: settings, then only the questions
+   * that differ (a changed one replaced, new ones added, deleted ones removed,
+   * then all put in order), so the rest keep their Canvas ids. A quiz with
+   * question groups, in the file or in Canvas, has all its questions
+   * replaced instead. Students who already submitted keep the questions they
+   * answered; Canvas does not regrade them.
    *
    * On a published quiz, students keep getting the old questions until
    * someone clicks "Save it now" on the quiz page in Canvas. No API call can
@@ -563,13 +575,13 @@ export const canvasQuizService = {
       canvasAssignmentGroupId,
       canvasLinkTargets,
       onStep = () => {},
-      questionsMatch = () => false,
+      planQuestions = replaceAll(localQuiz),
     }: {
       canvasAssignmentGroupId?: number;
       canvasLinkTargets?: CanvasLinkTargets;
       onStep?: (step: string) => void;
-      /** True when Canvas's questions already match the file. */
-      questionsMatch?: (canvasQuestions: CanvasQuizQuestion[]) => boolean;
+      /** What to do with each question; see planQuestionUpdates. By default, replace them all. */
+      planQuestions?: (canvasQuestions: CanvasQuizQuestion[]) => QuestionPlanRow[];
     } = {}
   ) {
     const url = `${canvasApi}/courses/${canvasCourseId}/quizzes/${canvasQuizId}`;
@@ -588,37 +600,68 @@ export const canvasQuizService = {
       canvasCourseId,
       canvasQuizId
     );
-    if (questionsMatch(oldQuestions)) {
-      // replacing them anyway would leave a published quiz needing Save it now
+    const plan = planQuestions(oldQuestions);
+    if (plan.every((r) => r.same && !r.moved)) {
+      // touching them anyway would leave a published quiz needing Save it now
       onStep("Questions already match the file");
-      return {
-        questionsReplaced: false,
-        questionsRemoved: 0,
-        questionsAdded: 0,
-        needsSaveInCanvas: false,
-      };
+      return { plan, needsSaveInCanvas: false };
     }
 
-    onStep(`Removing ${oldQuestions.length} questions from Canvas`);
-    await Promise.all(
-      oldQuestions.map((q) => rateLimitAwareDelete(`${url}/questions/${q.id}`))
-    );
-    const oldGroupIds = [
-      ...new Set(oldQuestions.map((q) => q.quiz_group_id).filter((id) => !!id)),
-    ];
-    await Promise.all(
-      oldGroupIds.map((id) => rateLimitAwareDelete(`${url}/groups/${id}`))
-    );
+    // groups would need creating, changing and deleting too, so a quiz with
+    // them has all its questions replaced (and so does its plan)
+    if (
+      localQuiz.questions.some((q) => q.group) ||
+      oldQuestions.some((q) => q.quiz_group_id)
+    ) {
+      onStep(`Removing ${oldQuestions.length} questions from Canvas`);
+      await Promise.all(
+        oldQuestions.map((q) => rateLimitAwareDelete(`${url}/questions/${q.id}`))
+      );
+      const oldGroupIds = [
+        ...new Set(oldQuestions.map((q) => q.quiz_group_id).filter((id) => !!id)),
+      ];
+      await Promise.all(
+        oldGroupIds.map((id) => rateLimitAwareDelete(`${url}/groups/${id}`))
+      );
+      onStep(`Adding ${localQuiz.questions.length} questions from the file`);
+      await createQuizQuestions(canvasCourseId, canvasQuizId, localQuiz, settings);
+    } else {
+      onStep("Updating the questions that differ");
+      // a changed question is replaced, not edited: only a question that is
+      // exactly the same keeps its Canvas id (and its statistics, regrades)
+      const kept = (r: QuestionPlanRow) => r.canvas !== undefined && r.same;
+      await Promise.all(
+        plan
+          .filter((r) => r.canvas !== undefined && !kept(r))
+          .map((r) =>
+            rateLimitAwareDelete(`${url}/questions/${oldQuestions[r.canvas!].id}`)
+          )
+      );
+      const inFileOrder = await Promise.all(
+        plan
+          .filter((r) => r.local !== undefined)
+          .map(async (r) =>
+            kept(r)
+              ? oldQuestions[r.canvas!]
+              : (
+                  await createQuestionOnly(
+                    canvasCourseId,
+                    canvasQuizId,
+                    localQuiz.questions[r.local!],
+                    r.local!,
+                    settings
+                  )
+                ).question
+          )
+      );
+      await hackFixQuestionOrdering(
+        canvasCourseId,
+        canvasQuizId,
+        inFileOrder.map((question, position) => ({ question, position }))
+      );
+    }
 
-    onStep(`Adding ${localQuiz.questions.length} questions from the file`);
-    await createQuizQuestions(canvasCourseId, canvasQuizId, localQuiz, settings);
-
-    return {
-      questionsReplaced: true,
-      questionsRemoved: oldQuestions.length,
-      questionsAdded: localQuiz.questions.length,
-      needsSaveInCanvas: canvasQuiz.published === true,
-    };
+    return { plan, needsSaveInCanvas: canvasQuiz.published === true };
   },
   /** Attempts students have started or finished (Canvas also lists "settings_only" rows for students with extra time). */
   async listAttempts(canvasCourseId: number, canvasQuizId: number) {
