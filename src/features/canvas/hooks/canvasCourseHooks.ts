@@ -6,12 +6,16 @@ import { LocalCourseSettings } from "@/features/local/course/localCourseSettings
 import { useUpdateLocalCourseSettingsMutation } from "@/features/local/course/localCoursesHooks";
 import { canvasAssignmentGroupService } from "../services/canvasAssignmentGroupService";
 import { canvasService } from "../services/canvasService";
+import { useTRPC } from "@/services/serverFunctions/trpcClient";
+import { syncAssignmentGroups } from "@/app/course/[courseName]/settings/syncAssignmentGroups";
 
 export const canvasCourseKeys = {
   courseDetails: (canavasId: number) =>
     ["canvas", canavasId, "course details"] as const,
   assignmentGroups: (canavasId: number) =>
     ["canvas", canavasId, "assignment groups"] as const,
+  assignmentGroupCounts: (canavasId: number) =>
+    ["canvas", canavasId, "assignment group counts"] as const,
   courseListInTerm: (canvasTermId: number | undefined) =>
     ["canvas courses in term", canvasTermId] as const,
   students: (canvasId: number) =>
@@ -26,73 +30,106 @@ export const useCourseListInTermQuery = (canvasTermId: number | undefined) =>
     enabled: !!canvasTermId,
   });
 
-export const useSetAssignmentGroupsMutation = (canvasId: number) => {
+/**
+ * Sync with Canvas: adds Canvas's groups to the settings, creates the
+ * settings' groups in Canvas and pushes the settings' weights. Never deletes.
+ */
+export const useSyncAssignmentGroupsMutation = () => {
   const queryClient = useQueryClient();
-  const updateSettingsMutation = useUpdateLocalCourseSettingsMutation();
+  const updateSettings = useUpdateLocalCourseSettingsMutation();
   return useMutation({
     mutationFn: async (settings: LocalCourseSettings) => {
-      const canvasAssignmentGroups =
-        await canvasAssignmentGroupService.getAll(canvasId);
-      const localAssignmentGroups = settings.assignmentGroups;
-
-      const localNames = localAssignmentGroups.map((g) => g.name);
-      const groupsToDelete = canvasAssignmentGroups.filter(
-        (c: CanvasAssignmentGroup) => !localNames.includes(c.name)
+      const canvasGroups = await canvasAssignmentGroupService.getAll(settings.canvasId);
+      const plan = syncAssignmentGroups(settings.assignmentGroups, canvasGroups, () =>
+        crypto.randomUUID(),
       );
-
-      await Promise.all(
-        groupsToDelete.map(
-          async (g: CanvasAssignmentGroup) =>
-            await canvasAssignmentGroupService.delete(canvasId, g.id, g.name)
-        )
-      );
-      const updatedGroups = await Promise.all(
-        localAssignmentGroups.map(
-          async (group): Promise<LocalAssignmentGroup> => {
-            const canvasGroup = canvasAssignmentGroups.find(
-              (c: CanvasAssignmentGroup) => c.name === group.name
-            );
-            if (!canvasGroup) {
-              const newGroup = await canvasAssignmentGroupService.create(
-                canvasId,
-                group
-              );
-              return {
-                ...group,
-                canvasId: newGroup.canvasId,
-              };
-            } else {
-              const groupWithCanvasId = {
-                ...group,
-                canvasId: canvasGroup.id,
-              };
-              if (canvasGroup.group_weight !== group.weight) {
-                await canvasAssignmentGroupService.update(
-                  canvasId,
-                  groupWithCanvasId
-                );
-              }
-              return groupWithCanvasId;
-            }
-          }
-        )
-      );
-
-      const updatedSettings: LocalCourseSettings = {
+      const created = new Map<string, number | undefined>();
+      for (const group of plan.create)
+        created.set(
+          group.id,
+          (await canvasAssignmentGroupService.create(settings.canvasId, group)).canvasId,
+        );
+      for (const group of plan.updateWeight)
+        await canvasAssignmentGroupService.update(settings.canvasId, group);
+      await updateSettings.mutateAsync({
         ...settings,
-        assignmentGroups: updatedGroups,
-      };
-
-      await updateSettingsMutation.mutateAsync(updatedSettings);
-      return updatedSettings;
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({
-        queryKey: canvasCourseKeys.assignmentGroups(canvasId),
+        assignmentGroups: plan.groups.map((g) =>
+          created.has(g.id) ? { ...g, canvasId: created.get(g.id) } : g,
+        ),
       });
+      return {
+        added: plan.added.length,
+        created: plan.create.length,
+        weights: plan.updateWeight.length,
+      };
+    },
+    onSettled: (_, __, settings) =>
+      queryClient.invalidateQueries({
+        queryKey: canvasCourseKeys.assignmentGroups(settings.canvasId),
+      }),
+  });
+};
+
+/**
+ * Deletes or renames a group without deleting anything in it: its items move
+ * to group `to`, in the files and in Canvas. A `to` no group has yet renames
+ * the group, keeping its weight. Without a `to`, an empty group is removed.
+ */
+export const useMoveAssignmentGroupMutation = () => {
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
+  const move = useMutation(trpc.settings.moveAssignmentGroup.mutationOptions());
+  const saveSettings = useMutation(trpc.settings.updateSettings.mutationOptions());
+  return useMutation({
+    mutationFn: async ({
+      settings,
+      from,
+      to,
+    }: {
+      settings: LocalCourseSettings;
+      from: LocalAssignmentGroup;
+      to?: string;
+    }) => {
+      const groups = settings.assignmentGroups;
+      if (to === undefined) {
+        // Canvas first: it refuses a group that still has assignments
+        if (from.canvasId) await canvasAssignmentGroupService.delete(settings.canvasId, from.canvasId);
+        await saveSettings.mutateAsync({ ...settings, assignmentGroups: groups.filter((g) => g.id !== from.id) });
+        return 0;
+      }
+      let target = groups.find((g) => g.name === to && g.id !== from.id);
+      // a target Canvas lacks is created first; that only adds
+      if (target && from.canvasId && !target.canvasId)
+        target = await canvasAssignmentGroupService.create(settings.canvasId, target);
+      const assignmentGroups = target
+        ? groups.filter((g) => g.id !== from.id).map((g) => (g.id === target.id ? target : g))
+        : groups.map((g) => (g.id === from.id ? { ...g, name: to } : g));
+      // the files and settings before Canvas: if Canvas then fails, the next
+      // sync adds the old group back instead of the settings naming a group
+      // Canvas no longer has
+      const moved = await move.mutateAsync({ from: from.name, to, settings: { ...settings, assignmentGroups } });
+      if (from.canvasId && target)
+        await canvasAssignmentGroupService.delete(settings.canvasId, from.canvasId, target.canvasId!);
+      else if (from.canvasId)
+        await canvasAssignmentGroupService.update(settings.canvasId, { ...from, name: to });
+      return moved;
+    },
+    onSettled: (_, __, { settings }) => {
+      queryClient.invalidateQueries({ queryKey: trpc.settings.courseSettings.queryKey(settings.name) });
+      queryClient.invalidateQueries({ queryKey: trpc.settings.allCoursesSettings.queryKey() });
+      queryClient.invalidateQueries({ queryKey: trpc.settings.assignmentGroupItemCounts.queryKey(settings.name) });
+      queryClient.invalidateQueries({ queryKey: canvasCourseKeys.assignmentGroups(settings.canvasId) });
+      queryClient.invalidateQueries({ queryKey: canvasCourseKeys.assignmentGroupCounts(settings.canvasId) });
     },
   });
 };
+
+/** How many assignments each Canvas group holds, by its id. */
+export const useCanvasAssignmentGroupCountsQuery = (canvasId: number) =>
+  useQuery({
+    queryKey: canvasCourseKeys.assignmentGroupCounts(canvasId),
+    queryFn: () => canvasAssignmentGroupService.assignmentCounts(canvasId),
+  });
 
 export const useAssignmentGroupsQuery = (canvasId: number) => {
   return useQuery({

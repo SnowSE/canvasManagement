@@ -17,6 +17,10 @@ import {
   zodLocalCourseSettings,
 } from "@/features/local/course/localCourseSettings";
 import { courseItemFileStorageService } from "./courseItemFileStorageService";
+import {
+  countItemsByAssignmentGroup,
+  moveItemsToAssignmentGroup,
+} from "./assignmentGroupFiles";
 import { updateOrCreateAssignmentFile } from "../assignments/assignmentRouter";
 import { updateQuizFile } from "../quizzes/quizRouter";
 import { updatePageFile } from "../pages/pageRouter";
@@ -95,6 +99,29 @@ export const settingsRouter = router({
         settings.name,
         settings,
       );
+    }),
+  /** How many assignment and quiz files name each assignment group. */
+  assignmentGroupItemCounts: publicProcedure
+    .input(z.string())
+    .query(async ({ input: courseName }) =>
+      countItemsByAssignmentGroup(courseName),
+    ),
+  /** Moves a group's items to another group (or a new name) in the files, then saves the settings. */
+  moveAssignmentGroup: publicProcedure
+    .input(
+      z.object({
+        from: z.string(),
+        to: z.string(),
+        settings: zodLocalCourseSettings,
+      }),
+    )
+    .mutation(async ({ input: { from, to, settings } }) => {
+      const moved = await moveItemsToAssignmentGroup(settings.name, from, to);
+      await fileStorageService.settings.updateCourseSettings(
+        settings.name,
+        settings,
+      );
+      return moved;
     }),
 });
 
