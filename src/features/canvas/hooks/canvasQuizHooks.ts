@@ -205,8 +205,8 @@ export const useUpdateQuizInCanvasMutation = () => {
         });
         const changes = describeQuestionPlan(summary.plan);
         const updated = changes
-          ? `Updated "${quiz.name}" in Canvas: settings, and ${changes}.`
-          : `Updated "${quiz.name}" in Canvas: settings. Its questions already matched the file, so they were left alone.`;
+          ? `Updated "${quiz.name}" in Canvas: ${changes}.`
+          : `Updated "${quiz.name}" in Canvas. Its questions already matched the file, so they were left alone.`;
         if (summary.needsSaveInCanvas) {
           toast.dismiss(progress);
           showActionNeededToast(
