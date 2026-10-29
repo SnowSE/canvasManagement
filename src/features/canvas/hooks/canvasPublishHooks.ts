@@ -60,8 +60,9 @@ export const usePublishInCanvasMutation = () => {
       if (canvasModule && canvasModule.published === false) {
         showActionNeededToast(
           `Published "${name}", but its module "${moduleName}" is unpublished in Canvas, so students can't see it yet.`,
-          `${baseCanvasUrl}/courses/${settings.canvasId}/modules`,
-          "Open modules in Canvas",
+          // Canvas opens its modules page scrolled to this one
+          `${baseCanvasUrl}/courses/${settings.canvasId}/modules/${canvasModule.id}`,
+          `Open "${moduleName}" in Canvas`,
         );
       } else {
         toast.success(`Published "${name}" in Canvas`);
