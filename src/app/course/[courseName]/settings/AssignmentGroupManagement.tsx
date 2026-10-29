@@ -5,226 +5,286 @@ import {
   useUpdateLocalCourseSettingsMutation,
 } from "@/features/local/course/localCoursesHooks";
 import { LocalAssignmentGroup } from "@/features/local/assignments/models/localAssignmentGroup";
-import { useEffect, useState } from "react";
-import TextInput from "../../../../components/form/TextInput";
+import { Fragment, ReactNode, useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import toast from "react-hot-toast";
 import { settingsBox } from "./sharedSettings";
-import { Spinner } from "@/components/Spinner";
 import MeatballIcon from "./MeatballIcon";
-import { useSetAssignmentGroupsMutation } from "@/features/canvas/hooks/canvasCourseHooks";
+import {
+  useAssignmentGroupsQuery,
+  useCanvasAssignmentGroupCountsQuery,
+  useMoveAssignmentGroupMutation,
+  useSyncAssignmentGroupsMutation,
+} from "@/features/canvas/hooks/canvasCourseHooks";
 import { baseCanvasUrl } from "@/features/canvas/services/canvasServiceUtils";
-import Modal, { useModal } from "@/components/Modal";
-import { canvasAssignmentGroupService } from "@/features/canvas/services/canvasAssignmentGroupService";
 import { showErrorToast } from "@/app/MyToaster";
-import { mergeCanvasAssignmentGroups } from "./mergeCanvasAssignmentGroups";
+import { useTRPC } from "@/services/serverFunctions/trpcClient";
+import { syncAssignmentGroups } from "./syncAssignmentGroups";
 
+const input = "bg-slate-800 border border-slate-500 rounded-md px-1";
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+/**
+ * The course's assignment groups beside Canvas's, each saying what Sync
+ * With Canvas will do. Nothing here deletes an assignment: removing a group
+ * moves its items to another (only an empty one is just removed), renaming
+ * moves them to the new name, and syncing only adds groups and sets weights.
+ */
 export default function AssignmentGroupManagement() {
-  const { data: settings, isPending } = useLocalCourseSettingsQuery();
+  const { data: settings } = useLocalCourseSettingsQuery();
   const updateSettings = useUpdateLocalCourseSettingsMutation();
-  const applyInCanvas = useSetAssignmentGroupsMutation(settings.canvasId);
-  const modal = useModal();
-  const [pulling, setPulling] = useState(false);
-
-  const [assignmentGroups, setAssignmentGroups] = useState<
-    LocalAssignmentGroup[]
-  >(settings.assignmentGroups);
+  const sync = useSyncAssignmentGroupsMutation();
+  const trpc = useTRPC();
+  const { data: fileCounts } = useQuery(
+    trpc.settings.assignmentGroupItemCounts.queryOptions(settings.name),
+  );
+  const { data: canvasCounts } = useCanvasAssignmentGroupCountsQuery(settings.canvasId);
+  const { data: canvasGroups } = useAssignmentGroupsQuery(settings.canvasId);
+  const [weights, setWeights] = useState<Record<string, number>>({});
+  // the groups as typed, weights saved a moment after typing stops
+  const groups = settings.assignmentGroups.map((g) => ({ ...g, weight: weights[g.id] ?? g.weight }));
+  const preview = canvasGroups && syncAssignmentGroups(groups, canvasGroups, () => "");
 
   useEffect(() => {
-    const delay = 1000;
-    const handler = setTimeout(() => {
-      if (
-        !areAssignmentGroupsEqual(assignmentGroups, settings.assignmentGroups)
-      ) {
-        console.log(
-          "updating",
-          assignmentGroups,
-          updateSettings.isPending,
-          isPending,
-        );
-        updateSettings.mutate({
-          ...settings,
-          assignmentGroups,
-        });
-      }
-    }, delay);
+    if (groups.every((g, i) => g.weight === settings.assignmentGroups[i].weight)) return;
+    const handler = setTimeout(
+      () => updateSettings.mutate({ ...settings, assignmentGroups: groups }),
+      1000,
+    );
+    return () => clearTimeout(handler);
+  }, [groups, settings, updateSettings]);
 
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [assignmentGroups, isPending, settings, updateSettings]);
+  const addGroup = () => {
+    let name = "New group";
+    for (let n = 2; groups.some((g) => g.name === name); n++) name = `New group ${n}`;
+    updateSettings.mutate({
+      ...settings,
+      assignmentGroups: [...groups, { id: crypto.randomUUID(), name, weight: 0 }],
+    });
+  };
 
   return (
     <div className={settingsBox}>
-      {assignmentGroups.map((group) => (
-        <div key={group.id} className="flex flex-row gap-3">
-          <TextInput
-            value={group.name}
-            setValue={(newValue) =>
-              setAssignmentGroups((oldGroups) =>
-                oldGroups.map((g) =>
-                  g.id === group.id ? { ...g, name: newValue } : g,
-                ),
-              )
+      <div className="grid grid-cols-[1fr_5rem_auto_auto_auto_auto] gap-x-3 gap-y-1 items-center">
+        <div>Group</div>
+        <div>Weight</div>
+        <div>Canvas weight</div>
+        <div title="Assignment and quiz files that name the group">Files</div>
+        <div title="Assignments and quizzes in the group in Canvas">Canvas items</div>
+        <div />
+        {groups.map((group) => {
+          // the Canvas group sync pairs it with, by id or else name
+          const canvasId = preview?.groups.find((g) => g.id === group.id)?.canvasId;
+          const files = fileCounts && (fileCounts[group.name] ?? 0);
+          const canvasItems = canvasId ? canvasCounts && (canvasCounts[canvasId] ?? 0) : 0;
+          return (
+          <GroupRow
+            key={group.id}
+            group={group}
+            groups={groups}
+            // unknown until counted
+            files={files}
+            canvasItems={canvasItems}
+            canvas={
+              <>
+                <InCanvas
+                  canvasWeight={canvasGroups?.find((c) => c.id === canvasId)?.group_weight}
+                  weight={group.weight}
+                  loaded={!!canvasGroups}
+                />
+                <div>{files ?? "…"}</div>
+                <div>{canvasId ? (canvasItems ?? "…") : "—"}</div>
+              </>
             }
-            label={"Group Name"}
+            setWeight={(weight) => setWeights((w) => ({ ...w, [group.id]: weight }))}
           />
-          <TextInput
-            value={group.weight.toString()}
-            setValue={(newValue) =>
-              setAssignmentGroups((oldGroups) =>
-                oldGroups.map((g) =>
-                  g.id === group.id
-                    ? { ...g, weight: parseInt(newValue || "0") }
-                    : g,
-                ),
-              )
-            }
-            label={"Weight"}
-          />
-        </div>
-      ))}
+          );
+        })}
+        {preview?.added.map((group) => (
+          <Fragment key={group.canvasId}>
+            <div className="px-1 text-sky-400">{group.name}</div>
+            <div className="px-1">—</div>
+            <div className="text-sky-400">{group.weight} · added here on sync</div>
+            <div>{fileCounts?.[group.name] ?? 0}</div>
+            <div>{canvasCounts?.[group.canvasId!] ?? "…"}</div>
+            <div />
+          </Fragment>
+        ))}
+      </div>
       <div className="flex gap-3 mt-3">
+        <button onClick={addGroup}>Add Group</button>
         <button
-          className="btn-danger"
-          onClick={() => {
-            setAssignmentGroups((oldGroups) => oldGroups.slice(0, -1));
-          }}
-        >
-          Remove Assignment Group
-        </button>
-        <button
-          onClick={() => {
-            setAssignmentGroups((oldGroups) => [
-              ...oldGroups,
-              {
-                id: Date.now().toString(),
-                name: "",
-                weight: 0,
-              },
-            ]);
-          }}
-        >
-          Add Assignment Group
-        </button>
-        <button
-          disabled={pulling}
-          title="Adds the groups Canvas has and replaces these weights with Canvas's; keeps groups only these settings have"
+          disabled={sync.isPending}
+          title="Adds the groups only Canvas has, creates the ones only listed here, and sets Canvas's weights to these. Deletes nothing."
           onClick={async () => {
-            setPulling(true);
             try {
-              const canvasGroups = await canvasAssignmentGroupService.getAll(settings.canvasId);
-              setAssignmentGroups((groups) =>
-                mergeCanvasAssignmentGroups(groups, canvasGroups, () => crypto.randomUUID()),
-              );
+              setWeights({});
+              const { added, created, weights } = await sync.mutateAsync({ ...settings, assignmentGroups: groups });
+              const changes = [
+                added && `${plural(added, "group")} added from Canvas`,
+                created && `${plural(created, "group")} created in Canvas`,
+                weights && `${plural(weights, "weight")} set in Canvas`,
+              ].filter(Boolean);
+              toast.success(changes.length ? changes.join(", ") : "Assignment groups already match Canvas");
             } catch (e) {
-              showErrorToast(`Couldn't read the assignment groups from Canvas: ${(e as Error).message}`);
-            } finally {
-              setPulling(false);
+              showErrorToast(`Couldn't sync the assignment groups: ${(e as Error).message}`);
             }
           }}
         >
-          Pull Assignment Groups and Weights From Canvas
+          {sync.isPending ? "Syncing…" : "Sync With Canvas"}
         </button>
       </div>
-      <br />
-      <div className="flex justify-end">
-        <Modal
-          modalControl={modal}
-          buttonText="Update Assignment Groups In Canvas"
-          buttonClass="btn-"
-          modalWidth="w-1/5"
-        >
-          {({ closeModal }) => (
-            <div>
-              <div className="text-center font-bold">
-                DANGER: updating assignment groups can delete assignments and
-                grades from canvas.
-              </div>
-              <div className="text-center">
-                This is only recommended to do at the beginning of a semester.
-                Are you sure you want to continue?
-              </div>
-              <br />
-              <div className="flex justify-around gap-3">
-                <button
-                  onClick={async () => {
-                    const newSettings =
-                      await applyInCanvas.mutateAsync(settings);
-
-                    // prevent debounce from resetting
-                    if (newSettings)
-                      setAssignmentGroups(newSettings.assignmentGroups);
-                  }}
-                  disabled={applyInCanvas.isPending}
-                  className="btn-danger"
-                >
-                  Yes
-                </button>
-                <button onClick={closeModal} disabled={applyInCanvas.isPending}>
-                  No
-                </button>
-              </div>
-              {applyInCanvas.isPending && <Spinner />}
-            </div>
-          )}
-        </Modal>
-      </div>
-      {applyInCanvas.isPending && <Spinner />}
-      {applyInCanvas.isSuccess && (
-        <div>
-          {"You will need to go to your course assignments page "}
+      {sync.isSuccess && (
+        <div className="mt-2">
+          {"For the weights to count, open your course's assignments page "}
           <a
             href={`${baseCanvasUrl}/courses/${settings.canvasId}/assignments`}
-            className="font-bold underline hover:scale-115"
+            className="font-bold underline"
             target="_blank"
           >
             HERE
           </a>
           {" > settings ("}
           <MeatballIcon />
-          {")  > Assignment Group Weights"}
-          <br />
-          {"and check the 'Weight final grade based on assignment groups' box"}
-          <br />
+          {") > Assignment Group Weights and check 'Weight final grade based on assignment groups'."}
         </div>
       )}
     </div>
   );
 }
 
-function areAssignmentGroupsEqual(
-  list1: LocalAssignmentGroup[],
-  list2: LocalAssignmentGroup[],
-): boolean {
-  // Check if lists have the same length
-  if (list1.length !== list2.length) return false;
+/** A group's weight in Canvas, and what Sync With Canvas will do to it. */
+function InCanvas({
+  canvasWeight,
+  weight,
+  loaded,
+}: {
+  canvasWeight: number | undefined;
+  weight: number;
+  loaded: boolean;
+}) {
+  if (!loaded) return <div className="text-slate-500">…</div>;
+  if (canvasWeight === undefined)
+    return <div className="text-emerald-400">new · created on sync</div>;
+  if (canvasWeight !== weight)
+    return <div className="text-amber-400">{canvasWeight} → {weight} on sync</div>;
+  return <div>{canvasWeight}</div>;
+}
 
-  // Sort both lists by the unique 'id' or 'canvasId' as a fallback
-  const sortedList1 = [...list1].sort((a, b) => {
-    if (a.id !== b.id) return a.id > b.id ? 1 : -1;
-    if (a.canvasId !== b.canvasId) return (a.canvasId || 0) - (b.canvasId || 0);
-    return 0;
-  });
+/**
+ * One group: its name (renamed on leaving the field), weight, and ✕, which
+ * removes an empty group at once and otherwise asks where its items go.
+ */
+function GroupRow({
+  group,
+  groups,
+  files,
+  canvasItems,
+  canvas,
+  setWeight,
+}: {
+  group: LocalAssignmentGroup;
+  groups: LocalAssignmentGroup[];
+  files: number | undefined;
+  canvasItems: number | undefined;
+  canvas: ReactNode;
+  setWeight: (weight: number) => void;
+}) {
+  const { data: settings } = useLocalCourseSettingsQuery();
+  const move = useMoveAssignmentGroupMutation();
+  const others = groups.filter((g) => g.id !== group.id);
+  const [name, setName] = useState(group.name);
+  const [moving, setMoving] = useState(false);
+  const counted = files !== undefined && canvasItems !== undefined;
+  const items = `${plural(files ?? 0, "file")} and ${plural(canvasItems ?? 0, "Canvas assignment")}`;
 
-  const sortedList2 = [...list2].sort((a, b) => {
-    if (a.id !== b.id) return a.id > b.id ? 1 : -1;
-    if (a.canvasId !== b.canvasId) return (a.canvasId || 0) - (b.canvasId || 0);
-    return 0;
-  });
-
-  // Deep compare each object in the sorted lists
-  for (let i = 0; i < sortedList1.length; i++) {
-    const group1 = sortedList1[i];
-    const group2 = sortedList2[i];
-
-    if (
-      group1.id !== group2.id ||
-      group1.name !== group2.name ||
-      group1.weight !== group2.weight ||
-      group1.canvasId !== group2.canvasId
-    ) {
-      return false;
+  const run = async (to?: string) => {
+    setMoving(false);
+    try {
+      await move.mutateAsync({ settings, from: group, to });
+      toast.success(
+        to === undefined
+          ? `Removed ${group.name}`
+          : others.some((g) => g.name === to)
+            ? `Moved ${group.name}'s ${items} to ${to}`
+            : `Renamed ${group.name} to ${to}`,
+      );
+    } catch (e) {
+      setName(group.name);
+      showErrorToast(`Couldn't change ${group.name}: ${(e as Error).message}`);
     }
-  }
+  };
+  // a group's items go to another group, or to a new name (a rename)
+  const moveTo = (typed: string, ask: boolean) => {
+    const to = typed.trim();
+    if (!to || to === group.name) return setMoving(false);
+    const merging = others.some((g) => g.name === to);
+    const question = `Move ${items} from ${group.name} to ${merging ? to : `a new group, ${to}`}, and remove ${group.name}?`;
+    if (ask && !window.confirm(question)) return setName(group.name);
+    run(to);
+  };
 
-  return true;
+  return (
+    <>
+      {moving ? (
+        <>
+          <input
+            autoFocus
+            list={`groups-${group.id}`}
+            aria-label={`Move ${group.name}'s items to`}
+            placeholder={`Move ${group.name}'s items to… (pick a group or type a new name)`}
+            className={input}
+            onChange={(e) => {
+              // picking from the list, not typing
+              const native = e.nativeEvent as InputEvent;
+              if (!native.inputType || native.inputType === "insertReplacementText")
+                moveTo(e.target.value, true);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") moveTo(e.currentTarget.value, true);
+              if (e.key === "Escape") setMoving(false);
+            }}
+            onBlur={(e) => !e.target.value && setMoving(false)}
+          />
+          <datalist id={`groups-${group.id}`}>
+            {others.map((g) => (
+              <option key={g.id} value={g.name} />
+            ))}
+          </datalist>
+        </>
+      ) : (
+        <input
+          aria-label="Group name"
+          className={input}
+          value={name}
+          disabled={move.isPending}
+          title="Renaming renames the group here, in Canvas and in its files"
+          onChange={(e) => setName(e.target.value)}
+          // renaming onto another group's name merges them, which asks first
+          onBlur={() => moveTo(name, others.some((g) => g.name === name.trim()))}
+          onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+        />
+      )}
+      <input
+        aria-label="Weight"
+        className={input}
+        value={group.weight.toString()}
+        onChange={(e) => setWeight(parseInt(e.target.value || "0"))}
+      />
+      {canvas}
+      <button
+        title={
+          !counted
+            ? "Counting its items…"
+            : files || canvasItems
+              ? `Move ${group.name}'s ${items} to another group and remove it`
+              : `Remove ${group.name}`
+        }
+        disabled={!counted || move.isPending}
+        onClick={() => (moving ? setMoving(false) : files || canvasItems ? setMoving(true) : run())}
+      >
+        ✕
+      </button>
+    </>
+  );
 }

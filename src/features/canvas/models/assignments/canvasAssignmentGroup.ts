@@ -5,6 +5,7 @@ export interface CanvasAssignmentGroup {
   group_weight: number;
   // sis_source_id?: string;  // Uncomment if needed.
   // integration_data?: Record<string, string>;  // Uncomment if needed.
-  // assignments?: CanvasAssignment[];  // Uncomment if needed, assuming CanvasAssignment is defined.
+  /** Present when asked for with include[]=assignments. */
+  assignments?: { id: number }[];
   // rules?: any;  // Assuming 'rules' is of unknown type, so using 'any' here.
 }
