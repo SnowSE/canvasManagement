@@ -9,14 +9,13 @@ import { Fragment, ReactNode, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { settingsBox } from "./sharedSettings";
-import MeatballIcon from "./MeatballIcon";
 import {
   useAssignmentGroupsQuery,
   useCanvasAssignmentGroupCountsQuery,
   useMoveAssignmentGroupMutation,
   useSyncAssignmentGroupsMutation,
+  useWeightByGroups,
 } from "@/features/canvas/hooks/canvasCourseHooks";
-import { baseCanvasUrl } from "@/features/canvas/services/canvasServiceUtils";
 import { showErrorToast } from "@/app/MyToaster";
 import { useTRPC } from "@/services/serverFunctions/trpcClient";
 import { syncAssignmentGroups } from "./syncAssignmentGroups";
@@ -121,6 +120,7 @@ export default function AssignmentGroupManagement() {
       </div>
       <div className="flex gap-3 mt-3">
         <button onClick={addGroup}>Add Group</button>
+        <WeightByGroups canvasId={settings.canvasId} />
         <button
           disabled={sync.isPending}
           title="Adds the groups only Canvas has, creates the ones only listed here, and sets Canvas's weights to these. Deletes nothing."
@@ -142,22 +142,30 @@ export default function AssignmentGroupManagement() {
           {sync.isPending ? "Syncing…" : "Sync With Canvas"}
         </button>
       </div>
-      {sync.isSuccess && (
-        <div className="mt-2">
-          {"For the weights to count, open your course's assignments page "}
-          <a
-            href={`${baseCanvasUrl}/courses/${settings.canvasId}/assignments`}
-            className="font-bold underline"
-            target="_blank"
-          >
-            HERE
-          </a>
-          {" > settings ("}
-          <MeatballIcon />
-          {") > Assignment Group Weights and check 'Weight final grade based on assignment groups'."}
-        </div>
-      )}
     </div>
+  );
+}
+
+/** Canvas's "Weight final grade based on assignment groups", changed in Canvas at once. */
+function WeightByGroups({ canvasId }: { canvasId: number }) {
+  const { weighted, set } = useWeightByGroups(canvasId);
+  return (
+    <label
+      className="flex items-center gap-2"
+      title={`Canvas's "Weight final grade based on assignment groups", changed in Canvas at once`}
+    >
+      <input
+        type="checkbox"
+        checked={!!weighted}
+        disabled={weighted === undefined || set.isPending}
+        onChange={(e) =>
+          set.mutate(e.target.checked, {
+            onError: (err) => showErrorToast(`Couldn't change the grade weighting: ${err.message}`),
+          })
+        }
+      />
+      Weight final grade by these groups
+    </label>
   );
 }
 

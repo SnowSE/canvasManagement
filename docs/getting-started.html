@@ -210,7 +210,7 @@ docker compose up -d</code></pre>
 <tr><td>Classroom 50</td><td>Optional GitHub Classroom integration. Skip it unless you use Classroom 50.</td></tr>
 <tr><td>Default submission types and upload types</td><td>What new assignments start with.</td></tr>
 <tr><td>Default due time and lock offset</td><td>The time of day dragged items get, and how many hours after due an assignment locks.</td></tr>
-<tr><td>Assignment groups</td><td>Canvas grading categories and their weights. Nothing here deletes an assignment. Each group shows its weight here and in Canvas, and what <em>Sync With Canvas</em> will do: create a group only listed here (green), add one only Canvas has (blue), and set Canvas&rsquo;s weight to this one where they differ (amber, <em>15 &rarr; 20</em>). To keep Canvas&rsquo;s weight, type it in here. The <em>Total</em> row adds up the weights here and in Canvas, amber when either isn&rsquo;t 100. Renaming a group (edit its name and leave the field) renames it here, in Canvas and in every assignment and quiz file that names it; renaming it to another group&rsquo;s name merges the two. <b>&#x2715;</b> removes a group after moving its items to the group you pick, in the files and in Canvas.</td></tr>
+<tr><td>Assignment groups</td><td>Canvas grading categories and their weights. Nothing here deletes an assignment. Each group shows its weight here and in Canvas, and what <em>Sync With Canvas</em> will do: create a group only listed here (green), add one only Canvas has (blue), and set Canvas&rsquo;s weight to this one where they differ (amber, <em>15 &rarr; 20</em>). To keep Canvas&rsquo;s weight, type it in here. The <em>Total</em> row adds up the weights here and in Canvas, amber when either isn&rsquo;t 100. <em>Weight final grade by these groups</em> turns Canvas&rsquo;s &ldquo;Weight final grade based on assignment groups&rdquo; on or off right away. Renaming a group (edit its name and leave the field) renames it here, in Canvas and in every assignment and quiz file that names it; renaming it to another group&rsquo;s name merges the two. <b>&#x2715;</b> removes a group after moving its items to the group you pick, in the files and in Canvas.</td></tr>
 <tr><td>Students and Groups</td><td>Read-only views of the Canvas roster and group sets, used by the editor. See the <em>Group Assignments &amp; Student Schedules</em> guide.</td></tr>
 <tr><td>Holidays</td><td>Days with no class. They are labeled on the calendar and struck through in the date picker.</td></tr>
 </table></div>
@@ -490,7 +490,7 @@ AddToHome: true
 <li><b>Make the storage folder a git repo</b> and commit as you go, from the <a href="#git">git button</a> on the course page. The files are small and diff well. No student names are written to them.</li>
 <li><b>Edit anywhere.</b> The app watches the folder, so a change made in your own editor shows up in the app within a second.</li>
 <li><b>Start a semester from the previous one.</b> Add New Course, choose the old course to import from, and everything lands on the new dates ready to review.</li>
-<li><b>Sync assignment groups</b> at the start of the semester, then check the &ldquo;Weight final grade based on assignment groups&rdquo; box in Canvas.</li>
+<li><b>Sync assignment groups</b> at the start of the semester, and check <em>Weight final grade by these groups</em> under them.</li>
 <li><b>Read the red pills.</b> Hovering an out-of-sync item tells you exactly what differs, which is faster than opening Canvas to compare.</li>
 <li><b>Error messages stay until you close them</b>, so you will not miss one, and the same error repeated shows once instead of stacking. Closed ones are still in the <a href="#errors">error list</a>.</li>
 <li><b>Group projects and per-student due dates</b> have their own guide: <a href="group-assignments-and-student-schedules.html"><em>Group Assignments &amp; Student Schedules</em></a>.</li>
@@ -499,6 +499,7 @@ AddToHome: true
 <h2 id="changes">Recent changes</h2>
 <div class="tw"><table>
 <tr><th>When</th><th>What changed</th></tr>
+<tr><td style="white-space:nowrap">Oct 2026</td><td>Course settings turn Canvas&rsquo;s &ldquo;Weight final grade based on assignment groups&rdquo; on or off with a checkbox under the assignment groups, instead of a note telling you to find it in Canvas.</td></tr>
 <tr><td style="white-space:nowrap">Oct 2026</td><td>The assignment groups table ends with the total weight here and in Canvas, amber when it isn&rsquo;t 100.</td></tr>
 <tr><td style="white-space:nowrap">Oct 2026</td><td>Assignment groups can no longer delete assignments: <em>Sync With Canvas</em> replaces <em>Update Assignment Groups In Canvas</em> and only adds groups and sets weights, and removing or renaming a group moves its assignments and quizzes, in the files and in Canvas.</td></tr>
 <tr><td style="white-space:nowrap">Oct 2026</td><td>Compare with Canvas no longer shows a multiple dropdowns question as different under <b>What students got</b> just because the attempt has the dropdowns drawn in.</td></tr>

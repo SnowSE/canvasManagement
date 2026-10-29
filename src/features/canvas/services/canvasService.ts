@@ -32,6 +32,13 @@ export const canvasService = {
     return data;
   },
 
+  /** Canvas's "Weight final grade based on assignment groups". */
+  async setWeightByGroups(courseId: number, weighted: boolean) {
+    await axiosClient.put(`${canvasApi}/courses/${courseId}`, {
+      course: { apply_assignment_group_weights: weighted },
+    });
+  },
+
   async getCurrentTermsFor(queryDate: Date = new Date()) {
     const terms = await getAllTerms();
     const currentTerms = terms

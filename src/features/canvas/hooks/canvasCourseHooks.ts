@@ -144,3 +144,18 @@ export const useCourseStudentsQuery = (canvasId: number) =>
     queryKey: canvasCourseKeys.students(canvasId),
     queryFn: async () => await canvasService.getEnrolledStudents(canvasId),
   });
+
+/** Whether Canvas weights the final grade by assignment group, and a way to change it. */
+export const useWeightByGroups = (canvasId: number) => {
+  const queryClient = useQueryClient();
+  const course = useQuery({
+    queryKey: canvasCourseKeys.courseDetails(canvasId),
+    queryFn: () => canvasService.getCourse(canvasId),
+  });
+  const set = useMutation({
+    mutationFn: (weighted: boolean) => canvasService.setWeightByGroups(canvasId, weighted),
+    onSettled: () =>
+      queryClient.invalidateQueries({ queryKey: canvasCourseKeys.courseDetails(canvasId) }),
+  });
+  return { weighted: course.data?.apply_assignment_group_weights, set };
+};
