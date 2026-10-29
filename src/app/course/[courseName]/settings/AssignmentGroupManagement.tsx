@@ -110,6 +110,14 @@ export default function AssignmentGroupManagement() {
             <div />
           </Fragment>
         ))}
+        <div className="px-1 text-slate-400">Total</div>
+        <Total weight={groups.reduce((sum, g) => sum + g.weight, 0)} />
+        {canvasGroups ? (
+          <Total weight={canvasGroups.reduce((sum, g) => sum + g.group_weight, 0)} />
+        ) : (
+          <div />
+        )}
+        <div className="col-span-3" />
       </div>
       <div className="flex gap-3 mt-3">
         <button onClick={addGroup}>Add Group</button>
@@ -152,6 +160,16 @@ export default function AssignmentGroupManagement() {
     </div>
   );
 }
+
+/** A total of weights, amber when it isn't 100. */
+const Total = ({ weight }: { weight: number }) => (
+  <div
+    className={"px-1 " + (weight === 100 ? "text-slate-400" : "text-amber-400")}
+    title={weight === 100 ? undefined : "The weights don't add up to 100"}
+  >
+    {weight}
+  </div>
+);
 
 /** A group's weight in Canvas, and what Sync With Canvas will do to it. */
 function InCanvas({
