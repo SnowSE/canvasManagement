@@ -96,7 +96,8 @@ const parseIndividualRubricItemMarkdown = (rawMarkdown: string): RubricItem => {
     throw new Error(`Points not found: ${rawMarkdown}`);
   }
   const points = parseFloat(match[1]);
-  const label = rawMarkdown.split(": ").slice(1).join(": ");
+  // Canvas drops trailing spaces, so keeping them would never compare equal
+  const label = rawMarkdown.split(": ").slice(1).join(": ").trim();
   return { points, label };
 };
 
@@ -106,7 +107,7 @@ const parseRatingFromMarkdown = (rawMarkdown: string): RubricRating => {
     throw new Error(`Points not found in rating: ${rawMarkdown}`);
   }
   const points = parseFloat(match[1]);
-  const description = rawMarkdown.split(": ").slice(1).join(": ");
+  const description = rawMarkdown.split(": ").slice(1).join(": ").trim();
   return { points, description };
 };
 

@@ -178,4 +178,19 @@ describe("RubricMarkdownTests", () => {
     const parsed = assignmentMarkdownParser.parseMarkdown(markdown, "test");
     expect(parsed).toEqual(assignment);
   });
+
+  it("drops trailing spaces from labels and ratings, as Canvas does", () => {
+    const rawRubric =
+      "- 2pts: riskiest features (not \"running out of time\") \n" +
+      "  - 2pts: 2+ specific risks  \n" +
+      "  - 0pts: generic risks\t\n";
+
+    const rubric: RubricItem[] =
+      assignmentMarkdownParser.parseRubricMarkdown(rawRubric);
+    expect(rubric[0].label).toBe('riskiest features (not "running out of time")');
+    expect(rubric[0].ratings?.map((r) => r.description)).toEqual([
+      "2+ specific risks",
+      "generic risks",
+    ]);
+  });
 });
