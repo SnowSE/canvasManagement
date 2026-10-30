@@ -5,11 +5,12 @@ import { getErrorMessage } from "@/services/utils/queryClient";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { showErrorToast } from "@/app/MyToaster";
 
-export const useClassroom50StatusQuery = () => {
+export const useClassroom50StatusQuery = (enabled: boolean = true) => {
   const { courseName } = useCourseContext();
   const trpc = useTRPC();
   return useQuery(
     trpc.classroom50.getStatus.queryOptions(courseName, {
+      enabled,
       retry: false,
       staleTime: 60 * 1000,
     })

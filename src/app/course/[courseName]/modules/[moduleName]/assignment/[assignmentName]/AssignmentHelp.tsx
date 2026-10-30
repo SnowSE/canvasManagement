@@ -233,7 +233,14 @@ Classroom50Slug: my-assignment-slug
 `}</Example>
         <P>
           The older <C>insert_github_classroom_url</C> token resolves to the
-          same url.
+          same url. A slug with no accept link in the description gets a
+          yellow underline in the editor, since students would have no way to
+          accept the assignment.
+        </P>
+        <P>
+          Until the assignment is created in Classroom 50, the{" "}
+          <C>Classroom 50</C> button sits beside the main button in the footer
+          instead of in its menu.
         </P>
       </HelpSection>
 

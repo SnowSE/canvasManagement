@@ -63,6 +63,7 @@ export function EditorFooter({
   onViewInCanvas,
   problem,
   extraActions = [],
+  sideActions = [],
   previousUrl,
   nextUrl,
   children,
@@ -85,6 +86,8 @@ export function EditorFooter({
   problem?: string;
   /** Classroom 50, the deletes: always in the ⋯ menu. */
   extraActions?: FooterAction[];
+  /** Needs attention (Classroom 50 not created): its own button beside the next step instead of in the ⋯ menu. */
+  sideActions?: FooterAction[];
   previousUrl: string | null;
   nextUrl: string | null;
   /** Dialogs the actions open. */
@@ -238,6 +241,9 @@ export function EditorFooter({
         <div className="px-3 py-2">{status}</div>
         {busy && <Spinner />}
         {primary && <ActionControl action={primary} className="btn" />}
+        {sideActions.map((a) => (
+          <ActionControl key={a.label} action={a} className="btn" />
+        ))}
         {menuActions.map((a) => (
           <ActionControl
             key={a.label}
@@ -309,6 +315,13 @@ export function EditorFooter({
       <div className="flex flex-row flex-wrap items-center justify-end gap-3">
         {busy && <Spinner />}
         {status}
+        {sideActions.map((a) => (
+          <ActionControl
+            key={a.label}
+            action={a}
+            className="unstyled btn btn-outline inline-flex items-center gap-2"
+          />
+        ))}
         {primary && <SplitButton primary={primary} actions={menuActions} />}
       </div>
       {children}

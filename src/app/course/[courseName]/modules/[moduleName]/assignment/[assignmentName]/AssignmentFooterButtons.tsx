@@ -28,6 +28,7 @@ import { useMemo, useState } from "react";
 import { useItemNavigation } from "../../../../hooks/useItemNavigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Classroom50AssignmentPanel } from "./Classroom50AssignmentPanel";
+import { useClassroom50StatusQuery } from "@/features/local/classroom50/classroom50Hooks";
 import { useCanvasQuizzesQuery } from "@/features/canvas/hooks/canvasQuizHooks";
 import {
   useRosterGroupSetsQuery,
@@ -62,6 +63,10 @@ export function AssignmentFooterButtons({
   const { data: rosterGroupSets } = useRosterGroupSetsQuery();
   const modal = useModal();
   const classroom50Modal = useModal();
+  const classroom50Slug = assignment.classroom50Slug;
+  const { data: classroom50Status } = useClassroom50StatusQuery(
+    !!settings.classroom50 && !!classroom50Slug,
+  );
   const { previousUrl, nextUrl } = useItemNavigation(
     "assignment",
     assignmentName,
@@ -113,12 +118,22 @@ export function AssignmentFooterButtons({
   );
 
   const extraActions: FooterAction[] = [];
+  const sideActions: FooterAction[] = [];
+  // only once Classroom 50 has answered, so it doesn't flash in while checking
+  const classroom50RepoMissing =
+    !!classroom50Slug &&
+    !!classroom50Status?.configured &&
+    classroom50Status.assignmentsListed &&
+    !classroom50Status.assignmentSlugs.includes(classroom50Slug);
   if (settings.classroom50)
-    extraActions.push({
+    (classroom50RepoMissing ? sideActions : extraActions).push({
       label: "Classroom 50",
       icon: <ClassroomIcon />,
       onClick: () => classroom50Modal.openModal(),
       opensDialog: true,
+      title: classroom50RepoMissing
+        ? `The Classroom 50 repo for ${classroom50Slug} does not exist yet. Click to create it.`
+        : undefined,
     });
   if (assignmentInCanvas)
     extraActions.push({
@@ -181,6 +196,7 @@ export function AssignmentFooterButtons({
         }
       }}
       extraActions={extraActions}
+      sideActions={sideActions}
       previousUrl={previousUrl}
       nextUrl={nextUrl}
     >

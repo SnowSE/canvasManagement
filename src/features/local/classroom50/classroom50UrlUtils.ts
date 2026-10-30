@@ -29,6 +29,15 @@ export const getClassroom50AcceptUrl = (
   return `${classPageUrl}/assignments/${slug}/accept`;
 };
 
+// the token, the legacy token, or the accept url pasted in by hand
+export const descriptionHasClassroom50AcceptLink = (
+  description: string,
+  slug: string
+) =>
+  description.includes(classroomUrlToken) ||
+  description.includes(legacyClassroomUrlToken) ||
+  description.includes(`/assignments/${slug}/accept`);
+
 // commands meant to be copied and run on the faculty machine, not the server
 export const getClassroom50LocalCommands = (
   settings: LocalCourseSettings,

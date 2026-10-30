@@ -11,6 +11,7 @@ import {
   shouldAutoSuggest,
 } from "./assist/completionProvider";
 import { markerOwner, scheduleMarkers } from "./assist/scheduleMarkers";
+import { classroom50Markers } from "./assist/classroom50Markers";
 import { scheduleInlayHints } from "./assist/scheduleInlayHints";
 import {
   DATE_KEYS,
@@ -95,11 +96,10 @@ export default function InnerMonacoEditorOther({
     const monaco = monacoRef.current;
     const model = editorRef.current?.getModel();
     if (!monaco || !model) return;
-    monaco.editor.setModelMarkers(
-      model,
-      markerOwner,
-      scheduleMarkers(monaco, model, assistDataRef.current)
-    );
+    monaco.editor.setModelMarkers(model, markerOwner, [
+      ...scheduleMarkers(monaco, model, assistDataRef.current),
+      ...classroom50Markers(monaco, model),
+    ]);
   }, []);
 
   useEffect(() => {

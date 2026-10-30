@@ -10,6 +10,7 @@ import {
   useCreateClassroom50AssignmentMutation,
 } from "@/features/local/classroom50/classroom50Hooks";
 import {
+  descriptionHasClassroom50AcceptLink,
   getClassroom50AcceptUrl,
   getClassroom50LocalCommands,
   classroomUrlToken,
@@ -79,6 +80,19 @@ export function Classroom50AssignmentPanel({
           <span className="text-slate-400 text-sm">not created · {slug}</span>
         )}
       </h5>
+
+      {!descriptionHasClassroom50AcceptLink(assignment.description, slug) && (
+        <div className="border border-amber-700/60 bg-amber-950/30 rounded-md p-2 my-2">
+          <p className="text-amber-200 mb-1">
+            The description has no accept link, so students have no way to
+            accept this assignment. Put this where the link should go, below
+            the <code>---</code>:
+          </p>
+          <CopyableCommand
+            command={`[Accept the assignment](${classroomUrlToken})`}
+          />
+        </div>
+      )}
 
       {acceptUrl && (
         <CopyableCommand

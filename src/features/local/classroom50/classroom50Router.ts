@@ -100,6 +100,8 @@ export const classroom50Router = router({
       return {
         configured: true as const,
         classroomFound,
+        // false when gh failed, so an empty list means nothing rather than none
+        assignmentsListed: assignmentResult.exitCode === 0,
         assignmentSlugs,
         rosterCount,
         ghTokenSet: ghTokenIsSet(),
