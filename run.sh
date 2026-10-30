@@ -59,6 +59,11 @@ docker run "${MODE_ARGS[@]}" \
       if command -v gh >/dev/null 2>&1 && ! gh extension list 2>/dev/null | grep -q gh-teacher; then
         gh extension install foundation50/gh-teacher \
           || echo "WARNING: could not install gh-teacher (needs auth: set GH_TOKEN in .env, or docker exec -it canvas-manager-2 gh auth login)"
+      elif command -v gh >/dev/null 2>&1; then
+        # an old gh-teacher rejects assignments.json files that newer
+        # classroom 50 features (like team mode) write
+        gh extension upgrade gh-teacher \
+          || echo "WARNING: could not upgrade gh-teacher, keeping the installed version"
       fi
       npx --yes pnpm dev
     '

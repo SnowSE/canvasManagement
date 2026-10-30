@@ -25,7 +25,9 @@ docker pull mcr.microsoft.com/playwright:v1.56.0-noble
 `.env` must exist with `CANVAS_TOKEN` and `GH_TOKEN`. The Classroom 50 panels
 shell out to `gh`, which lives in the container's persistent home at
 `~/.canvas-manager-dev-home` along with the `gh-teacher` extension — `run.sh`
-installs both on first boot and they survive restarts.
+installs both on first boot, they survive restarts, and gh-teacher is upgraded on
+every boot (an old one fails to read `assignments.json` files that newer Classroom
+50 features write, e.g. `invalid mode "team"`).
 
 ## Checks that need no container
 
