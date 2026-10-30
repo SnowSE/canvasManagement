@@ -218,14 +218,17 @@ Schedule:
 
       <HelpSection title="Classroom 50 accept link">
         <P>
-          Set the slug in the settings, then put the token in the description.
-          The accept url is built from the course&apos;s Classroom 50 settings
-          plus the slug.
+          Set the slug in the settings, above the <C>---</C>. The accept url is
+          built from the course&apos;s Classroom 50 settings plus the slug.
         </P>
         <Example>{`
 Classroom50Slug: my-assignment-slug
----
-
+`}</Example>
+        <P>
+          Then put the token in the description, below the <C>---</C>, where
+          the accept link should go.
+        </P>
+        <Example>{`
 [Accept the assignment](insert_classroom_url)
 `}</Example>
         <P>
