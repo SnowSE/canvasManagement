@@ -10,7 +10,6 @@ import { useAuthoritativeUpdates } from "@/app/course/[courseName]/utils/useAuth
 import EditPageHeader from "./EditPageHeader";
 import { UpdatePageName } from "./UpdatePageName";
 import { EditLayout } from "@/components/EditLayout";
-import { PageHelp } from "./PageHelp";
 import { localPageMarkdownUtils } from "@/features/local/pages/localCoursePageModels";
 import {
   usePageQuery,
@@ -100,11 +99,11 @@ export default function EditPage({
 
   return (
     <EditLayout
+      itemKey={`page:${moduleName}/${pageName}`}
       Header={<EditPageHeader pageName={pageName} />}
       HeaderActions={
         <UpdatePageName pageName={pageName} moduleName={moduleName} />
       }
-      Help={<PageHelp />}
       Editor={<MonacoEditor key={monacoKey} value={text} onChange={textUpdate} />}
       Preview={
         <div className="h-full flex flex-col overflow-hidden">

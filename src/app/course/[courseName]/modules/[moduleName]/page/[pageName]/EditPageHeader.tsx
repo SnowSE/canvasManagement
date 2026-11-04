@@ -7,10 +7,10 @@ export default function EditPageHeader({ pageName }: { pageName: string }) {
       <span className="text-slate-500 cursor-default select-none my-auto">
         <RightSingleChevron />
       </span>
-      <div className="w-5 ms-3 shrink-0 my-auto">
+      <div className="w-5 ms-3 max-md:ms-1 shrink-0 my-auto">
         <ItemTypeIcon type="page" />
       </div>
-      <div className="my-auto px-2 truncate min-w-10 flex-auto">{pageName}</div>
+      <div className="my-auto px-2 max-md:px-1 truncate min-w-10 flex-auto">{pageName}</div>
     </div>
   );
 }

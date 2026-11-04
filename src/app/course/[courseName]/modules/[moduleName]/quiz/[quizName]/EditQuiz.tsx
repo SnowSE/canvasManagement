@@ -14,13 +14,11 @@ import {
 import { useAuthoritativeUpdates } from "../../../../utils/useAuthoritativeUpdates";
 import EditQuizHeader from "./EditQuizHeader";
 import { UpdateQuizName } from "./UpdateQuizName";
-import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import { useGlobalSettingsQuery } from "@/features/local/globalSettings/globalSettingsHooks";
 import { getFeedbackDelimitersFromSettings } from "@/features/local/globalSettings/globalSettingsUtils";
 import type { GlobalSettings } from "@/features/local/globalSettings/globalSettingsModels";
 import { EditLayout } from "@/components/EditLayout";
 import { quizMarkdownUtils } from "@/features/local/quizzes/models/utils/quizMarkdownUtils";
-import { QuizHelp } from "./QuizHelp";
 
 export default function EditQuiz({
   moduleName,
@@ -29,7 +27,6 @@ export default function EditQuiz({
   quizName: string;
   moduleName: string;
 }) {
-  const { data: settings } = useLocalCourseSettingsQuery();
   const { courseName } = useCourseContext();
   const {
     data: quiz,
@@ -130,11 +127,11 @@ export default function EditQuiz({
 
   return (
     <EditLayout
+      itemKey={`quiz:${moduleName}/${quizName}`}
       Header={<EditQuizHeader quizName={quizName} />}
       HeaderActions={
         <UpdateQuizName quizName={quizName} moduleName={moduleName} />
       }
-      Help={<QuizHelp settings={settings} feedbackDelimiters={feedbackDelimiters} />}
       Editor={<MonacoEditor key={monacoKey} value={text} onChange={textUpdate} />}
       Preview={
         <>

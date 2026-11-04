@@ -1,32 +1,13 @@
-import { pageTitle, lectureTitle, titleHead } from "@/services/titleUtils";
 import { createFileRoute } from "@tanstack/react-router";
-import LecturePreviewPage from "@/app/course/[courseName]/lecture/[lectureDay]/preview/LecturePreviewPage";
-import {
-  getDateFromStringOrThrow,
-  getDateOnlyMarkdownString,
-} from "@/features/local/utils/timeUtils";
+import { ShowPaneAndGo } from "@/components/panes/ShowPaneAndGo";
+import { getLectureUrl } from "@/services/urlUtils";
 
-export const Route = createFileRoute(
-  "/course/$courseName/lecture/$lectureDay/preview",
-)({
-  head: ({ params }) =>
-    titleHead(
-      pageTitle({
-        thing: "Preview: " + lectureTitle(params.lectureDay),
-        courseName: params.courseName,
-        withAppName: false,
-      }),
-    ),
-  component: LecturePreview,
+// preview is a pane of the lecture now; this url from before opens it there
+export const Route = createFileRoute("/course/$courseName/lecture/$lectureDay/preview")({
+  component: OpenPane,
 });
 
-function LecturePreview() {
-  const { lectureDay } = Route.useParams();
-  const decodedLectureDay = decodeURIComponent(lectureDay);
-  const lectureDate = getDateFromStringOrThrow(
-    decodedLectureDay,
-    "lecture day in lecture page",
-  );
-  const lectureDayOnly = getDateOnlyMarkdownString(lectureDate);
-  return <LecturePreviewPage lectureDay={lectureDayOnly} />;
+function OpenPane() {
+  const { courseName, lectureDay } = Route.useParams();
+  return <ShowPaneAndGo pane="preview" to={getLectureUrl(decodeURIComponent(courseName), decodeURIComponent(lectureDay))} />;
 }

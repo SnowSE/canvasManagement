@@ -35,7 +35,7 @@ export default function CourseCalendar() {
         bg-linear-to-br
         from-blue-950/30
         to-fuchsia-950/10 to-60%
-        sm:p-1
+        @week:p-1
       "
     >
       <div className="h-full overflow-y-scroll sm:pe-1" ref={scrollRef}>

@@ -10,7 +10,8 @@ const barClass =
 /**
  * A pane's bar, on its left edge: its name along it, bottom-up. A click
  * collapses or expands the pane; a drag moves the edge (the caller says
- * what that resizes); the × at the bottom hides the pane.
+ * what that resizes; it gets where the drag started); the × at the bottom
+ * hides the pane.
  */
 export function PaneBar({
   label,
@@ -24,7 +25,7 @@ export function PaneBar({
   collapsed: boolean;
   onToggle: () => void;
   onHide: () => void;
-  onDrag: (e: React.PointerEvent) => void;
+  onDrag: (e: React.PointerEvent, startX: number) => void;
   onDragEnd: () => void;
 }) {
   const start = useRef<{ x: number; y: number; dragged: boolean } | null>(null);
@@ -59,7 +60,7 @@ export function PaneBar({
         if (!s || !e.currentTarget.hasPointerCapture(e.pointerId)) return;
         if (!s.dragged && Math.hypot(e.clientX - s.x, e.clientY - s.y) < dragThreshold) return;
         s.dragged = true;
-        onDrag(e);
+        onDrag(e, s.x);
       }}
       onPointerUp={(e) => {
         e.currentTarget.releasePointerCapture(e.pointerId);

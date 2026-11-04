@@ -17,8 +17,8 @@ import {
 } from "@/features/canvas/hooks/canvasQuizHooks";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import { baseCanvasUrl } from "@/features/canvas/services/canvasServiceUtils";
-import { getCompareUrl } from "@/services/urlUtils";
-import { Link } from "@tanstack/react-router";
+import { getModuleItemUrl } from "@/services/urlUtils";
+import { ShowPaneLink } from "@/components/panes/ShowPaneLink";
 import { useCourseContext } from "../../../context/courseContext";
 import { PublishInCanvasButton } from "../../../PublishInCanvasButton";
 import Modal, { ModalControl } from "@/components/Modal";
@@ -169,8 +169,9 @@ export const QuizDayItemContextMenu: FC<{
                   </button>
                 )}
                 {quizInCanvas && (
-                  <Link
-                    to={getCompareUrl(courseName, moduleName, "quiz", item.name)}
+                  <ShowPaneLink
+                    pane="compare"
+                    to={getModuleItemUrl(courseName, moduleName, "quiz", item.name)}
                     onClick={handleClose}
                     className={`block px-2 ${baseButtonClasses} ${normalButtonClass}`}
                   >
@@ -181,7 +182,7 @@ export const QuizDayItemContextMenu: FC<{
                         {differenceCount === 1 ? "" : "s"}
                       </span>
                     )}
-                  </Link>
+                  </ShowPaneLink>
                 )}
                 {quizInCanvas && (
                   <button

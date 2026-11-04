@@ -1,50 +1,44 @@
 "use client";
-import { createContext, ReactNode, useContext } from "react";
-
-// how the pane is hidden, for its header's title to call
-export const HideContext = createContext<(() => void) | undefined>(undefined);
-
-/** For pane content rendered from elsewhere (a portal), which the pane's own context can't reach. */
-export function PaneHideProvider({ hide, children }: { hide?: () => void; children: ReactNode }) {
-  return <HideContext.Provider value={hide}>{children}</HideContext.Provider>;
-}
+import { ReactNode } from "react";
+import { usePinned } from "./PaneStrip";
+import { PinButton } from "./PinnedBars";
 
 /**
- * The sticky top of a pane: its title with open/close all, and under them a
- * search box across the pane's width, so what's typed stays readable.
+ * The top of a pane whose content is sections: open/close all, a search box
+ * across the pane's width, and whatever filters the pane has under them.
+ * Pinned (the default) it stays at the top while the content scrolls; its
+ * pin lets it scroll away. The pane's name is on its bar.
  */
 export function PaneHeader({
-  title,
+  pin,
   setAllOpen,
   search,
+  children,
 }: {
-  title: string;
+  /** Remembered under this key, with what the pin's tooltip calls the header. */
+  pin: { key: string; label: string };
   setAllOpen: (open: boolean) => void;
   search?: { label: string; value: string; onChange: (value: string) => void };
+  children?: ReactNode;
 }) {
-  const hide = useContext(HideContext);
+  const [pinned] = usePinned(pin.key);
   return (
-    <div className="sticky top-0 z-10 bg-gray-900 py-2 flex flex-col gap-1 border-b border-slate-800 text-sm">
+    <div
+      className={
+        "z-10 bg-gray-900 py-2 flex flex-col gap-1 border-b border-slate-800 text-sm " +
+        (pinned ? "sticky top-0" : "")
+      }
+    >
       <div className="flex flex-row items-center gap-3">
-        <h3 className="flex-1 font-bold text-slate-300">
-          {hide ? (
-            <button
-              className="unstyled !p-0 !font-bold hover:text-white"
-              onClick={hide}
-              title={`Hide ${title.toLowerCase()}`}
-            >
-              {title}
-            </button>
-          ) : (
-            title
-          )}
-        </h3>
         <button className={headerLink} onClick={() => setAllOpen(true)}>
           Expand all
         </button>
         <button className={headerLink} onClick={() => setAllOpen(false)}>
           Collapse all
         </button>
+        <span className="ms-auto">
+          <PinButton pin={pin.key} label={pin.label} />
+        </span>
       </div>
       {search && (
         <label className="flex flex-col gap-0.5">
@@ -60,6 +54,7 @@ export function PaneHeader({
           />
         </label>
       )}
+      {children}
     </div>
   );
 }

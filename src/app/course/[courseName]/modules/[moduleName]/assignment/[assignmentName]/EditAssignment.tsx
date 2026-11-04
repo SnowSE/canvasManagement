@@ -7,16 +7,13 @@ import {
 import { useEffect, useState } from "react";
 import AssignmentPreview from "./AssignmentPreview";
 import { useCourseContext } from "@/app/course/[courseName]/context/courseContext";
-import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import ClientOnly from "@/components/ClientOnly";
 import { SuspenseAndErrorHandling } from "@/components/SuspenseAndErrorHandling";
 import { AssignmentFooterButtons } from "./AssignmentFooterButtons";
 import { useAuthoritativeUpdates } from "@/app/course/[courseName]/utils/useAuthoritativeUpdates";
 import EditAssignmentHeader from "./EditAssignmentHeader";
 import { UpdateAssignmentName } from "./UpdateAssignmentName";
-import { AssignmentHelp } from "./AssignmentHelp";
 import { EditLayout } from "@/components/EditLayout";
-import { useRosterGroupSetsQuery } from "@/features/canvas/roster/rosterHooks";
 import {
   useAssignmentQuery,
   useUpdateAssignmentMutation,
@@ -30,8 +27,6 @@ export default function EditAssignment({
   moduleName: string;
 }) {
   const { courseName } = useCourseContext();
-  const { data: settings } = useLocalCourseSettingsQuery();
-  const { data: groupSetsData } = useRosterGroupSetsQuery();
   const {
     data: assignment,
     dataUpdatedAt: serverDataUpdatedAt,
@@ -118,17 +113,12 @@ export default function EditAssignment({
 
   return (
     <EditLayout
+      itemKey={`assignment:${moduleName}/${assignmentName}`}
       Header={<EditAssignmentHeader assignmentName={assignmentName} />}
       HeaderActions={
         <UpdateAssignmentName
           assignmentName={assignmentName}
           moduleName={moduleName}
-        />
-      }
-      Help={
-        <AssignmentHelp
-          settings={settings}
-          groupSetNames={groupSetsData?.groupSets.map((g) => g.name) ?? []}
         />
       }
       Editor={<MonacoEditor key={monacoKey} value={text} onChange={textUpdate} />}

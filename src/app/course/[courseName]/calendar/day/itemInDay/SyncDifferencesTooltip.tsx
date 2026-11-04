@@ -1,7 +1,7 @@
 "use client";
 import { FC, ReactNode } from "react";
-import { Link } from "@tanstack/react-router";
-import { getCompareUrl } from "@/services/urlUtils";
+import { getModuleItemUrl } from "@/services/urlUtils";
+import { ShowPaneLink } from "@/components/panes/ShowPaneLink";
 import { useCourseContext } from "../../../context/courseContext";
 import { SyncField } from "../getAssignmentSyncStatus";
 import { differenceText } from "./differenceText";
@@ -73,12 +73,13 @@ export const SyncDifferencesTooltip: FC<{
         <div className="text-rose-300 pt-1">not published in canvas</div>
       )}
       <div className="border-t border-slate-700 mt-2 pt-1 flex justify-between gap-3 text-xs">
-        <Link
-          to={getCompareUrl(courseName, moduleName, type, itemName)}
+        <ShowPaneLink
+          pane="compare"
+          to={getModuleItemUrl(courseName, moduleName, type, itemName)}
           className="text-blue-300 hover:underline"
         >
           Compare with Canvas →
-        </Link>
+        </ShowPaneLink>
         {rightClickHint && (
           <span className="text-slate-500">right-click for more</span>
         )}

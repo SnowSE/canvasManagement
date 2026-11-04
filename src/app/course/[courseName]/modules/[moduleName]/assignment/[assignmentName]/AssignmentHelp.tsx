@@ -4,21 +4,11 @@ import { LocalCourseSettings } from "@/features/local/course/localCourseSettings
 import {
   C,
   Example,
-  HelpLinks,
-  HelpPanel,
   HelpSection,
   KeyList,
   P,
   ValueList,
 } from "@/components/editor/help/HelpParts";
-import {
-  EncodedBlocksHelp,
-  ImagesHelp,
-  MarkdownBasicsHelp,
-  MathHelp,
-  ListTableHelp,
-  MermaidHelp,
-} from "@/components/editor/help/MarkdownHelpSections";
 
 export function AssignmentHelp({
   settings,
@@ -32,7 +22,7 @@ export function AssignmentHelp({
   const exampleGroupSet = groupSetNames[0] ?? "Project Teams";
 
   return (
-    <HelpPanel>
+    <>
       <HelpSection tags={["assignment"]} title="File layout">
         <P>
           Settings come first, then a <C>---</C> line, then the description in
@@ -244,8 +234,6 @@ Classroom50Slug: my-assignment-slug
         </P>
       </HelpSection>
 
-      <MarkdownBasicsHelp />
-
       <HelpSection tags={["assignment"]} title="Links to other course files">
         <P>
           Link to a page, assignment, or quiz by its relative path to the
@@ -263,22 +251,6 @@ Classroom50Slug: my-assignment-slug
           that item is on Canvas; until then they are left as written.
         </P>
       </HelpSection>
-
-      <ImagesHelp />
-      <MathHelp />
-      <ListTableHelp />
-      <MermaidHelp />
-      <EncodedBlocksHelp />
-
-      <HelpLinks
-        links={[
-          {
-            href: "https://www.markdownguide.org/cheat-sheet/",
-            label: "Markdown Cheat Sheet",
-          },
-          { href: "https://mermaid.live/edit", label: "Mermaid Live Editor" },
-        ]}
-      />
-    </HelpPanel>
+    </>
   );
 }

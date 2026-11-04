@@ -1,9 +1,7 @@
 "use client";
 import { FC, ReactNode, useEffect, useMemo, useState } from "react";
-import { Link, useRouter } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import DOMPurify from "isomorphic-dompurify";
-import { CoursePageLayout } from "@/app/course/[courseName]/CoursePageLayout";
-import { RightSingleChevron } from "@/components/icons/RightSingleChevron";
 import { Spinner } from "@/components/Spinner";
 import { useCourseContext } from "@/app/course/[courseName]/context/courseContext";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
@@ -40,7 +38,7 @@ import {
   SyncReport,
   SyncSection,
 } from "@/app/course/[courseName]/calendar/day/getAssignmentSyncStatus";
-import { getCourseUrl, getModuleItemUrl } from "@/services/urlUtils";
+import { getModuleItemUrl } from "@/services/urlUtils";
 import {
   collapseUnchanged,
   diffHtmlText,
@@ -416,30 +414,15 @@ const CompareLayout: FC<{
   children,
 }) => {
   const { courseName } = useCourseContext();
-  const router = useRouter();
   const editUrl = getModuleItemUrl(courseName, moduleName, type, itemName);
   const inCanvas = report.status !== "localOnly";
   const differenceCount = report.differences.length;
 
   return (
-    <CoursePageLayout
-      topBar={
-        <div className="min-w-0 flex-auto flex flex-row items-center">
-          <Chevron />
-          <Link to={editUrl} className="truncate text-slate-300 hover:text-slate-100 px-2 text-sm font-bold">
-            {itemName}
-          </Link>
-          <Chevron />
-          <span className="px-2 text-sm font-bold text-slate-100 whitespace-nowrap">
-            Compare with Canvas
-          </span>
-        </div>
-      }
-    >
+    <div className="h-full flex flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto px-3 sm:px-5">
         <div className="flex flex-row flex-wrap justify-between items-end gap-3 pt-3 pb-4">
           <div className="min-w-0">
-            <h2 className="truncate">{itemName}</h2>
             <div className="text-sm text-slate-400 flex flex-row flex-wrap items-center gap-x-3">
               {canvasLoading ? (
                 <span>loading Canvas…</span>
@@ -497,23 +480,11 @@ const CompareLayout: FC<{
         <div className="text-sm text-slate-400 max-w-prose">{updateNote}</div>
         <div className="flex flex-row flex-wrap gap-3 justify-end items-center">
           {updating && <Spinner />}
-          <button
-            className="btn-outline"
-            onClick={() => {
-              if (window.history.length > 1) router.history.back();
-              else router.navigate({ to: getCourseUrl(courseName) });
-            }}
-          >
-            Back
-          </button>
           {canvasUrl && (
             <a className="btn" href={canvasUrl} target="_blank" rel="noreferrer">
               Open in Canvas ↗
             </a>
           )}
-          <Link className="btn" to={editUrl}>
-            Edit file
-          </Link>
           <button
             disabled={!inCanvas || updating || differenceCount === 0}
             title={
@@ -527,15 +498,9 @@ const CompareLayout: FC<{
           </button>
         </div>
       </div>
-    </CoursePageLayout>
+    </div>
   );
 };
-
-const Chevron = () => (
-  <span className="text-slate-500 cursor-default select-none my-auto">
-    <RightSingleChevron />
-  </span>
-);
 
 const StatusPill: FC<{ report: SyncReport; canvasLoading: boolean }> = ({
   report,

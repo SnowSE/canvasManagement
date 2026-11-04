@@ -7,21 +7,11 @@ import {
 import {
   C,
   Example,
-  HelpLinks,
-  HelpPanel,
   HelpSection,
   KeyList,
   P,
   ValueList,
 } from "@/components/editor/help/HelpParts";
-import {
-  EncodedBlocksHelp,
-  ImagesHelp,
-  MarkdownBasicsHelp,
-  MathHelp,
-  ListTableHelp,
-  MermaidHelp,
-} from "@/components/editor/help/MarkdownHelpSections";
 
 export function QuizHelp({
   settings,
@@ -39,7 +29,7 @@ export function QuizHelp({
     neutral === defaultFeedbackDelimiters.neutral;
 
   return (
-    <HelpPanel>
+    <>
       <HelpSection tags={["quiz"]} title="File layout">
         <P>
           Settings come first, then questions. Every question starts after a{" "}
@@ -421,23 +411,6 @@ a)b
 b) An error
 `}</Example>
       </HelpSection>
-
-      <MarkdownBasicsHelp />
-      <ImagesHelp />
-      <MathHelp />
-      <ListTableHelp />
-      <MermaidHelp />
-      <EncodedBlocksHelp />
-
-      <HelpLinks
-        links={[
-          {
-            href: "https://www.markdownguide.org/cheat-sheet/",
-            label: "Markdown Cheat Sheet",
-          },
-          { href: "https://mermaid.live/edit", label: "Mermaid Live Editor" },
-        ]}
-      />
-    </HelpPanel>
+    </>
   );
 }

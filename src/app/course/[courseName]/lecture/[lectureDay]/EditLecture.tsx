@@ -17,8 +17,8 @@ import { useLocalCourseSettingsQuery } from "@/features/local/course/localCourse
 import { Lecture } from "@/features/local/lectures/lectureModel";
 import { useAuthoritativeUpdates } from "../../utils/useAuthoritativeUpdates";
 import { EditLayout } from "@/components/EditLayout";
-import { Link } from "@tanstack/react-router";
-import { getLecturePreviewUrl } from "@/services/urlUtils";
+import { getLectureUrl } from "@/services/urlUtils";
+import { ShowPaneLink } from "@/components/panes/ShowPaneLink";
 
 export default function EditLecture({ lectureDay }: { lectureDay: string }) {
   const { courseName } = useCourseContext();
@@ -91,14 +91,12 @@ export default function EditLecture({ lectureDay }: { lectureDay: string }) {
   ]);
   return (
     <EditLayout
+      itemKey={`lecture:${lectureDay}`}
       Header={<EditLectureTitle lectureDay={lectureDay} />}
       HeaderActions={
-        <Link
-          className="btn inline text-center flex-grow m-1"
-          to={getLecturePreviewUrl(courseName, lectureDay)}
-        >
+        <ShowPaneLink pane="preview" to={getLectureUrl(courseName, lectureDay)} className="btn inline text-center flex-grow m-1">
           preview
-        </Link>
+        </ShowPaneLink>
       }
       Editor={<MonacoEditor key={monacoKey} value={text} onChange={textUpdate} />}
       Preview={

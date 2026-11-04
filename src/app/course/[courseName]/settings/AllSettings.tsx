@@ -7,7 +7,6 @@ import DefaultDueTime from "./DefaultDueTime";
 import DefaultFileUploadTypes from "./DefaultFileUploadTypes";
 import Classroom50Settings from "./Classroom50Settings";
 import HolidayConfig from "./HolidayConfig";
-import SettingsHeader from "./SettingsHeader";
 import StartAndEndDate from "./StartAndEndDate";
 import SubmissionDefaults from "./SubmissionDefaults";
 import StudentsSettings from "./StudentsSettings";
@@ -16,7 +15,6 @@ import GroupsSettings from "./GroupsSettings";
 export default function AllSettings() {
   return (
     <>
-      <SettingsHeader />
       <DaysOfWeekSettings />
       <StartAndEndDate />
       <Classroom50Settings />

@@ -37,11 +37,13 @@ const ErrorFallback: FC<{
 export const SuspenseAndErrorHandling: FC<{
   children: ReactNode;
   showToast?: boolean;
+  /** Shown while the content loads; a spinner unless given. */
+  fallback?: ReactNode;
   // Values that should clear the error and retry the subtree when they change.
   // Pass the text being edited so that fixing a typo restores the view, rather
   // than leaving the fallback up until "Try again" is clicked.
   resetKeys?: unknown[];
-}> = ({ children, showToast = true, resetKeys }) => {
+}> = ({ children, showToast = true, resetKeys, fallback = <Spinner /> }) => {
   return (
     <QueryErrorResetBoundary>
       {({ reset }) => (
@@ -56,7 +58,7 @@ export const SuspenseAndErrorHandling: FC<{
             />
           )}
         >
-          <Suspense fallback={<Spinner />}>{children}</Suspense>
+          <Suspense fallback={fallback}>{children}</Suspense>
         </ErrorBoundary>
       )}
     </QueryErrorResetBoundary>

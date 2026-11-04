@@ -13,13 +13,19 @@ export const useAssignmentQuery = (
 ) => {
   const { courseName } = useCourseContext();
   const trpc = useTRPC();
-  return useSuspenseQuery(
-    trpc.assignment.getAssignment.queryOptions({
+  const queryClient = useQueryClient();
+  // the module's list (the calendar and modules hold it) already has this
+  // item, so opening it shows it at once and only refreshes in the background
+  const listKey = trpc.assignment.getAllAssignments.queryKey({ courseName, moduleName });
+  return useSuspenseQuery({
+    ...trpc.assignment.getAssignment.queryOptions({
       moduleName,
       courseName,
       assignmentName,
     }),
-  );
+    initialData: () => queryClient.getQueryData(listKey)?.find((a) => a.name === assignmentName),
+    initialDataUpdatedAt: () => queryClient.getQueryState(listKey)?.dataUpdatedAt,
+  });
 };
 
 export const useAssignmentsQueries = (moduleName: string) => {

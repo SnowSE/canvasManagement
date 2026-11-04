@@ -10,13 +10,18 @@ import {
 export const usePageQuery = (moduleName: string, pageName: string) => {
   const { courseName } = useCourseContext();
   const trpc = useTRPC();
-  return useSuspenseQuery(
-    trpc.page.getPage.queryOptions({
+  const queryClient = useQueryClient();
+  // the module's list already has this page, so opening it shows it at once
+  const listKey = trpc.page.getAllPages.queryKey({ courseName, moduleName });
+  return useSuspenseQuery({
+    ...trpc.page.getPage.queryOptions({
       courseName,
       moduleName,
       pageName,
-    })
-  );
+    }),
+    initialData: () => queryClient.getQueryData(listKey)?.find((p) => p.name === pageName),
+    initialDataUpdatedAt: () => queryClient.getQueryState(listKey)?.dataUpdatedAt,
+  });
 };
 
 export const usePagesQueries = (moduleName: string) => {

@@ -1,12 +1,13 @@
 "use client";
 
-import { ReactNode } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import HomeIcon from "./icons/HomeIcon";
+import { showPane } from "./panes/PaneStrip";
 import { RightSingleChevron } from "./icons/RightSingleChevron";
 import { CourseMenu } from "@/app/course/[courseName]/CourseMenu";
 
-export const BreadCrumbs = ({ afterHome }: { afterHome?: ReactNode }) => {
+/** home › term › course ▾ › …; the term is the course's semester, when known. */
+export const BreadCrumbs = ({ term }: { term?: string }) => {
   const location = useLocation();
   const pathname = location.pathname;
 
@@ -58,20 +59,32 @@ export const BreadCrumbs = ({ afterHome }: { afterHome?: ReactNode }) => {
     h-full 
     flex 
     items-center 
-    px-3
+    px-3 max-md:px-1
   `;
 
   return (
-    <nav className="flex flex-row font-bold text-sm items-center">
+    <nav className="flex flex-row font-bold text-sm items-center min-w-0">
       <span className={sharedBackgroundClassNames}>
-        <Link to="/" className="flex items-center gap-1 rounded-lg h-full ">
+        <button
+          className="unstyled flex items-center gap-1 rounded-lg h-full !p-0"
+          aria-label="Open the Home pane"
+          title="Home: your courses, today's lectures and the handouts, as a pane here"
+          onClick={() => showPane("home")}
+        >
           <span className={sharedLinkClassNames}>
             <HomeIcon />
           </span>
-        </Link>
+        </button>
       </span>
-      {afterHome}
 
+      {term && (
+        <>
+          <span className="text-slate-500 cursor-default select-none">
+            <RightSingleChevron />
+          </span>
+          <span className="px-1 text-slate-500 whitespace-nowrap max-md:text-xs">{term}</span>
+        </>
+      )}
       {courseName && (
         <>
           <span className="text-slate-500 cursor-default select-none">
@@ -80,7 +93,7 @@ export const BreadCrumbs = ({ afterHome }: { afterHome?: ReactNode }) => {
           <span
             className={
               sharedBackgroundClassNames +
-              " min-w-20 overflow-hidden"
+              " min-w-12 overflow-hidden"
             }
           >
             <Link

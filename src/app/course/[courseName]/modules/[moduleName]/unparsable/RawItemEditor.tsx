@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { EditLayout } from "@/components/EditLayout";
+import { ShowPaneLink } from "@/components/panes/ShowPaneLink";
 import { MonacoEditor } from "@/components/editor/MonacoEditor";
 import { CourseItemType } from "@/features/local/course/courseItemTypes";
 import { useSaveRawItemMutation } from "@/features/local/modules/rawItemHooks";
@@ -10,12 +11,6 @@ import { getCourseUrl, getModuleItemUrl } from "@/services/urlUtils";
 import { useGitStatusQuery } from "@/features/local/git/gitHooks";
 import { ItemTypeIcon } from "@/app/course/[courseName]/ItemTypeIcon";
 import { RightSingleChevron } from "@/components/icons/RightSingleChevron";
-import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
-import { useGlobalSettingsQuery } from "@/features/local/globalSettings/globalSettingsHooks";
-import { getFeedbackDelimitersFromSettings } from "@/features/local/globalSettings/globalSettingsUtils";
-import { GlobalSettings } from "@/features/local/globalSettings/globalSettingsModels";
-import { AssignmentHelp } from "../assignment/[assignmentName]/AssignmentHelp";
-import { QuizHelp } from "../quiz/[quizName]/QuizHelp";
 import {
   useErrorLogQuery,
   useExplainErrorMutation,
@@ -69,6 +64,7 @@ export function RawItemEditor({
 
   return (
     <EditLayout
+      itemKey={`raw:${type}:${moduleName}/${name}`}
       Header={
         <div className="flex flex-row items-center min-w-0">
           <span className="text-slate-500 cursor-default select-none my-auto">
@@ -83,7 +79,6 @@ export function RawItemEditor({
           </div>
         </div>
       }
-      Help={<RawItemHelp type={type} />}
       Editor={<MonacoEditor value={initialText} onChange={setText} />}
       Preview={
         <div className="p-4 flex flex-col gap-3">
@@ -111,13 +106,14 @@ export function RawItemEditor({
             Back to calendar
           </Link>
           {git?.status.available && (
-            <Link
+            <ShowPaneLink
+              pane="history"
               className="btn btn-thin unstyled btn-outline"
-              to={getModuleItemUrl(courseName, moduleName, iconType[type], name) + "/history"}
+              to={getModuleItemUrl(courseName, moduleName, iconType[type], name)}
               title="Go back to a version of this file that worked"
             >
               File history
-            </Link>
+            </ShowPaneLink>
           )}
           {save.isPending && <Spinner />}
         </div>
@@ -126,28 +122,6 @@ export function RawItemEditor({
   );
 }
 
-function RawItemHelp({ type }: { type: CourseItemType }) {
-  const { data: settings } = useLocalCourseSettingsQuery();
-  const { data: globalSettings } = useGlobalSettingsQuery();
-  if (type === "Assignment")
-    return <AssignmentHelp settings={settings} groupSetNames={[]} />;
-  if (type === "Quiz")
-    return (
-      <QuizHelp
-        settings={settings}
-        feedbackDelimiters={getFeedbackDelimitersFromSettings(
-          (globalSettings ?? {}) as GlobalSettings,
-        )}
-      />
-    );
-  return (
-    <div className="p-3 text-slate-300">
-      A page file is a settings line, <code>DateForOrdering: MM/DD/YYYY</code>
-      (and optionally <code>AddToHome: true</code>), then a line with only{" "}
-      <code>---</code>, then the page content in markdown.
-    </div>
-  );
-}
 
 /** The error log's Explain button, for this file's entry. */
 function ExplainThisFile({

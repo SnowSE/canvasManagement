@@ -1,7 +1,5 @@
 import { pageTitle, itemTitle, titleHead } from "@/services/titleUtils";
 import { createFileRoute } from "@tanstack/react-router";
-import { UnparsableItemFallback } from "@/app/course/[courseName]/modules/[moduleName]/unparsable/UnparsableItemFallback";
-import EditQuiz from "@/app/course/[courseName]/modules/[moduleName]/quiz/[quizName]/EditQuiz";
 
 export const Route = createFileRoute(
   "/course/$courseName/modules/$moduleName/quiz/$quizName",
@@ -13,22 +11,10 @@ export const Route = createFileRoute(
         courseName: params.courseName,
       }),
     ),
-  // the page has a help pane; the course frame shows its toggle
-  staticData: { help: true },
   component: QuizPage,
 });
 
+// the frame renders the item's editing from the url (see ItemEditing)
 function QuizPage() {
-  const { moduleName, quizName } = Route.useParams();
-  const decodedQuizName = decodeURIComponent(quizName);
-  const decodedModuleName = decodeURIComponent(moduleName);
-  return (
-    <UnparsableItemFallback
-      moduleName={decodedModuleName}
-      type="Quiz"
-      name={decodedQuizName}
-    >
-      <EditQuiz quizName={decodedQuizName} moduleName={decodedModuleName} />
-    </UnparsableItemFallback>
-  );
+  return null;
 }

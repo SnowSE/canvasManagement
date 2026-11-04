@@ -19,20 +19,15 @@ import {
 } from "@/features/canvas/hooks/canvasQuizHooks";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import { useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import {
   CloseMenuOnClick,
   MobileActionsMenu,
 } from "@/components/MobileActionsMenu";
-import { getCourseImportUrl, getCourseSettingsUrl } from "@/services/urlUtils";
-import { useCourseContext } from "./context/courseContext";
 import ClientOnly from "@/components/ClientOnly";
 import { GitStatusButton } from "./git/GitStatusButton";
-import { getTermName } from "@/features/local/utils/timeUtils";
 
 export function CourseNavigation() {
   const { data: settings } = useLocalCourseSettingsQuery();
-  const { courseName } = useCourseContext();
 
   const queryClient = useQueryClient();
   const canvasAssignmentsQuery = useCanvasAssignmentsQuery();
@@ -72,19 +67,8 @@ export function CourseNavigation() {
       className="btn"
       target="_blank"
     >
-      View in Canvas
+      View course in Canvas
     </a>
-  );
-
-  // "Import" on the crowded desktop bar, next to View in Canvas
-  const importLink = (label: string) => (
-    <Link
-      className="btn"
-      to={getCourseImportUrl(courseName)}
-      title="Import from Canvas: bring in assignments, quizzes and pages that are in Canvas but have no file here"
-    >
-      {label}
-    </Link>
   );
 
   const reloadControl = isFetching ? (
@@ -102,37 +86,17 @@ export function CourseNavigation() {
     <>
       <div className="max-md:hidden flex flex-row items-center gap-3">
         {viewInCanvasLink}
-        {importLink("Import")}
         {reloadControl}
         <ClientOnly>
           <GitStatusButton />
         </ClientOnly>
-        <Link className="btn" to={getCourseSettingsUrl(courseName)}>
-          Course Settings
-        </Link>
-        {settings?.startDate && (
-          <div className="my-auto text-slate-500">
-            {getTermName(settings.startDate)}
-          </div>
-        )}
       </div>
       <MobileActionsMenu>
         <CloseMenuOnClick>{viewInCanvasLink}</CloseMenuOnClick>
-        <CloseMenuOnClick>{importLink("Import From Canvas")}</CloseMenuOnClick>
         {reloadControl}
         <ClientOnly>
           <GitStatusButton />
         </ClientOnly>
-        <CloseMenuOnClick>
-          <Link className="btn" to={getCourseSettingsUrl(courseName)}>
-            Course Settings
-          </Link>
-        </CloseMenuOnClick>
-        {settings?.startDate && (
-          <div className="px-3 pt-2 text-sm text-slate-500">
-            {getTermName(settings.startDate)}
-          </div>
-        )}
       </MobileActionsMenu>
     </>
   );

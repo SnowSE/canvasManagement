@@ -1,13 +1,13 @@
 "use client";
 import { CSSProperties, ReactNode, RefObject, useLayoutEffect, useRef, useState } from "react";
-import { usePaneRegistration, usePanes } from "./PaneStrip";
+import { paneElement, renderedWidths, usePaneRegistration, usePanes } from "./PaneStrip";
 import { HideButton, PaneBar } from "./PaneBar";
 import { isShown, widthRule } from "./paneStore";
 
-const paneElement = (id: string) => document.querySelector<HTMLElement>(`[data-pane="${id}"]`);
 const applyWidth = (el: HTMLElement, pane: { minWidth: number; width: number }, place: number) => {
   const rule = widthRule(pane, place);
   el.style.flex = rule.flex;
+  el.style.minWidth = rule.minWidth;
   el.style.maxWidth = rule.maxWidth;
 };
 
@@ -16,8 +16,9 @@ const applyWidth = (el: HTMLElement, pane: { minWidth: number; width: number }, 
  * name across the top. Collapsed, only the bar shows. Clicking the bar or
  * the name collapses or expands the pane, and the bar stays where it is, so
  * a second click lands on it too. The bar sits between two panes, so
- * dragging it moves that edge: it sets the width of the pane to its left
- * (see widthRule for how the open panes share the row). On a narrow window
+ * dragging it moves that edge: the open pane to its left shrinks and the
+ * open pane to its right grows by the same amount, down to their minimums,
+ * and the other open panes keep the width they have (see widthRule). On a narrow window
  * there are no bars: the panes share one spot, the first open one visible
  * and the others kept as they are, scroll included.
  */
@@ -39,7 +40,7 @@ export function Pane({
   icon?: ReactNode;
   /** In px; the pane can't get narrower. */
   minWidth?: number;
-  /** In px; the widest the pane gets until a drag sets it. */
+  /** In px; how wide the pane is until a drag or All sets it. */
   defaultWidth?: number;
   /** Keep the content while collapsed (scroll and state survive), or drop it (a heavy pane that fetches). */
   keepMounted?: boolean;
@@ -51,7 +52,7 @@ export function Pane({
   children: ReactNode;
 }) {
   usePaneRegistration({ id, label, icon, minWidth, defaultWidth, collapsedByDefault, ssr });
-  const { panes, narrow, showing, setCollapsed, setHidden, setWidth } = usePanes();
+  const { panes, narrow, showing, setCollapsed, setHidden, setWidths } = usePanes();
   const place = panes.findIndex((p) => p.id === id);
   const view = panes[place];
   const remembered = view?.collapsed ?? !ssr;
@@ -72,8 +73,9 @@ export function Pane({
   useLayoutEffect(() => {
     if (paneRef.current) applyWidth(paneRef.current, { minWidth, width }, place);
   }, [minWidth, width, place, hidden]);
-  // while a bar is dragged, the pane to its left is resized live; the width is remembered on release
-  const dragging = useRef<{ id: string; width: number } | null>(null);
+  // while a bar is dragged, the open panes are resized live from how they
+  // were when it started; the widths are remembered on release
+  const dragging = useRef<{ startX: number; was: Record<string, number>; now?: Record<string, number> } | null>(null);
 
   if (hidden) return null;
   return (
@@ -86,9 +88,9 @@ export function Pane({
         "min-w-0 min-h-0 flex md:flex-row " +
         // narrow: every pane in the same grid cell, the unselected ones
         // invisible but laid out, so they keep their scroll
-        "max-md:flex-col max-md:[grid-area:1/1] " +
+        "max-md:flex-col max-md:[grid-area:1/1] max-md:max-w-none! " +
         (selected ? "" : "max-md:invisible ") +
-        (collapsed ? "md:flex-none! md:max-w-none!" : "")
+        (collapsed ? "md:flex-none! md:min-w-0! md:max-w-none!" : "")
       }
       data-pane={id}
     >
@@ -97,17 +99,30 @@ export function Pane({
         collapsed={collapsed}
         onToggle={toggle}
         onHide={hide}
-        onDrag={(e) => {
-          // the nearest open pane to the left, in the panes' order
+        onDrag={(e, startX) => {
+          // every open pane as wide as it is now, so the drag moves one edge and nothing else
+          if (!dragging.current) dragging.current = { startX, was: renderedWidths(panes) };
+          const { startX: x0, was } = dragging.current;
+          // the nearest open panes on either side of this bar, in the panes' order
           const left = panes.slice(0, place).reverse().find(isShown);
-          const element = left && paneElement(left.id);
-          if (!left || !element) return;
-          const w = Math.max(e.clientX - element.getBoundingClientRect().left, left.minWidth);
-          applyWidth(element, { minWidth: left.minWidth, width: w }, panes.indexOf(left));
-          dragging.current = { id: left.id, width: w };
+          const right = panes.slice(place).find(isShown);
+          // how far the edge moves: as far as the drag, until a side reaches
+          // its minimum; with nothing open on the right, into the empty room
+          const move = Math.max(
+            left ? left.minWidth - was[left.id] : 0,
+            Math.min(e.clientX - x0, right ? was[right.id] - right.minWidth : Infinity),
+          );
+          const now = { ...was };
+          if (left) now[left.id] = was[left.id] + move;
+          if (right) now[right.id] = was[right.id] - move;
+          for (const p of panes) {
+            const element = now[p.id] !== undefined && paneElement(p.id);
+            if (element) applyWidth(element, { minWidth: p.minWidth, width: now[p.id] }, panes.indexOf(p));
+          }
+          dragging.current.now = now;
         }}
         onDragEnd={() => {
-          if (dragging.current) setWidth(dragging.current.id, dragging.current.width);
+          if (dragging.current?.now) setWidths(dragging.current.now);
           dragging.current = null;
         }}
       />
