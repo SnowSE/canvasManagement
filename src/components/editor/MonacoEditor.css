@@ -1,5 +1,7 @@
 
-@import "tailwindcss";
+/* the app's theme, for @apply below; emits nothing of its own (a plain
+   @import would build a second copy of every utility into this file) */
+@reference "../../app/globals.css";
 
 
 /* monaco editor */
