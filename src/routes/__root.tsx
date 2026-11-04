@@ -39,7 +39,7 @@ type InitialData = {
 // every course made each page several megabytes and slow to arrive. Other
 // courses load their data when they're opened.
 const fetchInitialData = createServerFn({ method: "GET" })
-  .inputValidator((courseName: string | undefined) => courseName)
+  .validator((courseName: string | undefined) => courseName)
   .handler(async ({ data: courseName }): Promise<InitialData> => {
     try {
       return { dehydratedState: await prefetchCourseData(courseName) };
