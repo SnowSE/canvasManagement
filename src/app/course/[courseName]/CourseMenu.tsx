@@ -4,7 +4,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { useLocalCoursesSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import { getTermName, groupByStartDate } from "@/features/local/utils/timeUtils";
 import { courseView, getCourseUrl } from "@/services/urlUtils";
-import { SectionTitle } from "@/components/SidePane";
+import { SectionTitle } from "@/components/panes/PaneHeader";
 import { CaretDownIcon } from "@/components/icons/ActionIcons";
 
 /**

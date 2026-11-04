@@ -33,7 +33,7 @@ export function AssignmentHelp({
 
   return (
     <HelpPanel>
-      <HelpSection title="File layout">
+      <HelpSection tags={["assignment"]} title="File layout">
         <P>
           Settings come first, then a <C>---</C> line, then the description in
           markdown. An optional <C>## Rubric</C> heading at the end starts the
@@ -68,7 +68,7 @@ What students should do, in markdown.
         </P>
       </HelpSection>
 
-      <HelpSection title="Settings">
+      <HelpSection tags={["assignment"]} title="Settings">
         <KeyList
           items={[
             {
@@ -143,7 +143,7 @@ What students should do, in markdown.
         />
       </HelpSection>
 
-      <HelpSection title="Group assignments">
+      <HelpSection tags={["assignment"]} title="Group assignments">
         <P>
           Name a Canvas group set to make this a group assignment. This
           course&apos;s group sets:{" "}
@@ -162,7 +162,7 @@ GradeIndividually: false
         </P>
       </HelpSection>
 
-      <HelpSection title="Per-student due dates (Schedule)">
+      <HelpSection tags={["assignment"]} title="Per-student due dates (Schedule)">
         <P>
           Give some students a different due date (published as Canvas
           overrides). Students not listed keep <C>DueAt</C>. With a{" "}
@@ -186,7 +186,7 @@ Schedule:
         </P>
       </HelpSection>
 
-      <HelpSection title="Rubric">
+      <HelpSection tags={["assignment"]} title="Rubric">
         <P>
           Each line under <C>## Rubric</C> is one criterion. Use <C>pt</C> for
           1 point and <C>pts</C> for more. Points possible is the total of the
@@ -216,7 +216,7 @@ Schedule:
         </P>
       </HelpSection>
 
-      <HelpSection title="Classroom 50 accept link">
+      <HelpSection tags={["assignment"]} title="Classroom 50 accept link">
         <P>
           Set the slug in the settings, above the <C>---</C>. The accept url is
           built from the course&apos;s Classroom 50 settings plus the slug.
@@ -246,7 +246,7 @@ Classroom50Slug: my-assignment-slug
 
       <MarkdownBasicsHelp />
 
-      <HelpSection title="Links to other course files">
+      <HelpSection tags={["assignment"]} title="Links to other course files">
         <P>
           Link to a page, assignment, or quiz by its relative path to the
           <C>.md</C> file. In the preview it opens that item here; when

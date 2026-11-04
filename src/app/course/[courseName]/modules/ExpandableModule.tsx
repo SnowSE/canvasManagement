@@ -17,7 +17,7 @@ import { Link } from "@tanstack/react-router";
 import { getModuleItemUrl } from "@/services/urlUtils";
 import { useCourseContext } from "../context/courseContext";
 import { Expandable } from "../../../../components/Expandable";
-import { SectionTitle } from "@/components/SidePane";
+import { SectionTitle } from "@/components/panes/PaneHeader";
 import { useQuizzesQueries } from "@/features/local/quizzes/quizHooks";
 import { useAssignmentsQueries } from "@/features/local/assignments/assignmentHooks";
 import { useReorderCanvasModuleItemsMutation } from "@/features/canvas/hooks/canvasModuleHooks";

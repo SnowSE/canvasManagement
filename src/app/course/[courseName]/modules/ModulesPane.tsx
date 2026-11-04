@@ -1,5 +1,6 @@
 "use client";
-import { PaneHeader, SidePane } from "@/components/SidePane";
+import { SidePane } from "@/components/SidePane";
+import { PaneHeader } from "@/components/panes/PaneHeader";
 import { usePersistedScroll } from "@/components/usePersistedScroll";
 import { usePersistedToggle } from "@/components/storage";
 import { useCourseContext } from "../context/courseContext";

@@ -1,7 +1,10 @@
 "use client";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { copyTextToClipboard } from "@/components/CopyableCommand";
-import { PaneHeader, SectionTitle } from "@/components/SidePane";
+import { PaneHeader, SectionTitle } from "@/components/panes/PaneHeader";
+
+/** The kinds of item a help topic is about; a topic with none is about all of them. */
+export type HelpType = "assignment" | "quiz" | "page";
 
 // The app's --font-mono is DM Sans, which is proportional. Examples need real
 // monospace so indentation (rubric ratings, Schedule) lines up the way it does
@@ -112,16 +115,18 @@ export function HelpPanel({ children }: { children: ReactNode }) {
   );
 }
 
-/** One collapsible topic, so the panel reads like a table of contents. */
+/** One collapsible topic, so the panel reads like a table of contents; `tags` say which item types it's about. */
 export function HelpSection({
   title,
+  tags,
   children,
 }: {
   title: string;
+  tags?: HelpType[];
   children: ReactNode;
 }) {
   return (
-    <details data-help-section className="group border-b border-slate-800">
+    <details data-help-section data-help-tags={tags?.join(" ")} className="group border-b border-slate-800">
       <summary className="list-none">
         <SectionTitle title={title} />
       </summary>
