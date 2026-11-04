@@ -3,6 +3,10 @@
 @import "tailwindcss";
 
 @theme {
+  /* the calendar's box (see CourseCalendar): a week is seven columns from
+     --container-week, and the day names are spelled out from --container-names */
+  --container-week: 440px;
+  --container-names: 760px;
   --font-sans: "DM Sans", sans-serif;
   --font-serif: "DM Sans", serif;
   --font-mono: "DM Sans", monospace;

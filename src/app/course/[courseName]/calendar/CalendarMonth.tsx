@@ -57,7 +57,7 @@ export const CalendarMonth = ({ month }: { month: CalendarMonthModel }) => {
         )}
       >
         <div
-          className={"hidden md:grid grid-cols-7 text-center fw-bold ms-3 " + calendarGridClass}
+          className={"hidden @week:grid grid-cols-7 text-center fw-bold ms-3 " + calendarGridClass}
           style={calendarColumnStyle(settings)}
         >
           {weekDaysList.map((day) =>
@@ -67,8 +67,8 @@ export const CalendarMonth = ({ month }: { month: CalendarMonthModel }) => {
               </div>
             ) : (
               <div key={day} className={""}>
-                <span className="hidden xl:inline">{day}</span>
-                <span className="xl:hidden inline">{day.slice(0, 3)}</span>
+                <span className="hidden @names:inline">{day}</span>
+                <span className="@names:hidden inline">{day.slice(0, 3)}</span>
               </div>
             ),
           )}

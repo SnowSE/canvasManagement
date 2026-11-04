@@ -61,7 +61,7 @@ export const ItemInDay: FC<{
       <Link
         to={getModuleItemUrl(courseName, moduleName, type, item.name)}
         className={
-          " border rounded-sm px-1 sm:mx-1 mb-1 truncate sm:text-wrap text-nowrap " +
+          " border rounded-sm px-1 @week:mx-1 mb-1 truncate @week:text-wrap text-nowrap " +
           " bg-slate-800 " +
           " block " +
           (scheduleEntry ? " border-dashed " : "") +

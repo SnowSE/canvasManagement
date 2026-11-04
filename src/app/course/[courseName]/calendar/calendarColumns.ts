@@ -22,4 +22,5 @@ export const calendarColumnStyle = (settings: LocalCourseSettings) => {
   } as React.CSSProperties;
 };
 
-export const calendarGridClass = "md:[grid-template-columns:var(--calendar-columns)]";
+// a week is seven columns once the calendar's box is wide enough, else a list of days
+export const calendarGridClass = "@week:[grid-template-columns:var(--calendar-columns)]";

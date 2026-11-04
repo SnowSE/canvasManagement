@@ -32,7 +32,7 @@ export function HiddenDayStrip({
   return (
     <div
       className={
-        "hidden md:flex flex-col items-center gap-1 rounded-lg my-1 mx-0.5 min-h-10 bg-gray-950 py-0.5 " +
+        "hidden @week:flex flex-col items-center gap-1 rounded-lg my-1 mx-0.5 min-h-10 bg-gray-950 py-0.5 " +
         className
       }
       title={`${weekday} ${dayAsDate.getDate()} (hidden in course settings)`}

@@ -36,7 +36,7 @@ export default function Day({ day, month }: { day: string; month: number }) {
   // grid lines up the way a printed calendar does. On mobile days stack in a
   // single column, so the blanks are dropped entirely there.
   if (dayAsDate.getMonth() + 1 !== month) {
-    return <div className="hidden md:block sm:m-1 m-0.5 min-h-10" />;
+    return <div className="hidden @week:block @week:m-1 m-0.5 min-h-10" />;
   }
   const classOnThisDay = settings.daysOfWeek.includes(getDayOfWeek(dayAsDate));
 
@@ -80,7 +80,7 @@ export default function Day({ day, month }: { day: string; month: number }) {
   const fullDay = (
     <div
       className={
-        " rounded-lg sm:m-1 m-0.5 min-h-10 " + meetingClasses + todayClasses
+        " rounded-lg @week:m-1 m-0.5 min-h-10 " + meetingClasses + todayClasses
       }
       onDrop={(e) => itemDropOnDay(e, day)}
       onDragOver={(e) => e.preventDefault()}
@@ -139,7 +139,7 @@ export default function Day({ day, month }: { day: string; month: number }) {
   return (
     <>
       {todaysItems.length + unparsableItems.length > 0 && (
-        <div className="md:hidden">{fullDay}</div>
+        <div className="@week:hidden">{fullDay}</div>
       )}
       <HiddenDayStrip
         day={day}
