@@ -56,12 +56,15 @@ function highlightTerms(sections: HTMLDetailsElement[], terms: string[]) {
 
 /**
  * Help pane contents: explanations as regular text, syntax as Example blocks.
- * The search box and expand/collapse buttons work on the <details> of each
- * HelpSection directly, so sections stay plain uncontrolled elements.
+ * The search box, the type filter and expand/collapse work on the <details>
+ * of each HelpSection directly, so sections stay plain uncontrolled elements.
+ * The type starts as `defaultType` (the item open, or all of them) and
+ * follows it when it changes.
  */
-export function HelpPanel({ children }: { children: ReactNode }) {
+export function HelpPanel({ defaultType = "all", children }: { defaultType?: HelpType | "all"; children: ReactNode }) {
   const sectionsRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState("");
+  const [type, setType] = useState<HelpType | "all">(defaultType);
   const [noMatches, setNoMatches] = useState(false);
 
   const sections = () => [
@@ -70,15 +73,16 @@ export function HelpPanel({ children }: { children: ReactNode }) {
     ) ?? []),
   ];
 
-  const filter = (value: string) => {
-    setQuery(value);
+  const apply = (value: string, kind: HelpType | "all") => {
     const terms = value.toLowerCase().split(/\s+/).filter(Boolean);
     const matching = sections().filter((section) => {
       const text = searchableTextNodes(section)
         .map((n) => n.textContent)
         .join(" ")
         .toLowerCase();
-      const isMatch = terms.every((term) => text.includes(term));
+      const tags = section.dataset.helpTags?.split(" ").filter(Boolean) ?? [];
+      const ofType = kind === "all" || tags.length === 0 || tags.includes(kind);
+      const isMatch = ofType && terms.every((term) => text.includes(term));
       section.hidden = !isMatch;
       // a search opens what it found; clearing it goes back to all collapsed
       section.open = terms.length > 0 && isMatch;
@@ -87,6 +91,23 @@ export function HelpPanel({ children }: { children: ReactNode }) {
     setNoMatches(matching.length === 0);
     highlightTerms(matching, terms);
   };
+  const filter = (value: string) => {
+    setQuery(value);
+    apply(value, type);
+  };
+  // a new item (a new default) picks its type; the sections are plain DOM,
+  // so the filter runs once the type has rendered
+  const [lastDefault, setLastDefault] = useState(defaultType);
+  if (defaultType !== lastDefault) {
+    setLastDefault(defaultType);
+    setType(defaultType);
+  }
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => apply(query, type));
+    return () => cancelAnimationFrame(frame);
+    // query is read, not followed: typing applies the filter itself
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [type]);
 
   const setAllOpen = (open: boolean) =>
     sections()
