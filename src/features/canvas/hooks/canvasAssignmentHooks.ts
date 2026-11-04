@@ -60,6 +60,12 @@ export const useAddAssignmentToCanvasMutation = () => {
         canvasLinkTargets,
         getPublishOptions(assignment),
       );
+      // in the cached list at once, so the item shows as in Canvas right
+      // away; the refetch below confirms it in the background
+      queryClient.setQueryData(
+        canvasAssignmentKeys.assignments(settings.canvasId),
+        (list: (typeof canvasAssignment)[] | undefined) => list && [...list, canvasAssignment],
+      );
       await addToModule(moduleName, assignmentModuleItem(canvasAssignment));
     },
     onSuccess: (_data, variables) => {
