@@ -10,7 +10,7 @@ import { BreadCrumbs } from "@/components/BreadCrumbs";
 import { useCourseContext } from "../context/courseContext";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import { getTermName } from "@/features/local/utils/timeUtils";
-import { useCurrentItem } from "../currentItem";
+import { CurrentItem, defaultLectureDay, useCurrentItem } from "../currentItem";
 import { coursePanes, PaneContext } from "./coursePanes";
 import { FollowNavigation } from "./FollowNavigation";
 import { ItemEditing } from "./ItemEditing";
@@ -23,14 +23,20 @@ import { CourseNavigation } from "../CourseNavigation";
  * view row, then every pane of the course (see coursePanes) in a row, and
  * the item's bottom bar. Living here and not in the pages, the panes keep
  * their scroll and state from page to page. The frame itself renders the
- * editing of the item the url names (see ItemEditing); the routes only
- * match the url and set the title.
+ * editing of the item open (see ItemEditing): the one the url names, or
+ * on the course page the lecture of the day; the routes only match the url
+ * and set the title.
  */
 export function CourseFrame({ children }: { children: ReactNode }) {
   const { courseName } = useCourseContext();
   const { data: settings } = useLocalCourseSettingsQuery();
-  const item = useCurrentItem();
+  const urlItem = useCurrentItem();
   const onCoursePage = useMatches().some((m) => m.routeId === "/course/$courseName/");
+  const item = useMemo((): CurrentItem | undefined => {
+    if (urlItem || !onCoursePage) return urlItem;
+    const lectureDay = settings && defaultLectureDay(settings, new Date());
+    return lectureDay ? { kind: "lecture", lectureDay } : undefined;
+  }, [urlItem, onCoursePage, settings]);
   const [topPinned] = usePinned(topPin);
   // the same object while nothing changed, so memoized pane contents are skipped
   const ctx: PaneContext = useMemo(() => ({ courseName, item, onCoursePage }), [courseName, item, onCoursePage]);
