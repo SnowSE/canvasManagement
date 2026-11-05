@@ -4,9 +4,12 @@ set -e
 # Docker Hub namespace (org or user) the images are pushed to.
 # Login (DOCKERHUB_USERNAME/DOCKERHUB_TOKEN secrets) uses your personal account, which must have push access to this org.
 DOCKERHUB_ORG="snowcollege"
-MAJOR_VERSION="4"
+MAJOR_VERSION="5"
 MINOR_VERSION="0"
 VERSION="$MAJOR_VERSION.$MINOR_VERSION"
+# Whether this build is also "latest". Version 4 (main) is, until version 5
+# is for everyone; the v5 branch's workflow sets this to false.
+PUSH_LATEST="${PUSH_LATEST:-true}"
 
 # Baked into the image so the running app can tell users when a newer image
 # has been published (see src/features/local/version). CI sets GIT_SHA from
@@ -46,22 +49,26 @@ if [ "$TAG_FLAG" = true ]; then
   echo "Tagging images..."
   echo "$DOCKERHUB_ORG/canvas_management:$VERSION"
   echo "$DOCKERHUB_ORG/canvas_management:$MAJOR_VERSION"
-  echo "$DOCKERHUB_ORG/canvas_management:latest"
 
   docker image tag canvas_management:"$VERSION" $DOCKERHUB_ORG/canvas_management:"$VERSION"
   docker image tag canvas_management:"$VERSION" $DOCKERHUB_ORG/canvas_management:"$MAJOR_VERSION"
-  docker image tag canvas_management:"$VERSION" $DOCKERHUB_ORG/canvas_management:latest
+  if [ "$PUSH_LATEST" = true ]; then
+    echo "$DOCKERHUB_ORG/canvas_management:latest"
+    docker image tag canvas_management:"$VERSION" $DOCKERHUB_ORG/canvas_management:latest
+  fi
 fi
 
 if [ "$PUSH_FLAG" = true ]; then
   echo "Pushing images..."
   echo "$DOCKERHUB_ORG/canvas_management:$VERSION"
   echo "$DOCKERHUB_ORG/canvas_management:$MAJOR_VERSION"
-  echo "$DOCKERHUB_ORG/canvas_management:latest"
 
   docker push -q $DOCKERHUB_ORG/canvas_management:"$VERSION"
   docker push -q $DOCKERHUB_ORG/canvas_management:"$MAJOR_VERSION"
-  docker push -q $DOCKERHUB_ORG/canvas_management:latest
+  if [ "$PUSH_LATEST" = true ]; then
+    echo "$DOCKERHUB_ORG/canvas_management:latest"
+    docker push -q $DOCKERHUB_ORG/canvas_management:latest
+  fi
 fi
 
 if [ "$TAG_FLAG" = false ] && [ "$PUSH_FLAG" = false ]; then

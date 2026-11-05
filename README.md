@@ -87,7 +87,8 @@ All class data files are stored in markdown files in a folder. I recommend makin
 ```yml
 services:
   canvas_manager:
-    image: snowcollege/canvas_management:4
+    # version 5 is the pane layout; version 4 is the earlier layout, still published from main
+    image: snowcollege/canvas_management:5
     user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
     container_name: canvas-manager
     ports:
@@ -319,7 +320,7 @@ updates automatically; run your [restart script](#restart-script) (or
 
 How it works: `build.sh` bakes the git commit into the image (`GIT_SHA` env
 var and the `org.opencontainers.image.revision` label). Once an hour the server
-reads that label off the published `snowcollege/canvas_management:4` manifest
+reads that label off the published `snowcollege/canvas_management:5` manifest
 using anonymous Docker Hub requests, and if the commit differs it asks the
 GitHub compare API for the commits in between. Nothing is sent anywhere except
 the two public APIs.

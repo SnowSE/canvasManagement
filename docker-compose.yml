@@ -1,6 +1,6 @@
 services:
   canvas_manager:
-    image: snowcollege/canvas_management:4
+    image: snowcollege/canvas_management:5
     # Whoever owns your storage volume on the host -- see the README. Named
     # DOCKER_UID rather than UID because bash makes UID readonly, so
     # `UID=$(id -u) docker compose up` errors instead of overriding it.

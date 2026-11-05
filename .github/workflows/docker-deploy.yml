@@ -1,8 +1,11 @@
 name: Deploy to Docker Hub
 
+# Version 5 (the pane layout) is published from this branch on every push,
+# as main publishes version 4: people switch when they're ready, by changing
+# the image tag in their docker-compose.yml. "latest" stays with main.
 on:
   push:
-    branches: [ main ]
+    branches: [ v5 ]
 
 jobs:
   deploy:
@@ -24,6 +27,7 @@ jobs:
     - name: Build and push Docker image
       env:
         GIT_SHA: ${{ github.sha }}
+        PUSH_LATEST: "false"
       run: |
         chmod +x ./build.sh
         ./build.sh -t -p

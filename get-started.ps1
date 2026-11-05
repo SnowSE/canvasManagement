@@ -24,7 +24,7 @@
 #>
 
 $CanvasUrl = 'https://snow.instructure.com'
-$Image = 'snowcollege/canvas_management:4'
+$Image = 'snowcollege/canvas_management:5'
 $ContainerName = 'canvas-manager'
 $DefaultPort = 3000
 $GhScopes = @('admin:org', 'repo', 'workflow')
