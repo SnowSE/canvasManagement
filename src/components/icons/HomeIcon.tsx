@@ -1,13 +1,13 @@
 import React from "react";
 
 // https://www.svgrepo.com/collection/wolf-kit-solid-glyph-icons/?search=home
-export default function HomeIcon() {
+export default function HomeIcon({ className = "h-4 w-4" }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 24 24"
       fill="currentColor"
       xmlns="http://www.w3.org/2000/svg"
-      className="h-4 w-4"
+      className={className}
     >
       <g id="SVGRepo_bgCarrier" strokeWidth="0"></g>
       <g

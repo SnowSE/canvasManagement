@@ -143,7 +143,8 @@ export const coursePanes: CoursePane[] = [
     id: "home",
     defaultWidth: 400,
     label: "Home",
-    icon: <HomeIcon />,
+    // the size of the other panes' icons (see ActionIcon), so it holds its own in the phone's row
+    icon: <HomeIcon className="size-[1.15em] shrink-0" />,
     collapsedByDefault: () => true,
     Content: Home,
   },
