@@ -1,5 +1,7 @@
 "use client";
 import { useRef } from "react";
+import { PopOutIcon } from "../icons/ActionIcons";
+import { openPopOut } from "@/app/course/[courseName]/panes/popOut";
 
 // pointer travel that counts as a drag rather than a click on the bar
 const dragThreshold = 4;
@@ -16,6 +18,7 @@ const barClass =
 export function PaneBar({
   label,
   collapsed,
+  popOutHref,
   onToggle,
   onHide,
   onDrag,
@@ -23,6 +26,8 @@ export function PaneBar({
 }: {
   label: string;
   collapsed: boolean;
+  /** The pane in its own window: what the page shows, and which pane. */
+  popOutHref: { pathname: string; pane: string };
   onToggle: () => void;
   onHide: () => void;
   onDrag: (e: React.PointerEvent, startX: number) => void;
@@ -30,6 +35,7 @@ export function PaneBar({
 }) {
   const start = useRef<{ x: number; y: number; dragged: boolean } | null>(null);
   const name = <span className="[writing-mode:vertical-rl] rotate-180 whitespace-nowrap">{label}</span>;
+  const popOut = <PopOutLink label={label} pathname={popOutHref.pathname} pane={popOutHref.pane} />;
   const hide = (
     <span className="mt-auto">
       <HideButton label={label} onHide={onHide} />
@@ -75,9 +81,31 @@ export function PaneBar({
         }
       }}
     >
+      {popOut}
       {name}
       {collapsed && hide}
     </div>
+  );
+}
+
+/** The link that opens a pane in its own window, following this one (a plain open of the link, from the middle button say, follows nothing). */
+export function PopOutLink({ label, pathname, pane }: { label: string; pathname: string; pane: string }) {
+  return (
+    <a
+      className="flex-none text-slate-500 hover:text-slate-200"
+      href={`${pathname}?pane=${pane}`}
+      target="_blank"
+      aria-label={`Open ${label} in its own window`}
+      title={`${label} in its own window, following this one as you move between items`}
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        openPopOut(pathname, pane);
+      }}
+    >
+      <PopOutIcon />
+    </a>
   );
 }
 

@@ -1,13 +1,15 @@
 "use client";
 import { useRef, useState } from "react";
+import { useRouterState } from "@tanstack/react-router";
 import { usePanes } from "./PaneStrip";
 import { CaretDownIcon, CheckMarkIcon, PanesIcon } from "../icons/ActionIcons";
+import { PopOutLink } from "./PaneBar";
 
 const button =
   "unstyled btn-thin flex-none flex items-center gap-1 rounded border px-2 py-0.5 text-sm border-slate-700 text-slate-400 hover:text-slate-200";
 const check =
   "unstyled !p-0 size-5 flex items-center justify-center rounded border border-slate-700 text-slate-300 disabled:border-slate-800 disabled:text-slate-700";
-const row = "grid grid-cols-[auto_auto_1fr_auto] items-center gap-x-2 rounded px-2 border-t-2 ";
+const row = "grid grid-cols-[auto_auto_1fr_auto_auto] items-center gap-x-2 rounded px-2 border-t-2 ";
 
 /** A check in the menu: on or off, with what clicking does in its tooltip. */
 function Check({ on, label, title, onClick }: { on: boolean; label: string; title: string; onClick: () => void }) {
@@ -31,6 +33,7 @@ function Check({ on, label, title, onClick }: { on: boolean; label: string; titl
 export function PanesMenu() {
   const [open, setOpen] = useState(false);
   const { panes, setHidden, jumpTo, move, setCollapsed, setAllCollapsed, setAllHidden, openAll, reset } = usePanes();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const allShown = panes.every((p) => !p.hidden);
   const allOpen = panes.every((p) => !p.collapsed);
   // a drag moves the pane only on release: reordering the rows mid-drag
@@ -64,6 +67,7 @@ export function PanesMenu() {
               <span title="Whether the pane's bar is on the page at all">Show</span>
               <span title="Expand this pane and collapse the others; All opens every pane, sharing the room equally">Focus</span>
               <span title="Expanded or collapsed">Open</span>
+              <span title="The pane in its own window, following this one" aria-hidden />
             </div>
             <div className={row + "border-transparent"}>
               <span className="w-5" aria-hidden />
@@ -80,6 +84,7 @@ export function PanesMenu() {
                 All
               </button>
               <Check on={allOpen} label="All open" title={allOpen ? "Collapse every pane" : "Expand every pane"} onClick={() => setAllCollapsed(allOpen)} />
+              <span className="w-5" aria-hidden />
             </div>
             {panes.map((p) => (
               <div
@@ -146,6 +151,9 @@ export function PanesMenu() {
                   title={p.collapsed ? `Expand ${p.label}` : `Collapse ${p.label}`}
                   onClick={() => setCollapsed(p.id, !p.collapsed)}
                 />
+                <span className="w-5 flex items-center justify-center">
+                  <PopOutLink label={p.label} pathname={pathname} pane={p.id} />
+                </span>
               </div>
             ))}
             <div className="px-1 pt-1">

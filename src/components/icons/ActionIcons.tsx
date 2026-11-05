@@ -65,6 +65,15 @@ export const ImportIcon = () => (
   </ActionIcon>
 );
 
+/** A pane in its own window: an arrow out of a box. */
+export const PopOutIcon = () => (
+  <ActionIcon>
+    <path d="M14 4h6v6" />
+    <path d="M20 4l-9 9" />
+    <path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5" />
+  </ActionIcon>
+);
+
 /** Pinned: pushed in, the head down where the needle was; unpinned: the head up and the needle showing. */
 export const PinIcon = ({ pinned = false }: { pinned?: boolean }) => (
   <ActionIcon>
