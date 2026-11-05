@@ -1,4 +1,5 @@
 import type { editor } from "monaco-editor";
+import { instanceId, tiedTo } from "@/app/course/[courseName]/panes/popOut";
 
 // Clicking text in the preview moves the editor to it: plain text in the
 // preview is, almost always, written the same way in the file.
@@ -28,6 +29,28 @@ export function sourceOffsetOf(source: string, snippet: string, fraction: number
 
 // the editor on screen; there is only ever one
 let current: editor.IStandaloneCodeEditor | undefined;
+// which item it shows (see the Editor pane), so a click announced by
+// another window's preview moves it only when it shows that item
+let shown: string | undefined;
+export const editorShows = (key: string | undefined) => {
+  shown = key;
+  groupChannel();
+};
+
+// a click in one window's preview reaches the windows that move together,
+// a full instance and the pop-outs tied to it (see popOut): a pop-out
+// editor beside this window's preview jumps too, another full window doesn't
+type Click = { key: string; text: string; fraction: number; within: number };
+let group: { id: string; channel: BroadcastChannel } | undefined;
+function groupChannel() {
+  const id = tiedTo() ?? instanceId();
+  if (group?.id !== id) {
+    group?.channel.close();
+    group = { id, channel: new BroadcastChannel(`canvas-management-preview-clicks-${id}`) };
+    group.channel.onmessage = (e: MessageEvent<Click>) => e.data.key === shown && jump(e.data);
+  }
+  return group.channel;
+}
 /** Makes `ed` the editor that preview clicks move, until it is disposed. */
 export const followPreviewClicks = (ed: editor.IStandaloneCodeEditor) => {
   current = ed;
@@ -36,11 +59,10 @@ export const followPreviewClicks = (ed: editor.IStandaloneCodeEditor) => {
   });
 };
 
-/** Moves the editor to the text clicked in `preview`, if it can find it. */
-export function jumpToClickedText(preview: Element, event: MouseEvent) {
-  const model = current?.getModel();
+/** Moves the editor showing `key` to the text clicked in `preview`, in this window and any other, if it can find it. */
+export function jumpToClickedText(preview: Element, event: MouseEvent, key: string) {
   const clicked = (event.target as Element).closest("a, button, summary, input, label");
-  if (!current || !model || clicked || !getSelection()?.isCollapsed) return;
+  if (clicked || !getSelection()?.isCollapsed) return;
   const caret = document.caretPositionFromPoint?.(event.clientX, event.clientY);
   const range = caret ? undefined : document.caretRangeFromPoint?.(event.clientX, event.clientY);
   const node = caret?.offsetNode ?? range?.startContainer;
@@ -54,9 +76,17 @@ export function jumpToClickedText(preview: Element, event: MouseEvent) {
   before.setStart(preview, 0);
   before.setEnd(node, offset);
   const fraction = before.toString().length / Math.max(1, preview.textContent?.length ?? 0);
-  const at = sourceOffsetOf(model.getValue(), snippet.text, fraction);
+  const click = { key, text: snippet.text, fraction, within: offset - snippet.start };
+  if (key === shown) jump(click);
+  groupChannel().postMessage(click);
+}
+
+function jump({ text, fraction, within }: Click) {
+  const model = current?.getModel();
+  if (!current || !model) return;
+  const at = sourceOffsetOf(model.getValue(), text, fraction);
   if (at === undefined) return;
-  const position = model.getPositionAt(at + offset - snippet.start);
+  const position = model.getPositionAt(at + within);
   current.setPosition(position);
   current.revealPositionInCenter(position);
   current.focus();

@@ -1,8 +1,8 @@
 "use client";
-import { ComponentType, memo, ReactNode } from "react";
+import { ComponentType, memo, ReactNode, useEffect } from "react";
 import { CurrentItem } from "../currentItem";
 import { useItemParts } from "./itemParts";
-import { jumpToClickedText } from "@/components/editor/previewJump";
+import { editorShows, jumpToClickedText } from "@/components/editor/previewJump";
 import ClientOnly from "@/components/ClientOnly";
 import { SuspenseAndErrorHandling } from "@/components/SuspenseAndErrorHandling";
 import HomeIcon from "@/components/icons/HomeIcon";
@@ -97,6 +97,8 @@ export function PaneNote({ children }: { children: ReactNode }) {
 // own boundary, since a suspension here would climb to the route and remount the frame
 function Editor() {
   const parts = useItemParts();
+  // which item the editor shows, for clicks in a preview (this window's or another's)
+  useEffect(() => editorShows(parts?.key), [parts?.key]);
   if (!parts) return <PaneNote>Open an item to edit it here.</PaneNote>;
   return (
     <SuspenseAndErrorHandling>
@@ -112,7 +114,7 @@ function Preview() {
   return (
     <SuspenseAndErrorHandling>
       {/* clicking text in the preview moves the editor to it */}
-      <div className="h-full" onClick={(e) => jumpToClickedText(e.currentTarget, e.nativeEvent)}>
+      <div className="h-full" onClick={(e) => jumpToClickedText(e.currentTarget, e.nativeEvent, parts.key)}>
         {parts.preview}
       </div>
     </SuspenseAndErrorHandling>
@@ -143,7 +145,8 @@ export const coursePanes: CoursePane[] = [
     id: "home",
     defaultWidth: 400,
     label: "Home",
-    icon: <HomeIcon />,
+    // the size of the other panes' icons (see ActionIcon), so it holds its own in the phone's row
+    icon: <HomeIcon className="size-[1.15em] shrink-0" />,
     collapsedByDefault: () => true,
     Content: Home,
   },
