@@ -76,7 +76,8 @@ export function SectionTitle({
 }) {
   return (
     <div
-      className="cursor-pointer select-none py-2 font-semibold text-slate-200 hover:text-white flex items-center gap-2"
+      // a narrow pane: the title keeps a readable width and what's on the right wraps under it
+      className="cursor-pointer select-none py-2 font-semibold text-slate-200 hover:text-white flex flex-wrap items-center gap-2"
       onClick={onClick}
       role={onClick ? "button" : undefined}
     >
@@ -90,7 +91,7 @@ export function SectionTitle({
       >
         <path d="M5 3l6 5-6 5z" />
       </svg>
-      <span className="flex-1 min-w-0">{title}</span>
+      <span className="flex-1 min-w-32">{title}</span>
       {children}
     </div>
   );
