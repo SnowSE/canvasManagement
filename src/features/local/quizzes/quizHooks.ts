@@ -11,13 +11,18 @@ import {
 export const useQuizQuery = (moduleName: string, quizName: string) => {
   const { courseName } = useCourseContext();
   const trpc = useTRPC();
-  return useSuspenseQuery(
-    trpc.quiz.getQuiz.queryOptions({
+  const queryClient = useQueryClient();
+  // the module's list already has this quiz, so opening it shows it at once
+  const listKey = trpc.quiz.getAllQuizzes.queryKey({ courseName, moduleName });
+  return useSuspenseQuery({
+    ...trpc.quiz.getQuiz.queryOptions({
       courseName,
       moduleName,
       quizName,
-    })
-  );
+    }),
+    initialData: () => queryClient.getQueryData(listKey)?.find((q) => q.name === quizName),
+    initialDataUpdatedAt: () => queryClient.getQueryState(listKey)?.dataUpdatedAt,
+  });
 };
 
 /** The question banks a quiz's text names, read relative to the module's quizzes folder. */

@@ -1,5 +1,7 @@
 "use client";
 import { Link } from "@tanstack/react-router";
+import { showPane } from "@/components/panes/PaneStrip";
+import { ShowPaneLink } from "@/components/panes/ShowPaneLink";
 import { Fragment, ReactNode, useEffect, useRef, useState } from "react";
 import { Spinner } from "@/components/Spinner";
 import { useActionsMenu } from "@/components/MobileActionsMenu";
@@ -32,8 +34,9 @@ export interface FooterAction {
   onClick?: () => void;
   /** Opens in a new tab (Canvas). */
   href?: string;
-  /** An in-app route. */
+  /** An in-app route, and a pane to show there. */
   to?: string;
+  pane?: string;
   danger?: boolean;
   disabled?: boolean;
   title?: string;
@@ -76,6 +79,7 @@ export function EditorFooter({
   /** Field-by-field differences, not counting Published. Undefined when the item is not compared. */
   differences?: SyncField[];
   canvasUrl?: string;
+  /** The item's url, for its Compare with Canvas pane, once the item is in Canvas. */
   compareUrl?: string;
   busy: boolean;
   onAdd: () => void;
@@ -107,7 +111,7 @@ export function EditorFooter({
       }
     : undefined;
   const compare: FooterAction | undefined = compareUrl
-    ? { label: "Compare with Canvas", icon: <CompareIcon />, to: compareUrl }
+    ? { label: "Compare with Canvas", icon: <CompareIcon />, to: compareUrl, pane: "compare" }
     : undefined;
   const update: FooterAction = {
     label: "Update in Canvas",
@@ -159,7 +163,8 @@ export function EditorFooter({
     const text = `${differences.length} ${differences.length === 1 ? "difference" : "differences"} from Canvas`;
     const tooltip = differences.map((d) => d.label).join(", ");
     status = compareUrl ? (
-      <Link
+      <ShowPaneLink
+        pane="compare"
         to={compareUrl}
         title={tooltip}
         className={
@@ -169,7 +174,7 @@ export function EditorFooter({
       >
         <WarningIcon />
         {text}
-      </Link>
+      </ShowPaneLink>
     ) : (
       <span className={statusClass + " text-amber-300"} title={tooltip}>
         <WarningIcon />
@@ -220,7 +225,8 @@ export function EditorFooter({
     ? {
         label: "File history",
         icon: <HistoryIcon />,
-        to: getModuleItemUrl(courseName, moduleName, type, name) + "/history",
+        to: getModuleItemUrl(courseName, moduleName, type, name),
+        pane: "history",
       }
     : undefined;
 
@@ -346,6 +352,7 @@ function ActionControl({
     </span>
   );
   const handleClick = () => {
+    if (action.pane) showPane(action.pane);
     action.onClick?.();
     onDone?.();
     if (!action.opensDialog) closeMenu();

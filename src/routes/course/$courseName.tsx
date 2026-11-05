@@ -6,7 +6,7 @@ import { DragStyleContextProvider } from "@/app/course/[courseName]/context/drag
 import CalendarItemsContextProvider from "@/app/course/[courseName]/context/CalendarItemsContextProvider";
 import { SyncStatusProvider } from "@/app/course/[courseName]/calendar/day/useItemSyncStatus";
 import CalendarQuizQuestionsProvider from "@/app/course/[courseName]/context/CalendarQuizQuestionsProvider";
-import { CourseFrame } from "@/app/course/[courseName]/CoursePageLayout";
+import { CourseFrameWithPanes as CourseFrame } from "@/app/course/[courseName]/panes/CourseFrame";
 
 export const Route = createFileRoute("/course/$courseName")({
   component: CourseLayout,

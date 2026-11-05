@@ -22,7 +22,7 @@ import {
   useDeleteAssignmentMutation,
 } from "@/features/local/assignments/assignmentHooks";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
-import { getCompareUrl, getCourseUrl } from "@/services/urlUtils";
+import { getCourseUrl, getModuleItemUrl } from "@/services/urlUtils";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useItemNavigation } from "../../../../hooks/useItemNavigation";
@@ -168,7 +168,7 @@ export function AssignmentFooterButtons({
         assignmentInCanvas &&
         `${baseCanvasUrl}/courses/${settings.canvasId}/assignments/${assignmentInCanvas.id}`
       }
-      compareUrl={getCompareUrl(
+      compareUrl={getModuleItemUrl(
         courseName,
         moduleName,
         "assignment",

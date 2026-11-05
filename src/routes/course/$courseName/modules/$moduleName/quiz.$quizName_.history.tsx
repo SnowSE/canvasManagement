@@ -1,35 +1,13 @@
-import { pageTitle, itemTitle, titleHead } from "@/services/titleUtils";
 import { createFileRoute } from "@tanstack/react-router";
-import ClientOnly from "@/components/ClientOnly";
-import { SuspenseAndErrorHandling } from "@/components/SuspenseAndErrorHandling";
-import { ItemHistory } from "@/app/course/[courseName]/modules/[moduleName]/history/ItemHistory";
+import { ShowPaneAndGo } from "@/components/panes/ShowPaneAndGo";
+import { getModuleItemUrl } from "@/services/urlUtils";
 
-// `$quizName_` keeps this page out of the editor's layout while sharing its url prefix.
-export const Route = createFileRoute(
-  "/course/$courseName/modules/$moduleName/quiz/$quizName_/history",
-)({
-  head: ({ params }) =>
-    titleHead(
-      pageTitle({
-        thing: itemTitle("History: ", params.quizName),
-        courseName: params.courseName,
-        withAppName: false,
-      }),
-    ),
-  component: QuizHistoryPage,
+// history is a pane of the item now; this url from before opens it there
+export const Route = createFileRoute("/course/$courseName/modules/$moduleName/quiz/$quizName_/history")({
+  component: OpenPane,
 });
 
-function QuizHistoryPage() {
-  const { moduleName, quizName } = Route.useParams();
-  return (
-    <ClientOnly>
-      <SuspenseAndErrorHandling>
-        <ItemHistory
-          moduleName={decodeURIComponent(moduleName)}
-          type="Quiz"
-          name={decodeURIComponent(quizName)}
-        />
-      </SuspenseAndErrorHandling>
-    </ClientOnly>
-  );
+function OpenPane() {
+  const { courseName, moduleName, quizName } = Route.useParams();
+  return <ShowPaneAndGo pane="history" to={getModuleItemUrl(decodeURIComponent(courseName), decodeURIComponent(moduleName), "quiz", decodeURIComponent(quizName))} />;
 }

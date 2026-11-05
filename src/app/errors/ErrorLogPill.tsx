@@ -1,5 +1,6 @@
 "use client";
-import { Link, useLocation } from "@tanstack/react-router";
+import { useLocation } from "@tanstack/react-router";
+import { ShowPaneLink } from "@/components/panes/ShowPaneLink";
 import { useErrorLogQuery } from "@/features/local/errorLog/errorLogHooks";
 
 /** Bottom-center count of this session's unfixed errors; opens the error list. */
@@ -8,10 +9,12 @@ export function ErrorLogPill() {
   const { pathname } = useLocation();
   const count = data?.entries.filter((e) => !e.resolved).length ?? 0;
   if (count === 0 || pathname === "/errors") return null;
+  const inCourse = pathname.startsWith("/course/");
 
   return (
-    <Link
-      to="/errors"
+    <ShowPaneLink
+      pane={inCourse ? "errors" : undefined}
+      to={inCourse ? pathname : "/errors"}
       className="
         fixed bottom-2 left-1/2 -translate-x-1/2 z-40
         flex items-center gap-2 rounded-full px-3 py-1
@@ -22,6 +25,6 @@ export function ErrorLogPill() {
     >
       <span aria-hidden>⚠</span>
       {count} {count === 1 ? "error" : "errors"}
-    </Link>
+    </ShowPaneLink>
   );
 }

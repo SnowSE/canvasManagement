@@ -9,6 +9,7 @@ import { FoldedBars, PinButton, topPin } from "@/components/panes/PinnedBars";
 import { BreadCrumbs } from "@/components/BreadCrumbs";
 import { useCourseContext } from "../context/courseContext";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
+import { getTermName } from "@/features/local/utils/timeUtils";
 import { CurrentItem, defaultLectureDay, useCurrentItem } from "../currentItem";
 import { coursePanes, PaneContext } from "./coursePanes";
 import { FollowNavigation } from "./FollowNavigation";
@@ -56,7 +57,7 @@ export function CourseFrame({ children }: { children: ReactNode }) {
           <span className="hidden md:contents">
             <PanesMenu />
           </span>
-          <BreadCrumbs />
+          <BreadCrumbs term={settings?.startDate ? getTermName(settings.startDate) : undefined} />
           <TopBar onCoursePage={onCoursePage} />
         </div>
         <PaneSelect />

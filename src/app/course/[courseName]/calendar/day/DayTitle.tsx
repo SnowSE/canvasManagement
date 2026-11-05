@@ -23,7 +23,7 @@ export function DayTitle({ day, dayAsDate }: { day: string; dayAsDate: Date }) {
   const lectureName = todaysLecture && (todaysLecture.name || "lecture");
   const dateLabel = (
     <>
-      <span className="md:hidden">
+      <span className="@week:hidden">
         {dayAsDate.toLocaleString("default", { weekday: "short" })}{" "}
       </span>
       {dayAsDate.getDate()}

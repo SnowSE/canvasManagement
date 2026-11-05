@@ -38,13 +38,13 @@ describe("viewPanes", () => {
 });
 
 describe("widthRule", () => {
-  it("gives a pane its minimum, a share of the rest by how much more it could take, and a cap", () => {
-    expect(widthRule({ minWidth: 120, width: 400 }, 0)).toEqual({ flex: "280 1 120px", maxWidth: "400px" });
-    expect(widthRule({ minWidth: 120, width: 400 }, 2).flex).toBe("280 256 120px");
+  it("makes a pane exactly its width, giving way from the right when the row is too narrow", () => {
+    expect(widthRule({ minWidth: 120, width: 400 }, 0)).toEqual({ flex: "0 1 400px", minWidth: "120px", maxWidth: "400px" });
+    expect(widthRule({ minWidth: 120, width: 400 }, 2).flex).toBe("0 256 400px");
   });
 
-  it("a pane dragged below its minimum keeps the minimum and no share of the rest", () => {
-    expect(widthRule({ minWidth: 120, width: 100 }, 0)).toEqual({ flex: "0 1 120px", maxWidth: "120px" });
+  it("a pane set below its minimum keeps the minimum", () => {
+    expect(widthRule({ minWidth: 120, width: 100 }, 0)).toEqual({ flex: "0 1 120px", minWidth: "120px", maxWidth: "120px" });
   });
 
   it("a pane's width is the dragged one, else its default", () => {
@@ -73,6 +73,13 @@ describe("paneActions", () => {
   it("moves a pane in the order, keeping the others", () => {
     expect(movePane(["a", "b", "c"], "c", 0)).toEqual(["c", "a", "b"]);
     expect(paneActions.move({}, ids, "preview", 1).order).toEqual(["help", "preview", "calendar", "modules", "editor"]);
+  });
+
+  it("opens the panes given at the widths given, leaving the others alone", () => {
+    const doc = paneActions.openAll({ panes: { help: { hidden: true, collapsed: true }, editor: { width: 650, collapsed: true } } }, { editor: 300.4, calendar: 300.4 });
+    expect(doc.panes?.help).toEqual({ hidden: true, collapsed: true });
+    expect(doc.panes?.editor).toEqual({ width: 300.4, collapsed: false });
+    expect(doc.panes?.calendar).toEqual({ width: 300.4, collapsed: false });
   });
 
   it("reset forgets everything", () => {

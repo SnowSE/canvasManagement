@@ -24,7 +24,7 @@ export function CalendarWeek({
   const weekNumber = getWeekNumber(startDate, firstDateString);
   return (
     <div className="flex flex-row">
-      <div className="my-auto text-gray-400 w-6 text-center flex-none sm:block hidden">
+      <div className="my-auto text-gray-400 w-6 text-center flex-none @week:block hidden">
         {weekNumber.toString().padStart(2, "0")}
       </div>
       <div

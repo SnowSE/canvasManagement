@@ -61,7 +61,7 @@ function useSyncStatuses() {
   const roster = { students: rosterStudents, groupSets: rosterGroupSets };
   // filled in the background for this week's and the next three weeks' quizzes
   const quizQuestions = useCalendarQuizQuestions();
-  const { data: canvasModules } = useCanvasModulesWithItemsQuery();
+  const { data: canvasModules, isFetching: modulesRefetching } = useCanvasModulesWithItemsQuery();
   const canvasLinkTargets = { assignments: canvasAssignments, quizzes: canvasQuizzes };
   const ready = !!(canvasAssignments && canvasQuizzes && canvasPages && canvasModules);
 
@@ -76,7 +76,7 @@ function useSyncStatuses() {
     const canvasQuestions = type === "quiz" ? quizQuestions[item.name] : undefined;
     return remembered(
       `${settings.name}/${type}/${moduleName}/${item.name}`,
-      [item, canvasItem, settings, canvasModules, rosterStudents, rosterGroupSets, canvasQuestions, canvasAssignments, canvasQuizzes],
+      [item, canvasItem, settings, canvasModules, modulesRefetching, rosterStudents, rosterGroupSets, canvasQuestions, canvasAssignments, canvasQuizzes],
       () =>
         getSyncStatus({
           item: item as LocalAssignment | LocalQuiz | LocalCoursePage,
@@ -86,7 +86,8 @@ function useSyncStatuses() {
           canvasLinkTargets,
           roster,
           canvasQuestions,
-          module: canvasItem && { file: moduleName, canvas: canvasModuleNames(canvasModules, type, canvasItem) },
+          // not compared while the modules are being refetched (an item was just added to one)
+          module: canvasItem && !modulesRefetching ? { file: moduleName, canvas: canvasModuleNames(canvasModules, type, canvasItem) } : undefined,
         }),
     );
   };

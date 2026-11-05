@@ -52,7 +52,7 @@ export type CoursePane = {
   icon: ReactNode;
   /** Dropped while collapsed, for content that fetches. */
   keepMounted?: boolean;
-  /** In px: the widest the pane gets until a drag sets it; see widthRule. */
+  /** In px: how wide the pane is until a drag or All sets it; see widthRule. */
   defaultWidth?: number;
   collapsedByDefault?: () => boolean;
   /** Memoized where it's expensive: the frame re-renders on every navigation. */
@@ -149,15 +149,14 @@ export const coursePanes: CoursePane[] = [
   },
   {
     id: "calendar",
-    // wide enough to take the course page; beside an item it shares by the width rule
-    defaultWidth: 1200,
+    defaultWidth: 560,
     label: "Calendar",
     icon: <CalendarIcon />,
     Content: Calendar,
   },
   {
     id: "modules",
-    defaultWidth: 360,
+    defaultWidth: 220,
     label: "Modules",
     icon: <ModulesIcon />,
     collapsedByDefault: () => window.innerWidth <= 1400,
@@ -165,14 +164,14 @@ export const coursePanes: CoursePane[] = [
   },
   {
     id: "editor",
-    defaultWidth: 504,
+    defaultWidth: 300,
     label: "Editor",
     icon: <EditIcon />,
     Content: Editor,
   },
   {
     id: "preview",
-    defaultWidth: 432,
+    defaultWidth: 260,
     label: "Preview",
     icon: <PreviewIcon />,
     Content: Preview,

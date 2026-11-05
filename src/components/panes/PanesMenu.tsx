@@ -30,7 +30,7 @@ function Check({ on, label, title, onClick }: { on: boolean; label: string; titl
  */
 export function PanesMenu() {
   const [open, setOpen] = useState(false);
-  const { panes, setHidden, jumpTo, move, setCollapsed, setAllCollapsed, setAllHidden, reset } = usePanes();
+  const { panes, setHidden, jumpTo, move, setCollapsed, setAllCollapsed, setAllHidden, openAll, reset } = usePanes();
   const allShown = panes.every((p) => !p.hidden);
   const allOpen = panes.every((p) => !p.collapsed);
   // a drag moves the pane only on release: reordering the rows mid-drag
@@ -62,13 +62,23 @@ export function PanesMenu() {
             <div className={row + "border-transparent pt-2 pb-1 text-xs uppercase tracking-wider text-slate-500"}>
               <span className="w-5" aria-hidden />
               <span title="Whether the pane's bar is on the page at all">Show</span>
-              <span title="Expand this pane and collapse the others">Focus</span>
+              <span title="Expand this pane and collapse the others; All opens every pane, sharing the room equally">Focus</span>
               <span title="Expanded or collapsed">Open</span>
             </div>
             <div className={row + "border-transparent"}>
               <span className="w-5" aria-hidden />
               <Check on={allShown} label="Show all" title={allShown ? "Take every bar off the page" : "Put every bar on the page"} onClick={() => setAllHidden(allShown)} />
-              <span className="w-full py-1 text-left text-slate-400">All</span>
+              <button
+                role="menuitem"
+                className="unstyled w-full py-1 text-left text-slate-300 hover:text-white"
+                title="Open every pane on the page, sharing the room equally"
+                onClick={() => {
+                  openAll();
+                  close();
+                }}
+              >
+                All
+              </button>
               <Check on={allOpen} label="All open" title={allOpen ? "Collapse every pane" : "Expand every pane"} onClick={() => setAllCollapsed(allOpen)} />
             </div>
             {panes.map((p) => (

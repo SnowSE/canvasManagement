@@ -1,9 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
-import { Link, useRouter } from "@tanstack/react-router";
 import { diffLines } from "diff";
-import { CoursePageLayout } from "@/app/course/[courseName]/CoursePageLayout";
-import { RightSingleChevron } from "@/components/icons/RightSingleChevron";
 import { Spinner } from "@/components/Spinner";
 import { useCourseContext } from "@/app/course/[courseName]/context/courseContext";
 import { CourseItemType } from "@/features/local/course/courseItemTypes";
@@ -13,10 +10,7 @@ import {
   useItemHistoryQuery,
   useRestoreItemMutation,
 } from "@/features/local/git/gitHooks";
-import { getCourseUrl, getModuleItemUrl } from "@/services/urlUtils";
 import { getErrorMessage } from "@/services/utils/queryClient";
-
-const urlType = { Assignment: "assignment", Quiz: "quiz", Page: "page" } as const;
 
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleString([], {
@@ -38,7 +32,6 @@ export function ItemHistory({
   name: string;
 }) {
   const { courseName } = useCourseContext();
-  const router = useRouter();
   const item = { moduleName, type, name };
   const { data: history, isLoading } = useItemHistoryQuery(item);
   const { data: current } = useRawItemQuery(moduleName, type, name);
@@ -50,7 +43,6 @@ export function ItemHistory({
     selected && { sha: selected.sha, path: selected.path },
   );
   const restore = useRestoreItemMutation();
-  const editUrl = getModuleItemUrl(courseName, moduleName, urlType[type], name);
 
   const onRestore = () => {
     if (!selected) return;
@@ -63,30 +55,11 @@ export function ItemHistory({
       )
     )
       return;
-    restore.mutate(
-      { courseName, ...item, sha: selected.sha, path: selected.path },
-      { onSuccess: () => router.navigate({ to: editUrl }) },
-    );
+    restore.mutate({ courseName, ...item, sha: selected.sha, path: selected.path });
   };
 
   return (
-    <CoursePageLayout
-      topBar={
-        <div className="min-w-0 flex-auto flex flex-row items-center">
-          <Chevron />
-          <Link
-            to={editUrl}
-            className="truncate text-slate-300 hover:text-slate-100 px-2 text-sm font-bold"
-          >
-            {name}
-          </Link>
-          <Chevron />
-          <span className="px-2 text-sm font-bold text-slate-100 whitespace-nowrap">
-            File history
-          </span>
-        </div>
-      }
-    >
+    <div className="h-full flex flex-col">
       <div className="min-h-0 flex-1 flex flex-col md:flex-row gap-4 px-3 sm:px-5 pt-3">
         <div className="md:w-80 flex-none md:overflow-y-auto">
           <div className="text-sm uppercase tracking-wider text-slate-400 font-semibold pb-2">
@@ -158,18 +131,6 @@ export function ItemHistory({
         <div className="flex flex-row flex-wrap gap-3 justify-end items-center">
           {restore.isPending && <Spinner />}
           <button
-            className="btn-outline"
-            onClick={() => {
-              if (window.history.length > 1) router.history.back();
-              else router.navigate({ to: getCourseUrl(courseName) });
-            }}
-          >
-            Back
-          </button>
-          <Link className="btn" to={editUrl}>
-            Edit file
-          </Link>
-          <button
             className="disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={!selected || restore.isPending || oldText === current?.text}
             title={oldText === current?.text ? "The file already matches this version" : undefined}
@@ -179,15 +140,9 @@ export function ItemHistory({
           </button>
         </div>
       </div>
-    </CoursePageLayout>
+    </div>
   );
 }
-
-const Chevron = () => (
-  <span className="text-slate-500 cursor-default select-none my-auto">
-    <RightSingleChevron />
-  </span>
-);
 
 type DiffRow =
   | { kind: "same" | "added" | "removed"; text: string }

@@ -14,11 +14,14 @@ export function UnparsableItemFallback({
   moduleName,
   type,
   name,
+  loading,
   children,
 }: {
   moduleName: string;
   type: CourseItemType;
   name: string;
+  /** Shown while the item loads. */
+  loading?: ReactNode;
   children: ReactNode;
 }) {
   const { data: raw } = useRawItemQuery(moduleName, type, name);
@@ -39,7 +42,7 @@ export function UnparsableItemFallback({
   // the raw check usually lands after the editor's own query has failed, so
   // contain that failure here rather than letting it replace the page
   return (
-    <SuspenseAndErrorHandling showToast={false} resetKeys={[raw?.error]}>
+    <SuspenseAndErrorHandling showToast={false} resetKeys={[raw?.error]} fallback={loading}>
       {children}
     </SuspenseAndErrorHandling>
   );

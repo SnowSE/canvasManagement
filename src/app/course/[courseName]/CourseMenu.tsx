@@ -1,9 +1,9 @@
 "use client";
 import { Suspense, useState } from "react";
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { useLocalCoursesSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import { getTermName, groupByStartDate } from "@/features/local/utils/timeUtils";
-import { courseView, getCourseUrl } from "@/services/urlUtils";
+import { getCourseUrl } from "@/services/urlUtils";
 import { SectionTitle } from "@/components/panes/PaneHeader";
 import { CaretDownIcon } from "@/components/icons/ActionIcons";
 
@@ -39,8 +39,6 @@ export function CourseMenu({ courseName }: { courseName: string }) {
 
 function CoursesByTerm({ courseName, onPick }: { courseName: string; onPick: () => void }) {
   const { data: allSettings } = useLocalCoursesSettingsQuery();
-  // another course opens on the same page: settings, import, or the calendar
-  const view = useRouterState({ select: (s) => courseView(s.location.pathname) });
   const byStart = groupByStartDate(allSettings);
   const currentTerm = Object.keys(byStart).find((start) =>
     byStart[start].some((c) => c.name === courseName),
@@ -61,7 +59,7 @@ function CoursesByTerm({ courseName, onPick }: { courseName: string; onPick: () 
           {byStart[start].map((course) => (
             <Link
               key={course.name}
-              to={getCourseUrl(course.name) + view}
+              to={getCourseUrl(course.name)}
               onClick={onPick}
               className={
                 "py-1 truncate hover:text-white " +

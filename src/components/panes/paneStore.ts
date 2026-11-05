@@ -38,7 +38,7 @@ export type PaneSpec = {
   ssr: boolean;
 };
 
-/** A pane as the page shows it: its spec with the user's choices applied; `width` is its max, dragged or default. */
+/** A pane as the page shows it: its spec with the user's choices applied; `width` is how wide it is, dragged, set by All, or its default. */
 export type PaneView = PaneSpec & { hidden: boolean; collapsed: boolean; width: number };
 
 /** Panes in the remembered order, then the rest in the order they registered. */
@@ -72,19 +72,18 @@ export const isShown = (pane: PaneView) => !pane.hidden && !pane.collapsed;
 export const showingPane = (panes: PaneView[]) => (panes.find(isShown) ?? panes.find((p) => !p.hidden))?.id;
 
 /**
- * How the open panes share the row, as flexbox terms: every pane gets its
- * minimum, the rest of the room goes to them in proportion to how much
- * more each could take (max − min), and nobody passes its max. When there
- * isn't room for every minimum, the minimums are handed out from the left
- * (a shrink weight that climbs steeply with the pane's place, so the
- * rightmost gives way almost entirely before the next one starts to). Room
- * nobody can take stays empty, so closing a pane doesn't push its
- * neighbours around.
+ * An open pane in the row, as flexbox terms: exactly its width, so opening
+ * or closing a pane only shifts the others and room nobody takes stays
+ * empty. When the row is too narrow for every width, the panes give way
+ * from the right (a shrink weight that climbs steeply with the pane's
+ * place, so the rightmost gives way almost entirely before the next one
+ * starts to), each down to its minimum. The room is shared out only by All
+ * (see openAll).
  */
-export const widthRule = (pane: { minWidth: number; width: number }, place: number) => ({
-  flex: `${Math.max(pane.width - pane.minWidth, 0)} ${16 ** place} ${pane.minWidth}px`,
-  maxWidth: `${Math.max(pane.width, pane.minWidth)}px`,
-});
+export const widthRule = (pane: { minWidth: number; width: number }, place: number) => {
+  const width = Math.max(pane.width, pane.minWidth);
+  return { flex: `0 ${16 ** place} ${width}px`, minWidth: `${pane.minWidth}px`, maxWidth: `${width}px` };
+};
 
 /** `order` with `id` moved to `index`. */
 export function movePane(order: string[], id: string, index: number): string[] {
@@ -112,9 +111,13 @@ export const paneActions = {
     ),
   setAllCollapsed: (doc: PaneDoc, ids: string[], collapsed: boolean) =>
     ids.reduce((d, id) => withPane(d, id, { collapsed }), doc),
+  /** Every pane whose bar is on the page open, at the widths given (the room shared out; equally, until min and max widths exist). */
+  openAll: (doc: PaneDoc, widths: Record<string, number>) =>
+    Object.entries(widths).reduce((d, [id, width]) => withPane(d, id, { collapsed: false, width }), doc),
   setAllHidden: (doc: PaneDoc, ids: string[], hidden: boolean) =>
     ids.reduce((d, id) => withPane(d, id, { hidden }), doc),
-  setWidth: (doc: PaneDoc, id: string, width: number) => withPane(doc, id, { width }),
+  setWidths: (doc: PaneDoc, widths: Record<string, number>) =>
+    Object.entries(widths).reduce((d, [id, width]) => withPane(d, id, { width }), doc),
   move: (doc: PaneDoc, ids: string[], id: string, index: number) => ({ ...doc, order: movePane(ids, id, index) }),
   setPinned: (doc: PaneDoc, key: string, pinned: boolean) => ({ ...doc, pins: { ...doc.pins, [key]: pinned } }),
   /** Back to how the app starts. */

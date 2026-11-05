@@ -5,6 +5,12 @@ import { PaneHeader, SectionTitle } from "@/components/panes/PaneHeader";
 
 /** The kinds of item a help topic is about; a topic with none is about all of them. */
 export type HelpType = "assignment" | "quiz" | "page";
+const helpTypes: { value: HelpType | "all"; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "assignment", label: "Assignments" },
+  { value: "quiz", label: "Quizzes" },
+  { value: "page", label: "Pages" },
+];
 
 // The app's --font-mono is DM Sans, which is proportional. Examples need real
 // monospace so indentation (rubric ratings, Schedule) lines up the way it does
@@ -76,12 +82,12 @@ export function HelpPanel({ defaultType = "all", children }: { defaultType?: Hel
   const apply = (value: string, kind: HelpType | "all") => {
     const terms = value.toLowerCase().split(/\s+/).filter(Boolean);
     const matching = sections().filter((section) => {
+      const tags = section.dataset.helpTags?.split(" ").filter(Boolean) ?? [];
+      const ofType = kind === "all" || tags.length === 0 || tags.includes(kind);
       const text = searchableTextNodes(section)
         .map((n) => n.textContent)
         .join(" ")
         .toLowerCase();
-      const tags = section.dataset.helpTags?.split(" ").filter(Boolean) ?? [];
-      const ofType = kind === "all" || tags.length === 0 || tags.includes(kind);
       const isMatch = ofType && terms.every((term) => text.includes(term));
       section.hidden = !isMatch;
       // a search opens what it found; clearing it goes back to all collapsed
@@ -122,10 +128,23 @@ export function HelpPanel({ defaultType = "all", children }: { defaultType?: Hel
   return (
     <div className="text-sm leading-relaxed pe-2 pb-6">
       <PaneHeader
-        title="Help"
+        pin={{ key: "help-header", label: "the help search and filters" }}
         setAllOpen={setAllOpen}
         search={{ label: "Search help", value: query, onChange: filter }}
-      />
+      >
+        <div className="flex flex-wrap gap-1 pt-1">
+          {helpTypes.map((t) => (
+            <button
+              key={t.value}
+              className={"btn-thin text-xs " + (type === t.value ? "btn" : "unstyled btn-outline")}
+              aria-pressed={type === t.value}
+              onClick={() => setType(t.value)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </PaneHeader>
       <div ref={sectionsRef}>{children}</div>
       {noMatches && (
         <div className="py-3 text-slate-400 italic">

@@ -45,7 +45,7 @@ export function UnparsableItemInDay({ item }: { item: InvalidItemInDay }) {
     <div className="relative">
       <Link
         to={unparsableItemUrl(courseName, item)}
-        className="block border border-dashed border-rose-700 rounded-sm px-1 sm:mx-1 mb-1 bg-rose-950/40 text-rose-200 truncate sm:text-wrap text-nowrap"
+        className="block border border-dashed border-rose-700 rounded-sm px-1 @week:mx-1 mb-1 bg-rose-950/40 text-rose-200 truncate sm:text-wrap text-nowrap"
         onMouseEnter={showTooltip}
         onMouseLeave={hideTooltip}
         ref={targetRef}

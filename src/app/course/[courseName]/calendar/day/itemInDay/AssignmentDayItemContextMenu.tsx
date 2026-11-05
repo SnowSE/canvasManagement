@@ -24,8 +24,8 @@ import { useCourseContext } from "../../../context/courseContext";
 import { PublishInCanvasButton } from "../../../PublishInCanvasButton";
 import Modal, { ModalControl } from "@/components/Modal";
 import { useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
-import { getCompareUrl } from "@/services/urlUtils";
+import { getModuleItemUrl } from "@/services/urlUtils";
+import { ShowPaneLink } from "@/components/panes/ShowPaneLink";
 
 function getDuplicateName(name: string, existingNames: string[]): string {
   const match = name.match(/^(.*)\s+(\d+)$/);
@@ -241,8 +241,9 @@ export const AssignmentDayItemContextMenu: FC<{
                     >
                       View in Canvas
                     </a>
-                    <Link
-                      to={getCompareUrl(
+                    <ShowPaneLink
+                      pane="compare"
+                      to={getModuleItemUrl(
                         courseName,
                         moduleName,
                         "assignment",
@@ -258,7 +259,7 @@ export const AssignmentDayItemContextMenu: FC<{
                           {differenceCount === 1 ? "" : "s"}
                         </span>
                       )}
-                    </Link>
+                    </ShowPaneLink>
                     <button
                       onClick={handleUpdateCanvas}
                       disabled={updateInCanvasMutation.isPending}

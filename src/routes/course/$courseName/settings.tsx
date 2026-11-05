@@ -1,22 +1,13 @@
-import { pageTitle, titleHead } from "@/services/titleUtils";
 import { createFileRoute } from "@tanstack/react-router";
-import AllSettings from "@/app/course/[courseName]/settings/AllSettings";
+import { ShowPaneAndGo } from "@/components/panes/ShowPaneAndGo";
+import { getCourseUrl } from "@/services/urlUtils";
 
+// settings is a pane of the course now; this url from before opens it there
 export const Route = createFileRoute("/course/$courseName/settings")({
-  head: ({ params }) =>
-    titleHead(pageTitle({ thing: "Settings", courseName: params.courseName })),
-  component: SettingsPage,
+  component: OpenPane,
 });
 
-function SettingsPage() {
-  return (
-    <div className="flex justify-center h-full overflow-auto pt-5">
-      <div className="w-full max-w-3xl min-w-0 px-3">
-        <AllSettings />
-        <br />
-        <br />
-        <br />
-      </div>
-    </div>
-  );
+function OpenPane() {
+  const { courseName } = Route.useParams();
+  return <ShowPaneAndGo pane="settings" to={getCourseUrl(decodeURIComponent(courseName))} />;
 }

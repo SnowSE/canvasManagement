@@ -11,6 +11,7 @@ import {
 } from "react";
 import { remember, subscribeToStorage } from "../storage";
 import {
+  isShown,
   paneActions,
   PaneDoc,
   paneDocKey,
@@ -20,6 +21,27 @@ import {
   showingPane,
   viewPanes,
 } from "./paneStore";
+
+export const paneElement = (id: string) => document.querySelector<HTMLElement>(`[data-pane="${id}"]`);
+
+/** Every open pane's width as it is on the page right now. */
+export const renderedWidths = (panes: PaneView[]) =>
+  Object.fromEntries(panes.filter(isShown).map((p) => [p.id, paneElement(p.id)?.getBoundingClientRect().width ?? p.width]));
+
+/**
+ * The room shared out among the panes whose bars are on the page, for All:
+ * what's left of the row once every bar has its width, in equal parts
+ * (until min and max widths exist to share it by).
+ */
+function sharedWidths(panes: PaneView[]) {
+  const shown = panes.filter((p) => !p.hidden);
+  const row = shown.map((p) => paneElement(p.id)?.parentElement).find(Boolean);
+  if (!row) return {};
+  const bars = shown.reduce((sum, p) => sum + (paneElement(p.id)?.firstElementChild?.getBoundingClientRect().width ?? 0), 0);
+  const gaps = row.clientWidth - [...row.children].reduce((sum, el) => sum + (el as HTMLElement).offsetWidth, 0);
+  const each = (row.clientWidth - bars - Math.max(gaps, 0)) / shown.length;
+  return Object.fromEntries(shown.map((p) => [p.id, Math.max(each, p.minWidth)]));
+}
 
 type Strip = {
   panes: PaneView[];
@@ -104,17 +126,23 @@ export const showPane = (id: string) =>
 export function usePanes() {
   const { panes, narrow, showing, update } = useContext(StripContext);
   const ids = panes.map((p) => p.id);
+  // a toggle keeps every open pane at the width it has (a pane the row had
+  // squeezed stays as it was), so the toggle only shifts the others; on a
+  // phone the widths are the screen's and aren't kept
+  const frozen = (doc: PaneDoc) => (narrow ? doc : paneActions.setWidths(doc, renderedWidths(panes)));
   return {
     panes,
     narrow,
     showing,
     setHidden: (id: string, hidden: boolean) => update((d) => paneActions.setHidden(d, id, hidden)),
-    setCollapsed: (id: string, collapsed: boolean) => update((d) => paneActions.setCollapsed(d, id, collapsed)),
+    setCollapsed: (id: string, collapsed: boolean) => update((d) => paneActions.setCollapsed(frozen(d), id, collapsed)),
     /** This pane open, the rest collapsed: on a phone, the one showing. */
-    jumpTo: (id: string) => update((d) => paneActions.jumpTo(d, ids, id)),
-    setAllCollapsed: (collapsed: boolean) => update((d) => paneActions.setAllCollapsed(d, ids, collapsed)),
+    jumpTo: (id: string) => update((d) => paneActions.jumpTo(frozen(d), ids, id)),
+    setAllCollapsed: (collapsed: boolean) => update((d) => paneActions.setAllCollapsed(frozen(d), ids, collapsed)),
+    /** Every pane on the page open, the room shared out among them. */
+    openAll: () => update((d) => paneActions.openAll(d, sharedWidths(panes))),
     setAllHidden: (hidden: boolean) => update((d) => paneActions.setAllHidden(d, ids, hidden)),
-    setWidth: (id: string, width: number) => update((d) => paneActions.setWidth(d, id, width)),
+    setWidths: (widths: Record<string, number>) => update((d) => paneActions.setWidths(d, widths)),
     move: (id: string, index: number) => update((d) => paneActions.move(d, ids, id, index)),
     reset: () => update(paneActions.reset),
   };

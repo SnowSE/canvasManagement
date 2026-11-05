@@ -20,15 +20,6 @@ export function getModuleItemUrl(
     encodeURIComponent(itemName)
   );
 }
-/** The file-vs-Canvas compare page for an assignment, quiz, or page. */
-export function getCompareUrl(
-  courseName: string,
-  moduleName: string,
-  type: "assignment" | "page" | "quiz",
-  itemName: string
-) {
-  return getModuleItemUrl(courseName, moduleName, type, itemName) + "/compare";
-}
 
 export function getLectureUrl(courseName: string, lectureDate: string) {
   return (
@@ -38,21 +29,11 @@ export function getLectureUrl(courseName: string, lectureDate: string) {
     encodeURIComponent(lectureDate)
   );
 }
-export function getLecturePreviewUrl(courseName: string, lectureDate: string) {
-  return getLectureUrl(courseName, lectureDate) + "/preview";
-}
 
 export function getCourseUrl(courseName: string) {
   return "/course/" + encodeURIComponent(courseName);
 }
 
-export function getCourseSettingsUrl(courseName: string) {
-  return "/course/" + encodeURIComponent(courseName) + "/settings";
-}
-
-export function getCourseImportUrl(courseName: string) {
-  return "/course/" + encodeURIComponent(courseName) + "/import";
-}
 
 const moduleItemTypeByFolder = {
   pages: "page",
@@ -163,11 +144,3 @@ function rewriteRelativeMdHrefs(
     return newHref ? `href="${newHref}"` : fullMatch;
   });
 }
-
-/** The view an item page is showing, as a suffix for another item's url: "/compare", "/history" or "" (the editor). */
-export const itemView = (pathname: string) =>
-  /\/modules\/[^/]+\/(?:assignment|quiz|page)\/[^/]+(\/compare|\/history)$/.exec(pathname)?.[1] ?? "";
-
-/** The course page showing, as a suffix for another course's url: "/settings", "/import" or "" (the calendar; an item has no counterpart in another course). */
-export const courseView = (pathname: string) =>
-  /^\/course\/[^/]+(\/settings|\/import)$/.exec(pathname)?.[1] ?? "";

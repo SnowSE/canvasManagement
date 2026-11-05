@@ -26,7 +26,9 @@ export default function CourseCalendar() {
 
   return (
     <div
+      // the calendar's layout follows this box's width, not the window's
       className="
+        @container
         min-h-0 min-w-0
         flex-1
         border-2
@@ -35,10 +37,10 @@ export default function CourseCalendar() {
         bg-linear-to-br
         from-blue-950/30
         to-fuchsia-950/10 to-60%
-        sm:p-1
+        @week:p-1
       "
     >
-      <div className="h-full overflow-y-scroll sm:pe-1" ref={scrollRef}>
+      <div className="h-full overflow-y-scroll @week:pe-1" ref={scrollRef}>
         {months.map((month) => (
           <CalendarMonth key={month.month + "" + month.year} month={month} />
         ))}

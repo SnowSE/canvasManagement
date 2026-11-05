@@ -22,7 +22,7 @@ import {
   useDeleteQuizMutation,
   useQuizQuery,
 } from "@/features/local/quizzes/quizHooks";
-import { getCompareUrl, getCourseUrl } from "@/services/urlUtils";
+import { getCourseUrl, getModuleItemUrl } from "@/services/urlUtils";
 import { useNavigate } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { useItemNavigation } from "../../../../hooks/useItemNavigation";
@@ -123,7 +123,7 @@ export function QuizButtons({
         quizInCanvas &&
         `${baseCanvasUrl}/courses/${settings.canvasId}/quizzes/${quizInCanvas.id}`
       }
-      compareUrl={getCompareUrl(courseName, moduleName, "quiz", quizName)}
+      compareUrl={getModuleItemUrl(courseName, moduleName, "quiz", quizName)}
       busy={
         addToCanvas.isPending ||
         deleteFromCanvas.isPending ||

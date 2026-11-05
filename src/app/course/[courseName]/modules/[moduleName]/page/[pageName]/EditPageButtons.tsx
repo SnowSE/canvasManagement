@@ -22,11 +22,7 @@ import { useCanvasAssignmentsQuery } from "@/features/canvas/hooks/canvasAssignm
 import { useCanvasQuizzesQuery } from "@/features/canvas/hooks/canvasQuizHooks";
 import { useCanvasModuleNames } from "@/features/canvas/hooks/canvasModuleHooks";
 import { getSyncReport } from "@/app/course/[courseName]/calendar/day/getAssignmentSyncStatus";
-import {
-  getCanvasHomeUrlFor,
-  getCompareUrl,
-  getCourseUrl,
-} from "@/services/urlUtils";
+import { getCanvasHomeUrlFor, getCourseUrl, getModuleItemUrl } from "@/services/urlUtils";
 import { useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useItemNavigation } from "../../../../hooks/useItemNavigation";
@@ -131,7 +127,7 @@ export default function EditPageButtons({
       }
       differences={differences}
       compareUrl={
-        pageInCanvas && getCompareUrl(courseName, moduleName, "page", pageName)
+        pageInCanvas ? getModuleItemUrl(courseName, moduleName, "page", pageName) : undefined
       }
       busy={requestIsPending}
       onAdd={() => createPageInCanvas.mutate({ page, moduleName })}

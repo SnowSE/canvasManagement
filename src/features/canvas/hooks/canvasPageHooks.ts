@@ -51,6 +51,12 @@ export const useCreateCanvasPageMutation = () => {
         publishSettings,
         canvasLinkTargets
       );
+      // in the cached list at once, so the page shows as in Canvas right
+      // away; the refetch below confirms it in the background
+      queryClient.setQueryData(
+        canvasPageKeys.pagesInCourse(settings.canvasId),
+        (list: (typeof canvasPage)[] | undefined) => list && [...list, canvasPage],
+      );
       await addToModule(moduleName, {
         type: "Page",
         id: canvasPage.page_id,
