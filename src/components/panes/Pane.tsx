@@ -1,7 +1,7 @@
 "use client";
 import { CSSProperties, ReactNode, RefObject, useLayoutEffect, useRef, useState } from "react";
 import { paneElement, renderedWidths, usePaneRegistration, usePanes } from "./PaneStrip";
-import { HideButton, PaneBar, PopOutLink } from "./PaneBar";
+import { HideButton, PaneBar } from "./PaneBar";
 import { useRouterState } from "@tanstack/react-router";
 import { isShown, widthRule } from "./paneStore";
 
@@ -139,7 +139,6 @@ export function Pane({
             <button className="unstyled flex-1 min-w-0 truncate text-left !px-1 !py-1 hover:text-white" title={`Collapse ${label}`} onClick={toggle}>
               {label}
             </button>
-            <PopOutLink label={label} pathname={pathname} pane={id} />
             <HideButton label={label} onHide={hide} />
           </div>
         )}
