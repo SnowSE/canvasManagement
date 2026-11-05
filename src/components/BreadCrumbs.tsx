@@ -1,14 +1,16 @@
 "use client";
 
-import { Link, useLocation } from "@tanstack/react-router";
+import { Link, useLocation, useRouter } from "@tanstack/react-router";
+import { leavePopOut } from "@/app/course/[courseName]/panes/popOut";
 import HomeIcon from "./icons/HomeIcon";
 import { showPane } from "./panes/PaneStrip";
 import { RightSingleChevron } from "./icons/RightSingleChevron";
 import { CourseMenu } from "@/app/course/[courseName]/CourseMenu";
 
-/** home › term › course ▾ › …; the term is the course's semester, when known. */
-export const BreadCrumbs = ({ term }: { term?: string }) => {
+/** home › term › course ▾ › …; the term is the course's semester, when known. In a pop-out, the home icon makes it a full window of its own. */
+export const BreadCrumbs = ({ term, popOut = false }: { term?: string; popOut?: boolean }) => {
   const location = useLocation();
+  const router = useRouter();
   const pathname = location.pathname;
 
   const pathSegments = pathname?.split("/").filter(Boolean) || [];
@@ -67,9 +69,18 @@ export const BreadCrumbs = ({ term }: { term?: string }) => {
       <span className={sharedBackgroundClassNames}>
         <button
           className="unstyled flex items-center gap-1 rounded-lg h-full !p-0"
-          aria-label="Open the Home pane"
-          title="Home: your courses, today's lectures and the handouts, as a pane here"
-          onClick={() => showPane("home")}
+          aria-label={popOut ? "Open this as a full window" : "Open the Home pane"}
+          title={
+            popOut
+              ? "Make this window a full one of its own, with every pane, no longer following the window it came from"
+              : "Home: your courses, today's lectures and the handouts, as a pane here"
+          }
+          onClick={() => {
+            if (!popOut) return showPane("home");
+            leavePopOut();
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            router.navigate({ to: pathname, search: { pane: undefined }, replace: true } as any);
+          }}
         >
           <span className={sharedLinkClassNames}>
             <HomeIcon />

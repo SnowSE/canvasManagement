@@ -11,7 +11,8 @@ import { useCourseContext } from "../context/courseContext";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import { getTermName } from "@/features/local/utils/timeUtils";
 import { CurrentItem, defaultLectureDay, useCurrentItem } from "../currentItem";
-import { coursePanes, PaneContext } from "./coursePanes";
+import { coursePanes, PaneContext, PaneNote } from "./coursePanes";
+import { usePopOutPane } from "./popOut";
 import { FollowNavigation } from "./FollowNavigation";
 import { ItemEditing } from "./ItemEditing";
 import { useItemParts } from "./itemParts";
@@ -25,7 +26,8 @@ import { CourseNavigation } from "../CourseNavigation";
  * their scroll and state from page to page. The frame itself renders the
  * editing of the item open (see ItemEditing): the one the url names, or
  * on the course page the lecture of the day; the routes only match the url
- * and set the title.
+ * and set the title. As a pop-out (see popOut) it shows the crumbs, the
+ * item's actions, one pane full-window and the footer: no bars, no layout.
  */
 export function CourseFrame({ children }: { children: ReactNode }) {
   const { courseName } = useCourseContext();
@@ -38,8 +40,29 @@ export function CourseFrame({ children }: { children: ReactNode }) {
     return lectureDay ? { kind: "lecture", lectureDay } : undefined;
   }, [urlItem, onCoursePage, settings]);
   const [topPinned] = usePinned(topPin);
+  const popOut = usePopOutPane();
   // the same object while nothing changed, so memoized pane contents are skipped
   const ctx: PaneContext = useMemo(() => ({ courseName, item, onCoursePage }), [courseName, item, onCoursePage]);
+  if (popOut) {
+    const pane = coursePanes.find((p) => p.id === popOut);
+    return (
+      <>
+        <FollowNavigation />
+        <ItemEditing item={item} />
+        <div className="h-full flex flex-col px-1 w-full bg-gray-900 rounded">
+          <div className="py-1 flex flex-row flex-nowrap items-center gap-x-2">
+            <BreadCrumbs term={settings?.startDate ? getTermName(settings.startDate) : undefined} popOut />
+            <TopBar onCoursePage={onCoursePage} />
+          </div>
+          <div className="min-h-0 flex-1 flex flex-col overflow-y-auto">
+            {pane ? <pane.Content {...ctx} /> : <PaneNote>There is no pane called {popOut}.</PaneNote>}
+          </div>
+          <BottomBar onCoursePage={onCoursePage} />
+        </div>
+        {children}
+      </>
+    );
+  }
   return (
     <>
       <FollowNavigation />

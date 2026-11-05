@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Outlet, retainSearchParams } from "@tanstack/react-router";
 import CourseContextProvider from "@/app/course/[courseName]/context/CourseContextProvider";
 import { Suspense } from "react";
 import DraggingContextProvider from "@/app/course/[courseName]/context/drag/DraggingContextProvider";
@@ -9,6 +9,11 @@ import CalendarQuizQuestionsProvider from "@/app/course/[courseName]/context/Cal
 import { CourseFrameWithPanes as CourseFrame } from "@/app/course/[courseName]/panes/CourseFrame";
 
 export const Route = createFileRoute("/course/$courseName")({
+  // a pane in its own window: ?pane=<id>, kept as that window moves between items (see panes/popOut)
+  validateSearch: (search: Record<string, unknown>): { pane?: string } => ({
+    pane: typeof search.pane === "string" ? search.pane : undefined,
+  }),
+  search: { middlewares: [retainSearchParams(["pane"])] },
   component: CourseLayout,
 });
 

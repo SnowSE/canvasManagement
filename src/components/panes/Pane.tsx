@@ -1,7 +1,8 @@
 "use client";
 import { CSSProperties, ReactNode, RefObject, useLayoutEffect, useRef, useState } from "react";
 import { paneElement, renderedWidths, usePaneRegistration, usePanes } from "./PaneStrip";
-import { HideButton, PaneBar } from "./PaneBar";
+import { HideButton, PaneBar, PopOutLink } from "./PaneBar";
+import { useRouterState } from "@tanstack/react-router";
 import { isShown, widthRule } from "./paneStore";
 
 const applyWidth = (el: HTMLElement, pane: { minWidth: number; width: number }, place: number) => {
@@ -53,6 +54,8 @@ export function Pane({
 }) {
   usePaneRegistration({ id, label, icon, minWidth, defaultWidth, collapsedByDefault, ssr });
   const { panes, narrow, showing, setCollapsed, setHidden, setWidths } = usePanes();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const popOutHref = { pathname, pane: id };
   const place = panes.findIndex((p) => p.id === id);
   const view = panes[place];
   const remembered = view?.collapsed ?? !ssr;
@@ -97,6 +100,7 @@ export function Pane({
       <PaneBar
         label={label}
         collapsed={collapsed}
+        popOutHref={popOutHref}
         onToggle={toggle}
         onHide={hide}
         onDrag={(e, startX) => {
@@ -135,6 +139,7 @@ export function Pane({
             <button className="unstyled flex-1 min-w-0 truncate text-left !px-1 !py-1 hover:text-white" title={`Collapse ${label}`} onClick={toggle}>
               {label}
             </button>
+            <PopOutLink label={label} pathname={pathname} pane={id} />
             <HideButton label={label} onHide={hide} />
           </div>
         )}
