@@ -40,7 +40,7 @@ export function QuizHelp({
 
   return (
     <HelpPanel>
-      <HelpSection title="File layout">
+      <HelpSection tags={["quiz"]} title="File layout">
         <P>
           Settings come first, then questions. Every question starts after a{" "}
           <C>---</C> line.
@@ -76,7 +76,7 @@ essay
         </P>
       </HelpSection>
 
-      <HelpSection title="Settings">
+      <HelpSection tags={["quiz"]} title="Settings">
         <KeyList
           items={[
             { name: "UnlockAt", children: "When it opens. Blank = right away." },
@@ -159,7 +159,7 @@ essay
         />
       </HelpSection>
 
-      <HelpSection title="Points">
+      <HelpSection tags={["quiz"]} title="Points">
         <P>
           Put <C>Points:</C> on the first line of a question. Without it the
           question is worth 1 point. Decimals are fine.
@@ -172,7 +172,7 @@ b) Lyon
 `}</Example>
       </HelpSection>
 
-      <HelpSection title="Multiple choice">
+      <HelpSection tags={["quiz"]} title="Multiple choice">
         <P>
           Lettered answers; <C>*</C> marks the correct one.
         </P>
@@ -184,7 +184,7 @@ c) 9
 `}</Example>
       </HelpSection>
 
-      <HelpSection title="Multiple answers (checkboxes)">
+      <HelpSection tags={["quiz"]} title="Multiple answers (checkboxes)">
         <P>
           <C>[*]</C> is a correct choice; <C>[ ]</C> or <C>[]</C> is not.
         </P>
@@ -197,7 +197,7 @@ Which are prime numbers?
 `}</Example>
       </HelpSection>
 
-      <HelpSection title="Essay">
+      <HelpSection tags={["quiz"]} title="Essay">
         <P>
           End the question with a line that says <C>essay</C>.
         </P>
@@ -208,7 +208,7 @@ essay
 `}</Example>
       </HelpSection>
 
-      <HelpSection title="File upload">
+      <HelpSection tags={["quiz"]} title="File upload">
         <P>
           End the question with <C>file_upload</C> (or <C>file upload</C>) to
           have students attach a file. Canvas can&apos;t grade it, so it is
@@ -221,7 +221,7 @@ file_upload
 `}</Example>
       </HelpSection>
 
-      <HelpSection title="Question groups (pick some at random)">
+      <HelpSection tags={["quiz"]} title="Question groups (pick some at random)">
         <P>
           A <C>Group:</C> section gives each student <C>Pick</C> of the
           questions after it, chosen at random, up to an <C>EndGroup</C>{" "}
@@ -255,7 +255,7 @@ EndGroup
 `}</Example>
       </HelpSection>
 
-      <HelpSection title="Question banks (a group's questions from a file)">
+      <HelpSection tags={["quiz"]} title="Question banks (a group's questions from a file)">
         <P>
           To share questions between quizzes, put them in a bank file: a{" "}
           <C>.md</C> file in a <C>banks</C> folder in the module (beside{" "}
@@ -277,7 +277,7 @@ EndGroup
 `}</Example>
       </HelpSection>
 
-      <HelpSection title="Short answer (fill in the blank)">
+      <HelpSection tags={["quiz"]} title="Short answer (fill in the blank)">
         <P>
           End with <C>short_answer</C> (or <C>short answer</C>) for a manually
           graded answer box.
@@ -298,7 +298,7 @@ short_answer=
 `}</Example>
       </HelpSection>
 
-      <HelpSection title="Fill in multiple blanks">
+      <HelpSection tags={["quiz"]} title="Fill in multiple blanks">
         <P>
           Put a placeholder like <C>[ans1]</C> (letters, numbers, <C>-</C> or{" "}
           <C>_</C>, no spaces) wherever a blank goes in the question. Then list
@@ -315,7 +315,7 @@ Roses are [color1], violets are [color2].
 `}</Example>
       </HelpSection>
 
-      <HelpSection title="Numerical">
+      <HelpSection tags={["quiz"]} title="Numerical">
         <P>
           Answer lines starting with <C>=</C> make a numeric answer box. Use a
           single value for an exact answer, <C>value +- margin</C> to accept
@@ -333,7 +333,7 @@ What is pi to two places?
 `}</Example>
       </HelpSection>
 
-      <HelpSection title="Matching">
+      <HelpSection tags={["quiz"]} title="Matching">
         <P>
           Each <C>^</C> line is <C>left side - right side</C>. A line with
           nothing before the <C>-</C> adds a distractor to the dropdowns.
@@ -348,7 +348,7 @@ Match each protocol to its port.
 `}</Example>
       </HelpSection>
 
-      <HelpSection title="Multiple dropdowns">
+      <HelpSection tags={["quiz"]} title="Multiple dropdowns">
         <P>
           Like matching, but blank lines split the <C>^</C> lines into groups.
           Each prompt is shown on its own line after the question text with a
@@ -365,7 +365,7 @@ Pick the right word for each sentence.
 `}</Example>
       </HelpSection>
 
-      <HelpSection title="Answer feedback">
+      <HelpSection tags={["quiz"]} title="Answer feedback">
         <P>
           Between the question text and the answers, start a line with{" "}
           <C>{correct}</C> for feedback on a correct answer, <C>{incorrect}</C>{" "}
@@ -402,7 +402,7 @@ b) 6
         </P>
       </HelpSection>
 
-      <HelpSection title="Markdown and code in questions">
+      <HelpSection tags={["quiz"]} title="Markdown and code in questions">
         <P>
           Question text, answers, and the description are all markdown. An
           answer can span several lines (everything up to the next answer

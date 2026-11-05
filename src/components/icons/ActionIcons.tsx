@@ -21,6 +21,13 @@ const ActionIcon: FC<{ children: ReactNode; strokeWidth?: number }> = ({
   </svg>
 );
 
+export const ModulesIcon = () => (
+  <ActionIcon>
+    <rect x="3" y="4" width="18" height="6" rx="1" />
+    <rect x="3" y="14" width="18" height="6" rx="1" />
+  </ActionIcon>
+);
+
 export const HelpIcon = () => (
   <ActionIcon>
     <circle cx="12" cy="12" r="10" />
@@ -29,10 +36,50 @@ export const HelpIcon = () => (
   </ActionIcon>
 );
 
-export const ModulesIcon = () => (
+export const EditIcon = () => (
   <ActionIcon>
-    <rect x="3" y="4" width="18" height="6" rx="1" />
-    <rect x="3" y="14" width="18" height="6" rx="1" />
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
+  </ActionIcon>
+);
+
+export const PreviewIcon = () => (
+  <ActionIcon>
+    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
+    <circle cx="12" cy="12" r="3" />
+  </ActionIcon>
+);
+
+export const SettingsIcon = () => (
+  <ActionIcon>
+    <circle cx="12" cy="12" r="3" />
+    <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
+  </ActionIcon>
+);
+
+export const ImportIcon = () => (
+  <ActionIcon>
+    <path d="M12 3v12" />
+    <path d="m7 10 5 5 5-5" />
+    <path d="M4 17v3h16v-3" />
+  </ActionIcon>
+);
+
+/** Pinned: pushed in, the head down where the needle was; unpinned: the head up and the needle showing. */
+export const PinIcon = ({ pinned = false }: { pinned?: boolean }) => (
+  <ActionIcon>
+    <g transform={pinned ? "translate(0 6)" : undefined}>
+      <path d="M9 4h6l-1 5 3 3v2H7v-2l3-3z" fill={pinned ? "currentColor" : "none"} />
+    </g>
+    {!pinned && <path d="M12 14v6" />}
+  </ActionIcon>
+);
+
+export const PanesIcon = () => (
+  <ActionIcon>
+    <rect x="3" y="4" width="18" height="16" rx="1" />
+    <path d="M9 4v16" />
+    <path d="M15 4v16" />
   </ActionIcon>
 );
 

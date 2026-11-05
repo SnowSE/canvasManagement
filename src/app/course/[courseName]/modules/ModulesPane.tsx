@@ -1,5 +1,6 @@
 "use client";
-import { PaneHeader, SidePane } from "@/components/SidePane";
+import { SidePane } from "@/components/SidePane";
+import { PaneHeader } from "@/components/panes/PaneHeader";
 import { usePersistedScroll } from "@/components/usePersistedScroll";
 import { usePersistedToggle } from "@/components/storage";
 import { useCourseContext } from "../context/courseContext";
@@ -32,6 +33,21 @@ export function ModulesPane({ hidden = false, onHide }: { hidden?: boolean; onHi
           <ModuleList />
         </div>
       </SidePane>
+    </ModuleSelectionProvider>
+  );
+}
+
+/** The module list with its search and filters in a header; the scroll is remembered per course. */
+export function ModulesContent() {
+  const { courseName } = useCourseContext();
+  // after the remembered modules have re-expanded (and their open animation)
+  const scrollRef = usePersistedScroll(`moduleListScroll-${courseName}`, 500);
+  return (
+    <ModuleSelectionProvider>
+      <div ref={scrollRef} className="h-full overflow-y-auto text-sm leading-relaxed pe-2 pb-6">
+        <ModulesHeader />
+        <ModuleList />
+      </div>
     </ModuleSelectionProvider>
   );
 }
