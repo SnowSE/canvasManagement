@@ -108,6 +108,40 @@ describe("getSyncStatus - assignment", () => {
     expect(result.message).toContain("lock date");
   });
 
+  describe("not graded", () => {
+    const gradedField = (item: LocalAssignment, canvasItem: CanvasAssignment) =>
+      getSyncReport({ item, canvasItem, type: "assignment", settings: baseSettings })
+        .fields.find((f) => f.key === "graded");
+    const notGraded: LocalAssignment = {
+      ...baseLocalAssignment,
+      submissionTypes: [AssignmentSubmissionType.NOT_GRADED],
+    };
+    const canvasNotGraded: CanvasAssignment = {
+      ...baseCanvasAssignment,
+      grading_type: "not_graded",
+      submission_types: ["not_graded"],
+    };
+
+    it("matches when both are not graded", () => {
+      expect(gradedField(notGraded, canvasNotGraded)?.same).toBe(true);
+    });
+
+    it("flags a file that is not graded when Canvas grades it", () => {
+      const f = gradedField(notGraded, baseCanvasAssignment);
+      expect(f?.same).toBe(false);
+      expect(f?.local).toBe("not graded");
+      expect(f?.canvas).toBe("graded");
+    });
+
+    it("flags a graded file when Canvas has it not graded", () => {
+      expect(gradedField(baseLocalAssignment, canvasNotGraded)?.same).toBe(false);
+    });
+
+    it("leaves the field out when both are graded", () => {
+      expect(gradedField(baseLocalAssignment, baseCanvasAssignment)).toBeUndefined();
+    });
+  });
+
   describe("external tool", () => {
     const toolAssignment: LocalAssignment = {
       ...baseLocalAssignment,

@@ -20,6 +20,8 @@ export interface CanvasAssignmentPublishOptions {
   groupCategoryId?: number;
   gradeIndividually?: boolean;
   overrides?: OverrideSpec[];
+  /** The assignment's grading_type in Canvas now, when updating one. */
+  canvasGradingType?: string;
 }
 
 export const canvasAssignmentService = {
@@ -82,6 +84,7 @@ export const canvasAssignmentService = {
         assignment_group_id: canvasAssignmentGroupId,
         ...groupFields(publishOptions),
         ...externalToolFields(localAssignment),
+        ...gradingFields(localAssignment, publishOptions),
       },
     };
 
@@ -139,6 +142,7 @@ export const canvasAssignmentService = {
         assignment_group_id: canvasAssignmentGroupId,
         ...groupFields(publishOptions),
         ...externalToolFields(localAssignment),
+        ...gradingFields(localAssignment, publishOptions),
       },
     };
 
@@ -200,6 +204,24 @@ const externalToolFields = (assignment: LocalAssignment) =>
   assignment.submissionTypes.includes(AssignmentSubmissionType.EXTERNAL_TOOL)
     ? { external_tool_tag_attributes: { url: assignment.externalToolUrl } }
     : {};
+
+// not_graded is Canvas's "Display Grade as: Not Graded", which stands alone.
+// Canvas keeps that grading type after the submission types change, so a
+// file that is graded again goes back to points; otherwise the grading type
+// set in Canvas (letter grade, percent...) is left alone.
+const gradingFields = (
+  assignment: LocalAssignment,
+  options?: CanvasAssignmentPublishOptions
+) => {
+  if (assignment.submissionTypes.includes(AssignmentSubmissionType.NOT_GRADED))
+    return {
+      submission_types: [AssignmentSubmissionType.NOT_GRADED],
+      grading_type: "not_graded",
+    };
+  if (options?.canvasGradingType === "not_graded")
+    return { grading_type: "points" };
+  return {};
+};
 
 const groupFields = (options?: CanvasAssignmentPublishOptions) => ({
   group_category_id: options?.groupCategoryId ?? null,

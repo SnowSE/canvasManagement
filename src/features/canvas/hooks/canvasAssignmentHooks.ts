@@ -7,6 +7,7 @@ import {
 } from "./canvasModuleHooks";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import { canvasAssignmentService } from "../services/canvasAssignmentService";
+import { CanvasAssignment } from "../models/assignments/canvasAssignment";
 import { assignmentModuleItem } from "../services/canvasModuleService";
 import { showErrorToast } from "@/app/MyToaster";
 import { useCanvasLinkTargets } from "./useCanvasLinkTargets";
@@ -100,6 +101,11 @@ export const useUpdateAssignmentInCanvasMutation = () => {
         (g) => g.name === assignment.localAssignmentGroupName,
       );
       const publishSettings = await prepareImages([assignment.description]);
+      const canvasGradingType = queryClient
+        .getQueryData<CanvasAssignment[]>(
+          canvasAssignmentKeys.assignments(settings.canvasId),
+        )
+        ?.find((a) => a.id === canvasAssignmentId)?.grading_type;
       const canvasAssignment = await canvasAssignmentService.update(
         settings.canvasId,
         canvasAssignmentId,
@@ -107,7 +113,7 @@ export const useUpdateAssignmentInCanvasMutation = () => {
         publishSettings,
         assignmentGroup?.canvasId,
         canvasLinkTargets,
-        getPublishOptions(assignment),
+        { ...getPublishOptions(assignment), canvasGradingType },
       );
       await placeInModule(moduleName, assignmentModuleItem(canvasAssignment));
     },

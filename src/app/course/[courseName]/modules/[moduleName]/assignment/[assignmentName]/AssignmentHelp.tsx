@@ -105,7 +105,9 @@ What students should do, in markdown.
               children: (
                 <>
                   A list, one per line starting with <C>- </C>. Options:{" "}
-                  <ValueList values={AssignmentSubmissionTypeList} empty="" />
+                  <ValueList values={AssignmentSubmissionTypeList} empty="" />.{" "}
+                  <C>not_graded</C> goes alone and is Canvas&apos;s Not Graded:
+                  no rubric, no gradebook column.
                 </>
               ),
             },

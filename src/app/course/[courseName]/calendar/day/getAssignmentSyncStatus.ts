@@ -262,6 +262,31 @@ function checkAssignmentGroup(
   });
 }
 
+/**
+ * Not graded (Canvas's "Display Grade as: Not Graded") is the not_graded
+ * submission type in the file. Shown only when either side is not graded.
+ */
+function checkGraded(
+  assignment: LocalAssignment,
+  canvasAssignment: CanvasAssignment,
+): SyncField | null {
+  const local = assignment.submissionTypes.includes(
+    AssignmentSubmissionType.NOT_GRADED,
+  );
+  const canvas = canvasAssignment.grading_type === "not_graded";
+  if (!local && !canvas) return null;
+  const label = (notGraded: boolean) => (notGraded ? "not graded" : "graded");
+  return field({
+    key: "graded",
+    label: "Graded",
+    section: "grading",
+    local: label(local),
+    canvas: label(canvas),
+    same: local === canvas,
+    message: `${label(local)} in the file but ${label(canvas)} in canvas`,
+  });
+}
+
 /** Canvas reports points on every real assignment; skip when it doesn't. */
 function checkPoints(
   localRubric: RubricItem[],
@@ -703,6 +728,8 @@ function checkAssignment(
     settings,
   );
   if (group) fields.push(group);
+  const graded = checkGraded(assignment, canvasAssignment);
+  if (graded) fields.push(graded);
   const externalTool = checkExternalTool(assignment, canvasAssignment);
   if (externalTool) fields.push(externalTool);
   fields.push(...checkRubric(assignment.rubric, canvasAssignment.rubric));

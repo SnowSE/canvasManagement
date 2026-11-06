@@ -225,6 +225,26 @@ describe("canvasAssignmentToLocal", () => {
       "ExternalToolUrl: https://tool.example.edu/launch",
     );
   });
+
+  it("keeps a not graded assignment as not_graded, with no points", () => {
+    const { item, warnings } = canvasAssignmentToLocal(
+      assignment({
+        submission_types: ["not_graded"],
+        grading_type: "not_graded",
+        points_possible: 0,
+        due_at: "2024-01-10T06:59:00Z",
+      }),
+      context,
+    );
+    expect(item.submissionTypes).toEqual(["not_graded"]);
+    expect(item.rubric).toEqual([]);
+    expect(warnings).toEqual([]);
+    const reparsed = assignmentMarkdownParser.parseMarkdown(
+      assignmentMarkdownSerializer.toMarkdown(item),
+      item.name,
+    );
+    expect(reparsed.submissionTypes).toEqual(["not_graded"]);
+  });
 });
 
 describe("canvasPageToLocal", () => {

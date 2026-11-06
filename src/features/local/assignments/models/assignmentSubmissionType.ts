@@ -8,6 +8,7 @@ export enum AssignmentSubmissionType {
   ON_PAPER = "on_paper",
   EXTERNAL_TOOL = "external_tool",
   NONE = "none",
+  NOT_GRADED = "not_graded",
 }
 export const zodAssignmentSubmissionType = z.enum([
   AssignmentSubmissionType.ONLINE_TEXT_ENTRY,
@@ -18,6 +19,7 @@ export const zodAssignmentSubmissionType = z.enum([
   AssignmentSubmissionType.ON_PAPER,
   AssignmentSubmissionType.EXTERNAL_TOOL,
   AssignmentSubmissionType.NONE,
+  AssignmentSubmissionType.NOT_GRADED,
 ]);
 
 export const AssignmentSubmissionTypeList: AssignmentSubmissionType[] = [
@@ -29,4 +31,5 @@ export const AssignmentSubmissionTypeList: AssignmentSubmissionType[] = [
   AssignmentSubmissionType.ON_PAPER,
   AssignmentSubmissionType.EXTERNAL_TOOL,
   AssignmentSubmissionType.NONE,
+  AssignmentSubmissionType.NOT_GRADED,
 ] as const;
