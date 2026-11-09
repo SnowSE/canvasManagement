@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { movePane, paneActions, PaneSpec, parseDoc, showingPane, viewPanes, widthRule } from "./paneStore";
+import { fitOpening, leadId, maxWidthFor, moveEdge, withLead, movePane, paneActions, PaneSpec, parseDoc, ruleLengthFor, shareRow, showingPane, viewPanes, widthRule } from "./paneStore";
 
 const spec = (id: string, extra: Partial<PaneSpec> = {}): PaneSpec => ({
   id,
@@ -84,5 +84,72 @@ describe("paneActions", () => {
 
   it("reset forgets everything", () => {
     expect(paneActions.reset()).toEqual({});
+  });
+});
+
+describe("moveEdge", () => {
+  const p = (id: string, width: number, minWidth = 100, maxWidth = Infinity) => ({ id, width, minWidth, maxWidth });
+  it("right: the empty room goes first, so the panes after are shoved over unchanged", () => {
+    expect(moveEdge([p("a", 300), p("b", 300)], 1, 50, 80)).toEqual({ a: 350, b: 300 });
+  });
+  it("right: past the empty room, the panes after shrink nearest first, each to its min", () => {
+    expect(moveEdge([p("a", 300), p("b", 150), p("c", 300)], 1, 200, 20)).toEqual({ a: 500, b: 100, c: 170 });
+  });
+  it("right: the panes before grow nearest first, each to its max", () => {
+    expect(moveEdge([p("a", 300), p("b", 300, 100, 320), p("c", 300)], 2, 50, 100)).toEqual({ a: 330, b: 320, c: 300 });
+  });
+  it("left: the panes before shrink nearest first to their min, the panes after grow to their max, the rest is empty room", () => {
+    expect(moveEdge([p("a", 300), p("b", 150), p("c", 300, 100, 340)], 2, -100, 0)).toEqual({ a: 250, b: 100, c: 340 });
+  });
+});
+
+describe("fitOpening", () => {
+  const p = (id: string, width: number, minWidth = 100) => ({ id, width, minWidth, maxWidth: Infinity });
+  it("takes the empty room first and changes nobody when it's enough", () => {
+    expect(fitOpening([p("a", 300), p("new", 300)], "new", 277, 300, 23)).toEqual({ widths: { a: 300, new: 300 }, collapse: [] });
+  });
+  it("then shrinks the others, those after it first, to their min", () => {
+    expect(fitOpening([p("a", 300), p("new", 300), p("c", 300)], "new", 277, 0, 23).widths).toEqual({ a: 223, new: 300, c: 100 });
+  });
+  it("then closes open panes from the right, not the one opening", () => {
+    expect(fitOpening([p("a", 100), p("new", 300), p("c", 100)], "new", 277, 0, 23)).toEqual({ widths: { new: 300 }, collapse: ["c", "a"] });
+  });
+});
+
+describe("shareRow", () => {
+  const p = (id: string, minWidth: number, maxWidth = Infinity) => ({ id, width: 0, minWidth, maxWidth });
+  it("gives each its min, then shares the rest by headroom, nobody past its max", () => {
+    const { widths, collapse } = shareRow([p("a", 100, 200), p("b", 100)], 1000, 20);
+    expect(collapse).toEqual([]);
+    expect(widths.a).toBeCloseTo(180);
+    expect(widths.b).toBeCloseTo(820);
+  });
+  it("collapses a pane whose min doesn't fit, handing mins out from the left", () => {
+    expect(shareRow([p("a", 500), p("b", 500)], 700, 20).collapse).toEqual(["b"]);
+  });
+});
+
+describe("the max rule", () => {
+  it("is as long as the drop from the corner that makes the bound, bar included", () => {
+    expect(ruleLengthFor(520, 320, 20)).toBeCloseTo(400);
+    expect(maxWidthFor(400, 320, 20, 900)).toBe(520);
+  });
+  it("is empty when the pane is as wide as it may be, and no bound at its full length", () => {
+    expect(ruleLengthFor(320, 320, 20)).toBe(0);
+    expect(ruleLengthFor(Infinity, 320, 20)).toBe(Infinity);
+    expect(maxWidthFor(898, 320, 20, 900)).toBeUndefined();
+  });
+});
+
+describe("the row's left end", () => {
+  const p = (id: string, width: number, minWidth = 100) => ({ id, width, minWidth, maxWidth: Infinity });
+  it("the first bar dragged right leaves room before it, the empty room at the end going first", () => {
+    expect(moveEdge(withLead([p("a", 300), p("b", 300)], 0), 1, 50, 80)).toEqual({ [leadId]: 50, a: 300, b: 300 });
+  });
+  it("dragged back left, the room before it is taken back", () => {
+    expect(moveEdge(withLead([p("a", 300)], 60), 1, -100, 0)).toEqual({ [leadId]: 0, a: 360 });
+  });
+  it("the lead is remembered apart from the panes", () => {
+    expect(paneActions.setWidths({}, { [leadId]: 40.4, a: 300 })).toEqual({ lead: 40, panes: { a: { width: 300 } } });
   });
 });

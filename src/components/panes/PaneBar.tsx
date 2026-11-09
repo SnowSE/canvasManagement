@@ -1,13 +1,13 @@
 "use client";
 import { useRef } from "react";
-import { PopOutIcon } from "../icons/ActionIcons";
-import { openPopOut } from "@/app/course/[courseName]/panes/popOut";
+import { PopOutLink } from "./PopOutLink";
+import { MaxRule } from "./PaneRules";
 
 // pointer travel that counts as a drag rather than a click on the bar
 const dragThreshold = 4;
 
 const barClass =
-  "max-md:hidden flex-none select-none w-5 py-2 flex flex-col items-center gap-1 rounded border text-xs font-semibold ";
+  "relative max-md:hidden flex-none select-none w-5 py-2 flex flex-col items-center gap-1 rounded border text-xs font-semibold ";
 
 /**
  * A pane's bar, on its left edge: its name along it, bottom-up. A click
@@ -18,6 +18,8 @@ const barClass =
 export function PaneBar({
   label,
   collapsed,
+  maxWidth,
+  onMax,
   popOutHref,
   onToggle,
   onHide,
@@ -26,6 +28,9 @@ export function PaneBar({
 }: {
   label: string;
   collapsed: boolean;
+  /** The widest the pane may be made (Infinity: no limit), for the max rule. */
+  maxWidth: number;
+  onMax: (max: number | undefined) => void;
   /** The pane in its own window: what the page shows, and which pane. */
   popOutHref: { pathname: string; pane: string };
   onToggle: () => void;
@@ -84,28 +89,8 @@ export function PaneBar({
       {popOut}
       {name}
       {collapsed && hide}
+      {!collapsed && <MaxRule label={label} maxWidth={maxWidth} onMax={onMax} />}
     </div>
-  );
-}
-
-/** The link that opens a pane in its own window, following this one (a plain open of the link, from the middle button say, follows nothing). */
-export function PopOutLink({ label, pathname, pane }: { label: string; pathname: string; pane: string }) {
-  return (
-    <a
-      className="flex-none text-slate-500 hover:text-slate-200"
-      href={`${pathname}?pane=${pane}`}
-      target="_blank"
-      aria-label={`Open ${label} in its own window`}
-      title={`${label} in its own window, following this one as you move between items`}
-      onPointerDown={(e) => e.stopPropagation()}
-      onClick={(e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        openPopOut(pathname, pane);
-      }}
-    >
-      <PopOutIcon />
-    </a>
   );
 }
 
