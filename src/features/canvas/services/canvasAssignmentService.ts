@@ -22,22 +22,31 @@ export interface CanvasAssignmentPublishOptions {
   overrides?: OverrideSpec[];
 }
 
+// Overrides ride along so the calendar can check scheduled students. Canvas
+// otherwise reports dates with the overrides applied (for a teacher, the
+// latest of them), so ask for the assignment's own dates, the ones its file sets.
+const ownDates = "include[]=overrides&override_assignment_dates=false";
+
+/** An assignment as the app lists them: dates in local form. */
+const asListed = (a: CanvasAssignment): CanvasAssignment => ({
+  ...a,
+  due_at: a.due_at ? new Date(a.due_at).toLocaleString() : undefined, // timezones?
+  lock_at: a.lock_at ? new Date(a.lock_at).toLocaleString() : undefined, // timezones?
+  unlock_at: a.unlock_at ? new Date(a.unlock_at).toLocaleString() : undefined, // timezones?
+});
+
 export const canvasAssignmentService = {
   async getAll(courseId: number): Promise<CanvasAssignment[]> {
-    // overrides ride along so the calendar can check scheduled students.
-    // Canvas otherwise reports dates with the overrides applied (for a
-    // teacher, the latest of them), so ask for the assignment's own dates,
-    // the ones its file sets.
-    const url = `${canvasApi}/courses/${courseId}/assignments?include[]=overrides&override_assignment_dates=false`;
+    const url = `${canvasApi}/courses/${courseId}/assignments?${ownDates}`;
     const assignments = await paginatedRequest<CanvasAssignment[]>({ url });
-    return assignments.map((a) => ({
-      ...a,
-      due_at: a.due_at ? new Date(a.due_at).toLocaleString() : undefined, // timezones?
-      lock_at: a.lock_at ? new Date(a.lock_at).toLocaleString() : undefined, // timezones?
-      unlock_at: a.unlock_at
-        ? new Date(a.unlock_at).toLocaleString()
-        : undefined, // timezones?
-    }));
+    return assignments.map(asListed);
+  },
+
+  /** One assignment, as getAll lists it: for the cached list after the app changed it. */
+  async get(courseId: number, canvasAssignmentId: number): Promise<CanvasAssignment> {
+    const url = `${canvasApi}/courses/${courseId}/assignments/${canvasAssignmentId}?${ownDates}`;
+    const { data } = await axiosClient.get<CanvasAssignment>(url);
+    return asListed(data);
   },
 
   async create(

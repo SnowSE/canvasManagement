@@ -13,6 +13,7 @@ import { useCanvasLinkTargets } from "./useCanvasLinkTargets";
 import { useCommitAfterPublish } from "@/features/local/git/gitHooks";
 import { useAssignmentPublishOptions } from "./useAssignmentPublishOptions";
 import { usePrepareImagesForCanvas } from "./usePrepareImagesForCanvas";
+import { byId, remove, upsert } from "./cachedList";
 
 export const canvasAssignmentKeys = {
   assignments: (canvasCourseId: number) =>
@@ -28,10 +29,21 @@ export const useCanvasAssignmentsQuery = () => {
   });
 };
 
+/** After the app changed an assignment in Canvas: reads that one back into the cached list. */
+export const useRefreshCanvasAssignment = () => {
+  const { data: settings } = useLocalCourseSettingsQuery();
+  const queryClient = useQueryClient();
+  return async (canvasAssignmentId: number) =>
+    queryClient.setQueryData(
+      canvasAssignmentKeys.assignments(settings.canvasId),
+      upsert(byId, await canvasAssignmentService.get(settings.canvasId, canvasAssignmentId)),
+    );
+};
+
 export const useAddAssignmentToCanvasMutation = () => {
   const { data: settings } = useLocalCourseSettingsQuery();
   const addToModule = useAddToCanvasModule();
-  const queryClient = useQueryClient();
+  const refresh = useRefreshCanvasAssignment();
   const canvasLinkTargets = useCanvasLinkTargets();
   const getPublishOptions = useAssignmentPublishOptions();
   const prepareImages = usePrepareImagesForCanvas();
@@ -60,19 +72,13 @@ export const useAddAssignmentToCanvasMutation = () => {
         canvasLinkTargets,
         getPublishOptions(assignment),
       );
-      // in the cached list at once, so the item shows as in Canvas right
-      // away; the refetch below confirms it in the background
-      queryClient.setQueryData(
-        canvasAssignmentKeys.assignments(settings.canvasId),
-        (list: (typeof canvasAssignment)[] | undefined) => list && [...list, canvasAssignment],
-      );
-      await addToModule(moduleName, assignmentModuleItem(canvasAssignment));
+      await Promise.all([
+        refresh(canvasAssignment.id),
+        addToModule(moduleName, assignmentModuleItem(canvasAssignment)),
+      ]);
     },
     onSuccess: (_data, variables) => {
       commitAfterPublish(`assignment "${variables.assignment.name}"`);
-      queryClient.invalidateQueries({
-        queryKey: canvasAssignmentKeys.assignments(settings.canvasId),
-      });
     },
     onError: (error) => {
       console.error("Failed to add assignment to Canvas:", error);
@@ -83,7 +89,7 @@ export const useAddAssignmentToCanvasMutation = () => {
 
 export const useUpdateAssignmentInCanvasMutation = () => {
   const { data: settings } = useLocalCourseSettingsQuery();
-  const queryClient = useQueryClient();
+  const refresh = useRefreshCanvasAssignment();
   const canvasLinkTargets = useCanvasLinkTargets();
   const getPublishOptions = useAssignmentPublishOptions();
   const prepareImages = usePrepareImagesForCanvas();
@@ -115,13 +121,13 @@ export const useUpdateAssignmentInCanvasMutation = () => {
         canvasLinkTargets,
         getPublishOptions(assignment),
       );
-      await placeInModule(moduleName, assignmentModuleItem(canvasAssignment));
+      await Promise.all([
+        refresh(canvasAssignment.id),
+        placeInModule(moduleName, assignmentModuleItem(canvasAssignment)),
+      ]);
     },
     onSuccess: (_data, variables) => {
       commitAfterPublish(`assignment "${variables.assignment.name}"`);
-      queryClient.invalidateQueries({
-        queryKey: canvasAssignmentKeys.assignments(settings.canvasId),
-      });
     },
     onError: (error) => {
       console.error("Failed to update assignment in Canvas:", error);
@@ -147,10 +153,11 @@ export const useDeleteAssignmentFromCanvasMutation = () => {
         assignmentName,
       );
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: canvasAssignmentKeys.assignments(settings.canvasId),
-      });
+    onSuccess: (_data, { canvasAssignmentId }) => {
+      queryClient.setQueryData(
+        canvasAssignmentKeys.assignments(settings.canvasId),
+        remove(byId, canvasAssignmentId),
+      );
     },
   });
 };

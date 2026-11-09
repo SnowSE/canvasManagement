@@ -7,7 +7,7 @@ import { LocalAssignment } from "@/features/local/assignments/models/localAssign
 import { LocalCourseSettings } from "@/features/local/course/localCourseSettings";
 
 vi.mock("@/services/axiosUtils", () => ({
-  axiosClient: { put: vi.fn() },
+  axiosClient: { put: vi.fn(), get: vi.fn() },
 }));
 vi.mock("./canvasWebRequestUtils", () => ({
   rateLimitAwarePost: vi.fn(),
@@ -76,5 +76,21 @@ describe("canvasAssignmentService.getAll", () => {
     const { url } = vi.mocked(paginatedRequest).mock.calls[0][0] as { url: string };
     expect(new URL(url).searchParams.get("override_assignment_dates")).toBe("false");
     expect(new URL(url).searchParams.getAll("include[]")).toContain("overrides");
+  });
+});
+
+describe("canvasAssignmentService.get", () => {
+  it("reads one assignment the way getAll lists them: its own dates, overrides along, dates in local form", async () => {
+    vi.mocked(axiosClient.get).mockResolvedValue({
+      data: { id: 5, name: "HW", due_at: "2026-09-08T05:59:00Z", overrides: [] },
+    });
+
+    const assignment = await canvasAssignmentService.get(42, 5);
+
+    const url = vi.mocked(axiosClient.get).mock.calls[0][0] as string;
+    expect(url).toContain("/courses/42/assignments/5?");
+    expect(new URL(url).searchParams.get("override_assignment_dates")).toBe("false");
+    expect(new URL(url).searchParams.getAll("include[]")).toContain("overrides");
+    expect(assignment.due_at).toBe(new Date("2026-09-08T05:59:00Z").toLocaleString());
   });
 });

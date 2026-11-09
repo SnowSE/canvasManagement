@@ -42,6 +42,7 @@ describe("placeInModule", () => {
     expect(await canvasModuleService.placeInModule(42, 9, quiz)).toEqual({
       placed: "already",
       removed: 0,
+      modules: [],
     });
     expect(axiosClient.put).not.toHaveBeenCalled();
     expect(rateLimitAwarePost).not.toHaveBeenCalled();
@@ -54,6 +55,7 @@ describe("placeInModule", () => {
     expect(await canvasModuleService.placeInModule(42, 9, quiz)).toEqual({
       placed: "already",
       removed: 1,
+      modules: [3],
     });
     expect(vi.mocked(rateLimitAwareDelete).mock.calls).toEqual([
       ["https://test.instructure.com/api/v1/courses/42/modules/3/items/500"],
@@ -66,6 +68,7 @@ describe("placeInModule", () => {
     expect(await canvasModuleService.placeInModule(42, 9, quiz)).toEqual({
       placed: "moved",
       removed: 0,
+      modules: [3, 9],
     });
     expect(vi.mocked(axiosClient.put).mock.calls).toEqual([
       [
@@ -81,6 +84,7 @@ describe("placeInModule", () => {
     expect(await canvasModuleService.placeInModule(42, 9, quiz)).toEqual({
       placed: "moved",
       removed: 1,
+      modules: [3, 9, 4],
     });
     expect(vi.mocked(axiosClient.put).mock.calls[0][0]).toBe(
       "https://test.instructure.com/api/v1/courses/42/modules/3/items/500",
@@ -96,6 +100,7 @@ describe("placeInModule", () => {
     expect(await canvasModuleService.placeInModule(42, 9, quiz)).toEqual({
       placed: "added",
       removed: 0,
+      modules: [9],
     });
     expect(vi.mocked(rateLimitAwarePost).mock.calls).toEqual([
       [

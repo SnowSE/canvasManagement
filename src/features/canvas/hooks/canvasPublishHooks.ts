@@ -6,12 +6,13 @@ import { baseCanvasUrl } from "../services/canvasServiceUtils";
 import { canvasAssignmentService } from "../services/canvasAssignmentService";
 import { canvasQuizService } from "../services/canvasQuizService";
 import { canvasPageService } from "../services/canvasPageService";
-import { canvasAssignmentKeys } from "./canvasAssignmentHooks";
-import { canvasQuizKeys } from "./canvasQuizHooks";
-import { canvasPageKeys } from "./canvasPageHooks";
+import { useRefreshCanvasAssignment } from "./canvasAssignmentHooks";
+import { useRefreshCanvasQuiz } from "./canvasQuizHooks";
+import { useRefreshCanvasPage } from "./canvasPageHooks";
 import {
   canvasCourseModuleKeys,
   useCanvasModulesQuery,
+  useRefreshCanvasModules,
 } from "./canvasModuleHooks";
 
 export type PublishableItemType = "assignment" | "quiz" | "page";
@@ -26,11 +27,18 @@ export const usePublishInCanvasMutation = () => {
   const { data: settings } = useLocalCourseSettingsQuery();
   const { data: canvasModules } = useCanvasModulesQuery();
   const queryClient = useQueryClient();
+  const refreshModules = useRefreshCanvasModules();
+  const refresh = {
+    assignment: useRefreshCanvasAssignment(),
+    quiz: useRefreshCanvasQuiz(),
+    page: useRefreshCanvasPage(),
+  };
 
   return useMutation({
     mutationFn: async ({
       type,
       canvasItemId,
+      moduleName,
     }: {
       type: PublishableItemType;
       canvasItemId: number;
@@ -42,20 +50,18 @@ export const usePublishInCanvasMutation = () => {
       else if (type === "quiz")
         await canvasQuizService.publish(settings.canvasId, canvasItemId);
       else await canvasPageService.publish(settings.canvasId, canvasItemId);
+      // the item's module shows it as published too
+      const canvasModule = canvasModules?.find((m) => m.name === moduleName);
+      await Promise.all([
+        refresh[type](canvasItemId),
+        canvasModule
+          ? refreshModules([canvasModule.id])
+          : queryClient.invalidateQueries({
+              queryKey: canvasCourseModuleKeys.modules(settings.canvasId),
+            }),
+      ]);
     },
-    onSuccess: (_, { type, name, moduleName }) => {
-      queryClient.invalidateQueries({
-        queryKey:
-          type === "assignment"
-            ? canvasAssignmentKeys.assignments(settings.canvasId)
-            : type === "quiz"
-              ? canvasQuizKeys.quizzes(settings.canvasId)
-              : canvasPageKeys.pagesInCourse(settings.canvasId),
-      });
-      queryClient.invalidateQueries({
-        queryKey: canvasCourseModuleKeys.modules(settings.canvasId),
-      });
-
+    onSuccess: (_, { name, moduleName }) => {
       const canvasModule = canvasModules?.find((m) => m.name === moduleName);
       if (canvasModule && canvasModule.published === false) {
         showActionNeededToast(

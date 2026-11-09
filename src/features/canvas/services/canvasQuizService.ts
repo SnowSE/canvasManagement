@@ -477,23 +477,20 @@ const replaceAll =
     ...localQuiz.questions.map((_, local) => ({ local, same: false, moved: false })),
   ];
 
+/** A quiz as the app lists them: dates in local form. */
+const asListed = (quiz: CanvasQuiz): CanvasQuiz => ({
+  ...quiz,
+  due_at: quiz.due_at ? new Date(quiz.due_at).toLocaleString() : undefined,
+  lock_at: quiz.lock_at ? new Date(quiz.lock_at).toLocaleString() : undefined,
+  unlock_at: quiz.unlock_at ? new Date(quiz.unlock_at).toLocaleString() : undefined,
+});
+
 export const canvasQuizService = {
   async getAll(canvasCourseId: number): Promise<CanvasQuiz[]> {
     try {
       const url = `${canvasApi}/courses/${canvasCourseId}/quizzes`;
       const quizzes = await paginatedRequest<CanvasQuiz[]>({ url });
-      return quizzes.map((quiz) => ({
-        ...quiz,
-        due_at: quiz.due_at
-          ? new Date(quiz.due_at).toLocaleString()
-          : undefined,
-        lock_at: quiz.lock_at
-          ? new Date(quiz.lock_at).toLocaleString()
-          : undefined,
-        unlock_at: quiz.unlock_at
-          ? new Date(quiz.unlock_at).toLocaleString()
-          : undefined,
-      }));
+      return quizzes.map(asListed);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       if (error?.response?.status === 403) {
@@ -504,6 +501,13 @@ export const canvasQuizService = {
       }
       throw error;
     }
+  },
+
+  /** One quiz, as getAll lists it: for the cached list after the app changed it. */
+  async get(canvasCourseId: number, canvasQuizId: number): Promise<CanvasQuiz> {
+    const url = `${canvasApi}/courses/${canvasCourseId}/quizzes/${canvasQuizId}`;
+    const { data } = await axiosClient.get<CanvasQuiz>(url);
+    return asListed(data);
   },
 
   async getQuizQuestions(
