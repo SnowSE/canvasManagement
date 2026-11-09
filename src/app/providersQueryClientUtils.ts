@@ -54,6 +54,13 @@ function makeQueryClient() {
       },
     },
   });
+  // Canvas is asked about once an hour. Nothing tells the app when Canvas
+  // changes, and if the app didn't change it, it almost never did; when the
+  // app does change it, the mutation writes Canvas's answer into the cache
+  // (features/canvas/hooks), and Reload Canvas Data asks at once. Local
+  // files need none of this: the server watches them and says when one
+  // changes. Every Canvas query key starts with "canvas", so this is all of them.
+  client.setQueryDefaults(["canvas"], { staleTime: 60 * 60 * 1000 });
   if (!isServer) shareInvalidations(client);
   return client;
 }
