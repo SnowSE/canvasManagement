@@ -608,7 +608,7 @@ export const canvasQuizService = {
     if (plan.every((r) => r.same && !r.moved)) {
       // touching them anyway would leave a published quiz needing Save it now
       onStep("Questions already match the file");
-      return { plan, needsSaveInCanvas: false };
+      return { plan, needsSaveInCanvas: false, quiz: asListed(canvasQuiz) };
     }
 
     // groups would need creating, changing and deleting too, so a quiz with
@@ -665,7 +665,7 @@ export const canvasQuizService = {
       );
     }
 
-    return { plan, needsSaveInCanvas: canvasQuiz.published === true };
+    return { plan, needsSaveInCanvas: canvasQuiz.published === true, quiz: asListed(canvasQuiz) };
   },
   /** Attempts students have started or finished (Canvas also lists "settings_only" rows for students with extra time). */
   async listAttempts(canvasCourseId: number, canvasQuizId: number) {

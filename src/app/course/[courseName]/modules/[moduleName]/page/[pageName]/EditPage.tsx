@@ -1,6 +1,6 @@
 "use client";
 import { MonacoEditor } from "@/components/editor/MonacoEditor";
-import { useEffect, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import PagePreview from "./PagePreview";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import EditPageButtons from "./EditPageButtons";
@@ -10,6 +10,7 @@ import { useAuthoritativeUpdates } from "@/app/course/[courseName]/utils/useAuth
 import EditPageHeader from "./EditPageHeader";
 import { UpdatePageName } from "./UpdatePageName";
 import { EditLayout } from "@/components/EditLayout";
+import { parsedOrNothing } from "@/app/course/[courseName]/utils/draft";
 import { localPageMarkdownUtils } from "@/features/local/pages/localCoursePageModels";
 import {
   usePageQuery,
@@ -40,6 +41,9 @@ export default function EditPage({
 
   const [error, setError] = useState("");
   const { data: settings } = useLocalCourseSettingsQuery();
+  const settledText = useDeferredValue(text);
+  // the footer compares what is typed, ahead of the save; deferred so typing stays smooth
+  const draft = useMemo(() => parsedOrNothing(() => localPageMarkdownUtils.parseMarkdown(settledText, pageName)), [settledText, pageName]);
 
   useEffect(() => {
     const delay = 500;
@@ -121,6 +125,7 @@ export default function EditPage({
               <EditPageButtons
                 pageName={pageName}
                 moduleName={moduleName}
+                draft={draft}
               />
             </ClientOnly>
           )}

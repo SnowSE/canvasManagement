@@ -578,7 +578,7 @@ describe("canvasQuizService", () => {
       ]);
       const posts = vi.mocked(rateLimitAwarePost).mock.calls;
       expect(posts.filter(([u]) => u.endsWith("/questions"))).toHaveLength(2);
-      expect(summary).toEqual({ plan: oneOfEach(), needsSaveInCanvas: false });
+      expect(summary).toMatchObject({ plan: oneOfEach(), needsSaveInCanvas: false });
     });
 
     it("keeps a question that is exactly the same, with its id, and orders the new ones around it", async () => {

@@ -45,7 +45,8 @@ beforeEach(() => {
 
 describe("canvasAssignmentService.update", () => {
   it("leaves Canvas's student overrides alone when the file has no Schedule", async () => {
-    await canvasAssignmentService.update(42, 5, assignment, settings);
+    const saved = await canvasAssignmentService.update(42, 5, assignment, settings);
+    await canvasAssignmentService.syncRubricAndOverrides(42, saved, assignment, undefined);
 
     expect(rateLimitAwareDelete).not.toHaveBeenCalled();
   });
@@ -53,9 +54,8 @@ describe("canvasAssignmentService.update", () => {
   it("replaces them with the Schedule's when the file has one", async () => {
     const scheduled = { title: "Scheduled 09/18/2026", student_ids: [100203], due_at: "2026-09-19T05:59:00Z" };
 
-    await canvasAssignmentService.update(42, 5, assignment, settings, undefined, undefined, {
-      overrides: [scheduled],
-    });
+    const saved = await canvasAssignmentService.update(42, 5, assignment, settings);
+    await canvasAssignmentService.syncRubricAndOverrides(42, saved, assignment, [scheduled]);
 
     expect(rateLimitAwareDelete).toHaveBeenCalledWith(
       "https://test.instructure.com/api/v1/courses/42/assignments/5/overrides/9"

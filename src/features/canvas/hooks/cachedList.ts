@@ -12,6 +12,12 @@ export const upsert =
       ? list.map((x) => (idOf(x) === idOf(item) ? item : x))
       : [...list, item]);
 
+/** The item's fields Canvas sent back, over what the list had: for an answer that leaves fields out (an update's answer has no overrides). */
+export const merge =
+  <T>(idOf: (item: T) => unknown, item: T) =>
+  (list: T[] | undefined) =>
+    list?.map((x) => (idOf(x) === idOf(item) ? { ...x, ...item } : x));
+
 export const remove =
   <T>(idOf: (item: T) => unknown, id: unknown) =>
   (list: T[] | undefined) =>

@@ -95,16 +95,7 @@ export const canvasAssignmentService = {
     };
 
     const response = await rateLimitAwarePost<CanvasAssignment>(url, body);
-    const canvasAssignment = response.data;
-
-    await createRubric(canvasCourseId, canvasAssignment.id, localAssignment);
-    await syncStudentOverrides(
-      canvasCourseId,
-      canvasAssignment,
-      publishOptions?.overrides
-    );
-
-    return canvasAssignment;
+    return asListed(response.data);
   },
 
   async update(
@@ -155,13 +146,24 @@ export const canvasAssignmentService = {
       url,
       body
     );
-    await createRubric(courseId, canvasAssignmentId, localAssignment);
-    await syncStudentOverrides(
-      courseId,
-      canvasAssignment,
-      publishOptions?.overrides
-    );
-    return canvasAssignment;
+    return asListed(canvasAssignment);
+  },
+
+  /**
+   * The rest of a save, after create or update has answered: the rubric and
+   * the Schedule's student overrides, which Canvas takes as separate requests.
+   * Apart so the app can show the saved assignment while these run.
+   */
+  async syncRubricAndOverrides(
+    courseId: number,
+    saved: CanvasAssignment,
+    localAssignment: LocalAssignment,
+    overrides: OverrideSpec[] | undefined
+  ) {
+    await Promise.all([
+      createRubric(courseId, saved.id, localAssignment),
+      syncStudentOverrides(courseId, saved, overrides),
+    ]);
   },
 
   async getOverrides(
@@ -236,12 +238,9 @@ const syncStudentOverrides = async (
   );
   const baseUrl = `${canvasApi}/courses/${courseId}/assignments/${canvasAssignment.id}/overrides`;
 
-  for (const override of studentOverrides) {
-    await rateLimitAwareDelete(`${baseUrl}/${override.id}`);
-  }
-  for (const spec of wanted) {
-    await rateLimitAwarePost(baseUrl, { assignment_override: spec });
-  }
+  // the old ones go before the new ones come, so no student has two
+  await Promise.all(studentOverrides.map((o) => rateLimitAwareDelete(`${baseUrl}/${o.id}`)));
+  await Promise.all(wanted.map((spec) => rateLimitAwarePost(baseUrl, { assignment_override: spec })));
   if (studentOverrides.length > 0 || wanted.length > 0)
     console.log(
       `Replaced ${studentOverrides.length} student override(s) with ${wanted.length} for ${canvasAssignment.name}`

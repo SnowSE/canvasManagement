@@ -13,7 +13,7 @@ import { useCanvasLinkTargets } from "./useCanvasLinkTargets";
 import { useCommitAfterPublish } from "@/features/local/git/gitHooks";
 import { useAssignmentPublishOptions } from "./useAssignmentPublishOptions";
 import { usePrepareImagesForCanvas } from "./usePrepareImagesForCanvas";
-import { byId, remove, upsert } from "./cachedList";
+import { byId, merge, remove, upsert } from "./cachedList";
 
 export const canvasAssignmentKeys = {
   assignments: (canvasCourseId: number) =>
@@ -42,6 +42,7 @@ export const useRefreshCanvasAssignment = () => {
 
 export const useAddAssignmentToCanvasMutation = () => {
   const { data: settings } = useLocalCourseSettingsQuery();
+  const queryClient = useQueryClient();
   const addToModule = useAddToCanvasModule();
   const refresh = useRefreshCanvasAssignment();
   const canvasLinkTargets = useCanvasLinkTargets();
@@ -64,18 +65,23 @@ export const useAddAssignmentToCanvasMutation = () => {
       );
 
       const publishSettings = await prepareImages([assignment.description]);
-      const canvasAssignment = await canvasAssignmentService.create(
+      const publishOptions = getPublishOptions(assignment);
+      const saved = await canvasAssignmentService.create(
         settings.canvasId,
         assignment,
         publishSettings,
         assignmentGroup?.canvasId,
         canvasLinkTargets,
-        getPublishOptions(assignment),
+        publishOptions,
       );
+      // Canvas's answer shows the item as in Canvas now; the rubric, the
+      // overrides and the module follow, then the item is read back whole
+      queryClient.setQueryData(canvasAssignmentKeys.assignments(settings.canvasId), upsert(byId, saved));
       await Promise.all([
-        refresh(canvasAssignment.id),
-        addToModule(moduleName, assignmentModuleItem(canvasAssignment)),
+        canvasAssignmentService.syncRubricAndOverrides(settings.canvasId, saved, assignment, publishOptions?.overrides),
+        addToModule(moduleName, assignmentModuleItem(saved)),
       ]);
+      await refresh(saved.id);
     },
     onSuccess: (_data, variables) => {
       commitAfterPublish(`assignment "${variables.assignment.name}"`);
@@ -89,6 +95,7 @@ export const useAddAssignmentToCanvasMutation = () => {
 
 export const useUpdateAssignmentInCanvasMutation = () => {
   const { data: settings } = useLocalCourseSettingsQuery();
+  const queryClient = useQueryClient();
   const refresh = useRefreshCanvasAssignment();
   const canvasLinkTargets = useCanvasLinkTargets();
   const getPublishOptions = useAssignmentPublishOptions();
@@ -112,19 +119,25 @@ export const useUpdateAssignmentInCanvasMutation = () => {
         (g) => g.name === assignment.localAssignmentGroupName,
       );
       const publishSettings = await prepareImages([assignment.description]);
-      const canvasAssignment = await canvasAssignmentService.update(
+      const publishOptions = getPublishOptions(assignment);
+      const saved = await canvasAssignmentService.update(
         settings.canvasId,
         canvasAssignmentId,
         assignment,
         publishSettings,
         assignmentGroup?.canvasId,
         canvasLinkTargets,
-        getPublishOptions(assignment),
+        publishOptions,
       );
+      // Canvas's answer colours the item now (over what the list had: the
+      // answer leaves out its overrides); the rubric, the overrides and the
+      // module follow, then the item is read back whole
+      queryClient.setQueryData(canvasAssignmentKeys.assignments(settings.canvasId), merge(byId, saved));
       await Promise.all([
-        refresh(canvasAssignment.id),
-        placeInModule(moduleName, assignmentModuleItem(canvasAssignment)),
+        canvasAssignmentService.syncRubricAndOverrides(settings.canvasId, saved, assignment, publishOptions?.overrides),
+        placeInModule(moduleName, assignmentModuleItem(saved)),
       ]);
+      await refresh(saved.id);
     },
     onSuccess: (_data, variables) => {
       commitAfterPublish(`assignment "${variables.assignment.name}"`);

@@ -25,14 +25,18 @@ import { getSyncReport } from "@/app/course/[courseName]/calendar/day/getAssignm
 import { getCanvasHomeUrlFor, getCourseUrl, getModuleItemUrl } from "@/services/urlUtils";
 import { useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { LocalCoursePage } from "@/features/local/pages/localCoursePageModels";
 import { useItemNavigation } from "../../../../hooks/useItemNavigation";
 
 export default function EditPageButtons({
   moduleName,
   pageName,
+  draft,
 }: {
   pageName: string;
   moduleName: string;
+  /** The page as the editor's text has it, ahead of the save, so the status follows the typing. */
+  draft?: LocalCoursePage;
 }) {
   const navigate = useNavigate();
   const { courseName } = useCourseContext();
@@ -59,7 +63,7 @@ export default function EditPageButtons({
     () =>
       pageInCanvas
         ? getSyncReport({
-            item: page,
+            item: draft ?? page,
             canvasItem: pageInCanvas,
             type: "page",
             settings,
@@ -74,6 +78,7 @@ export default function EditPageButtons({
       canvasAssignments,
       canvasModules,
       canvasQuizzes,
+      draft,
       moduleName,
       page,
       pageInCanvas,

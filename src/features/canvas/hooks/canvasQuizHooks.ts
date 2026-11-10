@@ -14,7 +14,7 @@ import {
   usePrepareImagesForCanvas,
 } from "./usePrepareImagesForCanvas";
 import toast from "react-hot-toast";
-import { byId, remove, upsert } from "./cachedList";
+import { byId, merge, remove, upsert } from "./cachedList";
 import { showActionNeededToast, showErrorToast } from "@/app/MyToaster";
 import { baseCanvasUrl } from "../services/canvasServiceUtils";
 import {
@@ -150,6 +150,7 @@ Update anyway?`;
  */
 export const useUpdateQuizInCanvasMutation = () => {
   const { data: settings } = useLocalCourseSettingsQuery();
+  const queryClient = useQueryClient();
   const refresh = useRefreshCanvasQuiz();
   const canvasLinkTargets = useCanvasLinkTargets();
   const prepareImages = usePrepareImagesForCanvas();
@@ -211,6 +212,8 @@ export const useUpdateQuizInCanvasMutation = () => {
               planQuestionUpdates(quiz.questions, canvasQuestions, publishSettings),
           }
         );
+        // Canvas's answer colours the quiz now; the read-back confirms it
+        queryClient.setQueryData(canvasQuizKeys.quizzes(settings.canvasId), merge(byId, summary.quiz));
         await Promise.all([
           refresh(canvasQuizId),
           placeInModule(moduleName, { type: "Quiz", id: canvasQuizId, title: quiz.name }),

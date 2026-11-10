@@ -25,6 +25,7 @@ import { useLocalCourseSettingsQuery } from "@/features/local/course/localCourse
 import { getCourseUrl, getModuleItemUrl } from "@/services/urlUtils";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { LocalAssignment } from "@/features/local/assignments/models/localAssignment";
 import { useItemNavigation } from "../../../../hooks/useItemNavigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Classroom50AssignmentPanel } from "./Classroom50AssignmentPanel";
@@ -38,9 +39,12 @@ import {
 export function AssignmentFooterButtons({
   moduleName,
   assignmentName,
+  draft,
 }: {
   assignmentName: string;
   moduleName: string;
+  /** The assignment as the editor's text has it, ahead of the save, so the status follows the typing. */
+  draft?: LocalAssignment;
 }) {
   const navigate = useNavigate();
   const router = useRouter();
@@ -92,7 +96,7 @@ export function AssignmentFooterButtons({
     () =>
       assignmentInCanvas
         ? getSyncReport({
-            item: assignment,
+            item: draft ?? assignment,
             canvasItem: assignmentInCanvas,
             type: "assignment",
             settings,
@@ -108,6 +112,7 @@ export function AssignmentFooterButtons({
       assignment,
       assignmentInCanvas,
       canvasAssignments,
+      draft,
       canvasModules,
       canvasQuizzes,
       moduleName,

@@ -1,8 +1,9 @@
 "use client";
 import { MonacoEditor } from "@/components/editor/MonacoEditor";
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import QuizPreview from "./QuizPreview";
 import { QuizButtons } from "./QuizButton";
+import { parsedOrNothing } from "@/app/course/[courseName]/utils/draft";
 import ClientOnly from "@/components/ClientOnly";
 import { SuspenseAndErrorHandling } from "@/components/SuspenseAndErrorHandling";
 import { useCourseContext } from "@/app/course/[courseName]/context/courseContext";
@@ -35,8 +36,9 @@ export default function EditQuiz({
   } = useQuizQuery(moduleName, quizName);
   const updateQuizMutation = useUpdateQuizMutation();
   const { data: globalSettings } = useGlobalSettingsQuery();
-  const feedbackDelimiters = getFeedbackDelimitersFromSettings(
-    (globalSettings ?? ({} as GlobalSettings)) as GlobalSettings,
+  const feedbackDelimiters = useMemo(
+    () => getFeedbackDelimitersFromSettings((globalSettings ?? ({} as GlobalSettings)) as GlobalSettings),
+    [globalSettings],
   );
 
   const { clientIsAuthoritative, text, textUpdate, monacoKey } =
@@ -50,6 +52,21 @@ export default function EditQuiz({
 
   const bankPaths = useMemo(() => quizMarkdownUtils.bankPaths(text), [text]);
   const { data: bankFiles } = useQuizBanksQuery(moduleName, bankPaths);
+  // the footer compares what is typed, ahead of the save; deferred so typing stays smooth
+  const settledText = useDeferredValue(text);
+  const draft = useMemo(
+    () =>
+      parsedOrNothing(() => {
+        const banks: Record<string, string> = {};
+        for (const p of quizMarkdownUtils.bankPaths(settledText)) {
+          const bank = bankFiles?.[p];
+          if (!bank || "error" in bank) throw new Error("bank not read yet");
+          banks[p] = bank.text;
+        }
+        return quizMarkdownUtils.parseMarkdown(settledText, quizName, feedbackDelimiters, banks);
+      }),
+    [settledText, quizName, feedbackDelimiters, bankFiles],
+  );
 
   useEffect(() => {
     const delay = 1000;
@@ -145,6 +162,7 @@ export default function EditQuiz({
             <QuizButtons
               moduleName={moduleName}
               quizName={quizName}
+              draft={draft}
             />
           </SuspenseAndErrorHandling>
         </ClientOnly>

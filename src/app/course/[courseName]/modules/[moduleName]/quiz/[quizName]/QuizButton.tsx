@@ -25,14 +25,18 @@ import {
 import { getCourseUrl, getModuleItemUrl } from "@/services/urlUtils";
 import { useNavigate } from "@tanstack/react-router";
 import { useMemo } from "react";
+import { LocalQuiz } from "@/features/local/quizzes/models/localQuiz";
 import { useItemNavigation } from "../../../../hooks/useItemNavigation";
 
 export function QuizButtons({
   moduleName,
   quizName,
+  draft,
 }: {
   quizName: string;
   moduleName: string;
+  /** The quiz as the editor's text has it, ahead of the save, so the status follows the typing. */
+  draft?: LocalQuiz;
 }) {
   const navigate = useNavigate();
   const { courseName } = useCourseContext();
@@ -62,7 +66,7 @@ export function QuizButtons({
     () =>
       quizInCanvas
         ? getSyncReport({
-            item: quiz,
+            item: draft ?? quiz,
             canvasItem: quizInCanvas,
             type: "quiz",
             settings,
@@ -78,6 +82,7 @@ export function QuizButtons({
       canvasAssignments,
       canvasModules,
       canvasQuestions,
+      draft,
       canvasQuizzes,
       moduleName,
       quiz,
