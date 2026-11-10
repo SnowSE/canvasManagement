@@ -31,7 +31,6 @@ export default function EditQuiz({
   const { courseName } = useCourseContext();
   const {
     data: quiz,
-    dataUpdatedAt: serverDataUpdatedAt,
     isFetching,
   } = useQuizQuery(moduleName, quizName);
   const updateQuizMutation = useUpdateQuizMutation();
@@ -41,10 +40,9 @@ export default function EditQuiz({
     [globalSettings],
   );
 
-  const { clientIsAuthoritative, text, textUpdate, monacoKey } =
+  const { clientIsAuthoritative, text, textUpdate, textSaved, monacoKey } =
     useAuthoritativeUpdates({
       itemKey: `quiz:${moduleName}/${quizName}`,
-      serverUpdatedAt: serverDataUpdatedAt,
       startingText: quizMarkdownUtils.toMarkdown(quiz, feedbackDelimiters),
     });
 
@@ -102,6 +100,7 @@ export default function EditQuiz({
         );
         if (serverMarkdown !== updatedMarkdown) {
           if (clientIsAuthoritative) {
+            textSaved(updatedMarkdown);
             await updateQuizMutation.mutateAsync({
               quiz: updatedQuiz,
               moduleName,
@@ -138,6 +137,7 @@ export default function EditQuiz({
     quiz,
     quizName,
     text,
+    textSaved,
     textUpdate,
     updateQuizMutation,
   ]);

@@ -25,7 +25,6 @@ export default function EditLecture({ lectureDay }: { lectureDay: string }) {
   const { data: settings } = useLocalCourseSettingsQuery();
   const {
     data: weeks,
-    dataUpdatedAt: serverDataUpdatedAt,
     isFetching,
   } = useLecturesSuspenseQuery();
   const updateLecture = useLectureUpdateMutation();
@@ -34,10 +33,9 @@ export default function EditLecture({ lectureDay }: { lectureDay: string }) {
     .flatMap(({ lectures }) => lectures.map((lecture) => lecture))
     .find((l) => l.date === lectureDay);
 
-  const { clientIsAuthoritative, text, textUpdate, monacoKey } =
+  const { clientIsAuthoritative, text, textUpdate, textSaved, monacoKey } =
     useAuthoritativeUpdates({
       itemKey: `lecture:${lectureDay}`,
-      serverUpdatedAt: serverDataUpdatedAt,
       startingText: getLectureTextOrDefault(lecture, lectureDay),
     });
   const [error, setError] = useState("");
@@ -55,6 +53,7 @@ export default function EditLecture({ lectureDay }: { lectureDay: string }) {
         if (!lecture || lectureToString(parsed) !== lectureToString(lecture)) {
           if (clientIsAuthoritative) {
             console.log("updating lecture");
+            textSaved(lectureToString(parsed));
             updateLecture.mutate({ lecture: parsed, settings, courseName });
           } else {
             if (lecture) {
@@ -84,6 +83,7 @@ export default function EditLecture({ lectureDay }: { lectureDay: string }) {
     courseName,
     isFetching,
     lecture,
+    textSaved,
     settings,
     text,
     textUpdate,

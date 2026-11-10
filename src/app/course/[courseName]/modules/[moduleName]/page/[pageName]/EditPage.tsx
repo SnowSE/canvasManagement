@@ -27,15 +27,13 @@ export default function EditPage({
   const { courseName } = useCourseContext();
   const {
     data: page,
-    dataUpdatedAt,
     isFetching,
   } = usePageQuery(moduleName, pageName);
   const updatePage = useUpdatePageMutation();
 
-  const { clientIsAuthoritative, text, textUpdate, monacoKey } =
+  const { clientIsAuthoritative, text, textUpdate, textSaved, monacoKey } =
     useAuthoritativeUpdates({
       itemKey: `page:${moduleName}/${pageName}`,
-      serverUpdatedAt: dataUpdatedAt,
       startingText: localPageMarkdownUtils.toMarkdown(page),
     });
 
@@ -58,12 +56,11 @@ export default function EditPage({
           text,
           pageName,
         );
-        if (
-          localPageMarkdownUtils.toMarkdown(page) !==
-          localPageMarkdownUtils.toMarkdown(updatedPage)
-        ) {
+        const updatedMarkdown = localPageMarkdownUtils.toMarkdown(updatedPage);
+        if (localPageMarkdownUtils.toMarkdown(page) !== updatedMarkdown) {
           if (clientIsAuthoritative) {
             console.log("updating page");
+            textSaved(updatedMarkdown);
             updatePage.mutateAsync({
               page: updatedPage,
               moduleName,
@@ -97,6 +94,7 @@ export default function EditPage({
     page,
     pageName,
     text,
+    textSaved,
     textUpdate,
     updatePage,
   ]);
