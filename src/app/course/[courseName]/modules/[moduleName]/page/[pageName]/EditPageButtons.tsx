@@ -135,11 +135,12 @@ export default function EditPageButtons({
         pageInCanvas ? getModuleItemUrl(courseName, moduleName, "page", pageName) : undefined
       }
       busy={requestIsPending}
-      onAdd={() => createPageInCanvas.mutate({ page, moduleName })}
+      // what the footer compares is what it sends
+      onAdd={() => createPageInCanvas.mutate({ page: draft ?? page, moduleName })}
       onUpdate={() =>
         pageInCanvas &&
         updatePageInCanvas.mutate({
-          page,
+          page: draft ?? page,
           canvasPage: pageInCanvas,
           moduleName,
         })

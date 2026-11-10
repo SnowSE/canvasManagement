@@ -180,13 +180,14 @@ export function AssignmentFooterButtons({
         assignmentName,
       )}
       busy={anythingIsLoading}
-      problem={dateOrderProblem(assignment)}
-      onAdd={() => addToCanvas.mutate({ assignment, moduleName })}
+      problem={dateOrderProblem(draft ?? assignment)}
+      // what the footer compares is what it sends
+      onAdd={() => addToCanvas.mutate({ assignment: draft ?? assignment, moduleName })}
       onUpdate={() =>
         assignmentInCanvas &&
         updateAssignment.mutate({
           canvasAssignmentId: assignmentInCanvas.id,
-          assignment,
+          assignment: draft ?? assignment,
           moduleName,
         })
       }

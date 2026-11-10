@@ -134,12 +134,13 @@ export function QuizButtons({
         deleteFromCanvas.isPending ||
         updateInCanvas.isPending
       }
-      problem={dateOrderProblem(quiz)}
-      onAdd={() => addToCanvas.mutate({ quiz, moduleName })}
+      problem={dateOrderProblem(draft ?? quiz)}
+      // what the footer compares is what it sends
+      onAdd={() => addToCanvas.mutate({ quiz: draft ?? quiz, moduleName })}
       onUpdate={() =>
         quizInCanvas &&
         updateInCanvas.mutate({
-          quiz,
+          quiz: draft ?? quiz,
           canvasQuizId: quizInCanvas.id,
           moduleName,
         })
