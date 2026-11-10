@@ -3,6 +3,7 @@ import {
   assignmentModuleItem,
   canvasModuleNames,
   canvasModuleService,
+  modulesHolding,
 } from "./canvasModuleService";
 import { CanvasModule } from "../models/modules/canvasModule";
 import { axiosClient } from "@/services/axiosUtils";
@@ -31,6 +32,19 @@ const inModules = (...moduleIds: number[]) =>
       })),
     },
   });
+
+describe("modulesHolding", () => {
+  const modules = [
+    { id: 1, name: "Week 1", items: [{ type: "Quiz", content_id: 7 }, { type: "Page", page_url: "syllabus" }] },
+    { id: 2, name: "Week 2", items: [{ type: "Assignment", content_id: 7 }] },
+  ] as CanvasModule[];
+  it("finds a module item by type and id, a page by its url", () => {
+    const names = (item: Parameters<typeof modulesHolding>[1]) => modulesHolding(modules, item).map((m) => m.name);
+    expect(names({ type: "Quiz", id: 7, title: "" })).toEqual(["Week 1"]);
+    expect(names({ type: "Page", id: 0, title: "", pageUrl: "syllabus" })).toEqual(["Week 1"]);
+    expect(names({ type: "Assignment", id: 8, title: "" })).toEqual([]);
+  });
+});
 
 describe("placeInModule", () => {
   const quiz = { type: "Quiz" as const, id: 7, title: "Quiz 1" };

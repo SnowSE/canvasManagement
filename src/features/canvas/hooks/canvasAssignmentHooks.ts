@@ -6,7 +6,7 @@ import {
   usePlaceInCanvasModule,
 } from "./canvasModuleHooks";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
-import { canvasAssignmentService } from "../services/canvasAssignmentService";
+import { answerIsWhole, canvasAssignmentService } from "../services/canvasAssignmentService";
 import { assignmentModuleItem } from "../services/canvasModuleService";
 import { showErrorToast } from "@/app/MyToaster";
 import { useCanvasLinkTargets } from "./useCanvasLinkTargets";
@@ -14,6 +14,8 @@ import { useCommitAfterPublish } from "@/features/local/git/gitHooks";
 import { useAssignmentPublishOptions } from "./useAssignmentPublishOptions";
 import { usePrepareImagesForCanvas } from "./usePrepareImagesForCanvas";
 import { byId, merge, remove, upsert } from "./cachedList";
+import { rubricInSync } from "@/app/course/[courseName]/calendar/day/getAssignmentSyncStatus";
+import { CanvasAssignment } from "../models/assignments/canvasAssignment";
 
 export const canvasAssignmentKeys = {
   assignments: (canvasCourseId: number) =>
@@ -118,6 +120,10 @@ export const useUpdateAssignmentInCanvasMutation = () => {
       const assignmentGroup = settings.assignmentGroups.find(
         (g) => g.name === assignment.localAssignmentGroupName,
       );
+      const listKey = canvasAssignmentKeys.assignments(settings.canvasId);
+      const before = queryClient
+        .getQueryData<CanvasAssignment[]>(listKey)
+        ?.find((a) => a.id === canvasAssignmentId);
       const publishSettings = await prepareImages([assignment.description]);
       const publishOptions = getPublishOptions(assignment);
       const saved = await canvasAssignmentService.update(
@@ -131,13 +137,15 @@ export const useUpdateAssignmentInCanvasMutation = () => {
       );
       // Canvas's answer colours the item now (over what the list had: the
       // answer leaves out its overrides); the rubric, the overrides and the
-      // module follow, then the item is read back whole
-      queryClient.setQueryData(canvasAssignmentKeys.assignments(settings.canvasId), merge(byId, saved));
-      await Promise.all([
-        canvasAssignmentService.syncRubricAndOverrides(settings.canvasId, saved, assignment, publishOptions?.overrides),
+      // module follow, then the item is read back whole if any of them changed
+      queryClient.setQueryData(listKey, merge(byId, saved));
+      // what Compare with Canvas shows as in sync is left alone: two requests fewer
+      const rubricUnchanged = !!before && rubricInSync(assignment.rubric, before.rubric);
+      const [{ overridesChanged }, placed] = await Promise.all([
+        canvasAssignmentService.syncRubricAndOverrides(settings.canvasId, saved, assignment, publishOptions?.overrides, { rubricUnchanged }),
         placeInModule(moduleName, assignmentModuleItem(saved)),
       ]);
-      await refresh(saved.id);
+      if (!answerIsWhole(saved, { rubricUnchanged, overridesChanged, placed })) await refresh(saved.id);
     },
     onSuccess: (_data, variables) => {
       commitAfterPublish(`assignment "${variables.assignment.name}"`);

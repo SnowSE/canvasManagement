@@ -3,8 +3,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   canvasModuleService,
   canvasModuleNames,
+  modulesHolding,
   ModuleItemContent,
 } from "../services/canvasModuleService";
+import { CanvasModule } from "../models/modules/canvasModule";
 import { IModuleItem } from "@/features/local/modules/IModuleItem";
 import toast from "react-hot-toast";
 import { byOrderingDate, positionInModule } from "@/features/local/modules/moduleItemOrder";
@@ -154,14 +156,23 @@ export const useAddToCanvasModule = () => {
 /**
  * For Update in Canvas: makes the Canvas module named after an item's folder
  * the only one holding it, so moving a file to another module moves it in
- * Canvas too.
+ * Canvas too. Answers how the item was placed.
  */
 export const usePlaceInCanvasModule = () => {
   const { data: settings } = useLocalCourseSettingsQuery();
+  const queryClient = useQueryClient();
   const moduleIdByName = useCanvasModuleIdByName();
   const positionIn = usePositionInCanvasModule();
   const refreshModules = useRefreshCanvasModules();
   return async (moduleName: string, item: ModuleItemContent) => {
+    // the modules as last read holding the item in its module and no other:
+    // nothing to do, and nothing to ask Canvas (a module changed in Canvas
+    // since shows after Reload Canvas Data, like any other change made there)
+    const lastRead = queryClient.getQueryData<CanvasModule[]>(
+      canvasCourseModuleKeys.modulesWithItems(settings.canvasId)
+    );
+    const holding = lastRead && modulesHolding(lastRead, item);
+    if (holding?.length === 1 && holding[0].name === moduleName) return "already";
     const moduleId = await moduleIdByName(moduleName);
     const { placed, removed, modules } = await canvasModuleService.placeInModule(
       settings.canvasId,
@@ -178,6 +189,7 @@ export const usePlaceInCanvasModule = () => {
     ].filter(Boolean);
     if (changes.length > 0) toast.success(`In Canvas, ${changes.join(" and ")}: "${item.title}".`);
     await refreshModules(modules);
+    return placed;
   };
 };
 

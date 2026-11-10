@@ -29,6 +29,14 @@ export function canvasModuleNames(
   return modules.filter((m) => m.items?.some(holds)).map((m) => m.name);
 }
 
+/** The Canvas modules holding a module item (a page by its url). */
+export const modulesHolding = (modules: CanvasModule[], item: ModuleItemContent) =>
+  modules.filter((m) =>
+    m.items?.some(
+      (i) => i.type === item.type && (item.type === "Page" ? i.page_url === item.pageUrl : i.content_id === item.id)
+    )
+  );
+
 /**
  * What a module holds for an assignment: Canvas files a graded discussion as
  * its discussion, not its assignment.

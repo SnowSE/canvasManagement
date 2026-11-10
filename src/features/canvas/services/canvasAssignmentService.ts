@@ -152,18 +152,21 @@ export const canvasAssignmentService = {
   /**
    * The rest of a save, after create or update has answered: the rubric and
    * the Schedule's student overrides, which Canvas takes as separate requests.
-   * Apart so the app can show the saved assignment while these run.
+   * Apart so the app can show the saved assignment while these run. A rubric
+   * Canvas already has as the file has it is left alone (`rubricUnchanged`).
    */
   async syncRubricAndOverrides(
     courseId: number,
     saved: CanvasAssignment,
     localAssignment: LocalAssignment,
-    overrides: OverrideSpec[] | undefined
+    overrides: OverrideSpec[] | undefined,
+    { rubricUnchanged = false } = {}
   ) {
-    await Promise.all([
-      createRubric(courseId, saved.id, localAssignment),
+    const [, overridesChanged] = await Promise.all([
+      rubricUnchanged ? undefined : createRubric(courseId, saved.id, localAssignment),
       syncStudentOverrides(courseId, saved, overrides),
     ]);
+    return { overridesChanged };
   },
 
   async getOverrides(
@@ -217,17 +220,33 @@ const groupFields = (options?: CanvasAssignmentPublishOptions) => ({
   grade_group_students_individually: options?.gradeIndividually ?? false,
 });
 
+/**
+ * After an update, whether Canvas's answer already is the assignment as a
+ * readback would list it, so none is needed: nothing else was sent, and with
+ * no overrides its dates are its own (Canvas otherwise answers with the
+ * overrides applied).
+ */
+export const answerIsWhole = (
+  saved: { has_overrides?: boolean },
+  {
+    rubricUnchanged,
+    overridesChanged,
+    placed,
+  }: { rubricUnchanged: boolean; overridesChanged: boolean; placed: "already" | "moved" | "added" }
+) => rubricUnchanged && !overridesChanged && placed === "already" && !saved.has_overrides;
+
 // Replace the assignment's per-student overrides with the scheduled ones.
 // Section overrides (no student_ids) are left alone, and so is everything
 // when the file has no Schedule (`wanted` undefined): those overrides are
-// set in Canvas, like an extension for one student.
+// set in Canvas, like an extension for one student. Answers whether anything
+// was changed.
 const syncStudentOverrides = async (
   courseId: number,
   canvasAssignment: CanvasAssignment,
   wanted: OverrideSpec[] | undefined
-) => {
-  if (!wanted) return;
-  if (wanted.length === 0 && !canvasAssignment.has_overrides) return;
+): Promise<boolean> => {
+  if (!wanted) return false;
+  if (wanted.length === 0 && !canvasAssignment.has_overrides) return false;
 
   const existing = await canvasAssignmentService.getOverrides(
     courseId,
@@ -245,6 +264,7 @@ const syncStudentOverrides = async (
     console.log(
       `Replaced ${studentOverrides.length} student override(s) with ${wanted.length} for ${canvasAssignment.name}`
     );
+  return true;
 };
 
 const createRubric = async (

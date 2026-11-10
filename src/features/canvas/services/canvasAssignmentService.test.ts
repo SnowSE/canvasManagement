@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { canvasAssignmentService } from "./canvasAssignmentService";
+import { answerIsWhole, canvasAssignmentService } from "./canvasAssignmentService";
 import { axiosClient } from "@/services/axiosUtils";
 import { paginatedRequest } from "./canvasServiceUtils";
 import { rateLimitAwareDelete, rateLimitAwarePost } from "./canvasWebRequestUtils";
 import { LocalAssignment } from "@/features/local/assignments/models/localAssignment";
 import { LocalCourseSettings } from "@/features/local/course/localCourseSettings";
+import { CanvasAssignment } from "@/features/canvas/models/assignments/canvasAssignment";
 
 vi.mock("@/services/axiosUtils", () => ({
   axiosClient: { put: vi.fn(), get: vi.fn() },
@@ -39,24 +40,26 @@ beforeEach(() => {
     data: { id: 5, name: "Essay", has_overrides: true },
   });
   vi.mocked(paginatedRequest).mockResolvedValue([extension]);
-  // the rubric every update re-creates
+  // the rubric's creation
   vi.mocked(rateLimitAwarePost).mockResolvedValue({ data: {} } as never);
 });
 
 describe("canvasAssignmentService.update", () => {
   it("leaves Canvas's student overrides alone when the file has no Schedule", async () => {
     const saved = await canvasAssignmentService.update(42, 5, assignment, settings);
-    await canvasAssignmentService.syncRubricAndOverrides(42, saved, assignment, undefined);
+    const { overridesChanged } = await canvasAssignmentService.syncRubricAndOverrides(42, saved, assignment, undefined);
 
     expect(rateLimitAwareDelete).not.toHaveBeenCalled();
+    expect(overridesChanged).toBe(false);
   });
 
   it("replaces them with the Schedule's when the file has one", async () => {
     const scheduled = { title: "Scheduled 09/18/2026", student_ids: [100203], due_at: "2026-09-19T05:59:00Z" };
 
     const saved = await canvasAssignmentService.update(42, 5, assignment, settings);
-    await canvasAssignmentService.syncRubricAndOverrides(42, saved, assignment, [scheduled]);
+    const { overridesChanged } = await canvasAssignmentService.syncRubricAndOverrides(42, saved, assignment, [scheduled]);
 
+    expect(overridesChanged).toBe(true);
     expect(rateLimitAwareDelete).toHaveBeenCalledWith(
       "https://test.instructure.com/api/v1/courses/42/assignments/5/overrides/9"
     );
@@ -64,6 +67,36 @@ describe("canvasAssignmentService.update", () => {
       "https://test.instructure.com/api/v1/courses/42/assignments/5/overrides",
       { assignment_override: scheduled }
     );
+  });
+});
+
+describe("canvasAssignmentService.syncRubricAndOverrides", () => {
+  const rubricUrl = "https://test.instructure.com/api/v1/courses/42/rubrics";
+  const saved = { id: 5, name: "Essay", has_overrides: false } as CanvasAssignment;
+
+  it("re-creates the rubric and re-asserts the points", async () => {
+    await canvasAssignmentService.syncRubricAndOverrides(42, saved, assignment, undefined);
+
+    expect(rateLimitAwarePost).toHaveBeenCalledWith(rubricUrl, expect.anything());
+    expect(axiosClient.put).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves a rubric Canvas already has as the file has it alone", async () => {
+    await canvasAssignmentService.syncRubricAndOverrides(42, saved, assignment, undefined, { rubricUnchanged: true });
+
+    expect(rateLimitAwarePost).not.toHaveBeenCalled();
+    expect(axiosClient.put).not.toHaveBeenCalled();
+  });
+});
+
+describe("answerIsWhole", () => {
+  const nothingElse = { rubricUnchanged: true, overridesChanged: false, placed: "already" as const };
+  it("spares the readback only when nothing else was sent and no overrides apply", () => {
+    expect(answerIsWhole({ has_overrides: false }, nothingElse)).toBe(true);
+    expect(answerIsWhole({ has_overrides: true }, nothingElse)).toBe(false);
+    expect(answerIsWhole({ has_overrides: false }, { ...nothingElse, rubricUnchanged: false })).toBe(false);
+    expect(answerIsWhole({ has_overrides: false }, { ...nothingElse, overridesChanged: true })).toBe(false);
+    expect(answerIsWhole({ has_overrides: false }, { ...nothingElse, placed: "moved" })).toBe(false);
   });
 });
 
