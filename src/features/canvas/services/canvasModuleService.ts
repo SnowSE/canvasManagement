@@ -29,6 +29,14 @@ export function canvasModuleNames(
   return modules.filter((m) => m.items?.some(holds)).map((m) => m.name);
 }
 
+/** The Canvas modules holding a module item (a page by its url). */
+export const modulesHolding = (modules: CanvasModule[], item: ModuleItemContent) =>
+  modules.filter((m) =>
+    m.items?.some(
+      (i) => i.type === item.type && (item.type === "Page" ? i.page_url === item.pageUrl : i.content_id === item.id)
+    )
+  );
+
 /**
  * What a module holds for an assignment: Canvas files a graded discussion as
  * its discussion, not its assignment.
@@ -96,6 +104,7 @@ export const canvasModuleService = {
   /**
    * Makes a module the only one holding an item: keeps or moves one copy into
    * it (adding one when the item is in no module) and removes every other.
+   * `modules` are the ids of the modules whose items changed.
    */
   async placeInModule(
     canvasCourseId: number,
@@ -103,7 +112,7 @@ export const canvasModuleService = {
     item: ModuleItemContent,
     /** where to add or move it (1-based), asked only when it is added or moved */
     position: () => Promise<number | undefined> = async () => undefined
-  ): Promise<{ placed: "already" | "moved" | "added"; removed: number }> {
+  ): Promise<{ placed: "already" | "moved" | "added"; removed: number; modules: number[] }> {
     const { data } = await axiosClient.get<{
       items: { current?: { id: number; module_id: number } }[];
     }>(`${canvasApi}/courses/${canvasCourseId}/module_item_sequence`, {
@@ -117,13 +126,14 @@ export const canvasModuleService = {
       placements.find((p) => p.module_id === canvasModuleId) ?? placements[0];
     const extras = placements.filter((p) => p !== kept);
     for (const extra of extras) await rateLimitAwareDelete(itemUrl(extra));
+    const emptied = extras.map((p) => p.module_id);
 
     if (!kept) {
       await canvasModuleService.addModuleItem(canvasCourseId, canvasModuleId, item, await position());
-      return { placed: "added", removed: 0 };
+      return { placed: "added", removed: 0, modules: [canvasModuleId] };
     }
     if (kept.module_id === canvasModuleId)
-      return { placed: "already", removed: extras.length };
+      return { placed: "already", removed: extras.length, modules: emptied };
     const at = await position();
     await axiosClient.put(itemUrl(kept), {
       module_item: {
@@ -131,7 +141,7 @@ export const canvasModuleService = {
         ...(at !== undefined && { position: at }),
       },
     });
-    return { placed: "moved", removed: extras.length };
+    return { placed: "moved", removed: extras.length, modules: [kept.module_id, canvasModuleId, ...emptied] };
   },
 
   async getCourseModules(canvasCourseId: number) {

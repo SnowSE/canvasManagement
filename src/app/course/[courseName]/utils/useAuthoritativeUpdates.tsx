@@ -1,9 +1,19 @@
 "use client";
 import { useState, useMemo, useCallback } from "react";
 
+/**
+ * Which copy of an item's text the editor should trust: what the user has
+ * typed here, or what the server last sent (`startingText`).
+ *
+ * The server's text has changed when it is one this editor has never loaded,
+ * adopted or saved. A refetch that brings back a text this editor saved (the
+ * echo of its own save, or a late read from before a newer save) is not a
+ * change, however long after the last keystroke it lands, so it never replaces
+ * what is being typed. A text from outside (another window, another program,
+ * git) is, and then the server wins.
+ */
 export function useAuthoritativeUpdates({
   itemKey,
-  serverUpdatedAt,
   startingText,
 }: {
   /**
@@ -13,12 +23,12 @@ export function useAuthoritativeUpdates({
    * holding no longer belongs to the item on screen.
    */
   itemKey: string;
-  serverUpdatedAt: number;
+  /** The item's text as the server has it, in the editor's own normalized form. */
   startingText: string;
 }) {
   const [text, setText] = useState(startingText);
-  const [clientDataUpdatedAt, setClientDataUpdatedAt] =
-    useState(serverUpdatedAt);
+  // the server texts this editor has loaded, adopted or saved, newest first
+  const [known, setKnown] = useState([startingText]);
   const [updateMonacoKey, setUpdateMonacoKey] = useState(1);
   const [openItemKey, setOpenItemKey] = useState(itemKey);
   const [clientHasEdited, setClientHasEdited] = useState(false);
@@ -30,42 +40,40 @@ export function useAuthoritativeUpdates({
   if (itemKey !== openItemKey) {
     setOpenItemKey(itemKey);
     setText(startingText);
-    setClientDataUpdatedAt(serverUpdatedAt);
+    setKnown([startingText]);
     setClientHasEdited(false);
     setUpdateMonacoKey((k) => k + 1);
   }
 
-  const clientIsAuthoritative = useMemo(() => {
-    // Only keystrokes make the client authoritative. Merely opening or
-    // re-rendering an item must never be enough to trigger a save.
-    if (!clientHasEdited) return false;
-    const estimatedNetworkRoundTrip = 500; // network latency means client is still authoritative for a slight delay
-    return serverUpdatedAt <= clientDataUpdatedAt + estimatedNetworkRoundTrip;
-  }, [clientDataUpdatedAt, clientHasEdited, serverUpdatedAt]);
+  // Only keystrokes make the client authoritative. Merely opening or
+  // re-rendering an item must never be enough to trigger a save.
+  const clientIsAuthoritative = clientHasEdited && known.includes(startingText);
 
-  const textUpdate = useCallback((t: string, updateMonaco: boolean = false) => {
+  // a few, not one: late reads of earlier saves can still land
+  const remember = (serverText: string) =>
+    setKnown((k) => [serverText, ...k.filter((t) => t !== serverText)].slice(0, 8));
+
+  /** Typing; or, with `fromServer`, taking the server's text in place of what was here. */
+  const textUpdate = useCallback((t: string, fromServer: boolean = false) => {
     setText(t);
-    setClientDataUpdatedAt(Date.now());
     setClientHasEdited(true);
-    if (updateMonaco) setUpdateMonacoKey((k) => k + 1);
+    if (fromServer) {
+      remember(t);
+      setUpdateMonacoKey((k) => k + 1);
+    }
   }, []);
+
+  /** The text just sent to the server (normalized): its echo is not a change. */
+  const textSaved = useCallback((normalized: string) => remember(normalized), []);
 
   return useMemo(
     () => ({
       clientIsAuthoritative,
-      serverUpdatedAt,
-      clientDataUpdatedAt,
       textUpdate,
+      textSaved,
       text,
       monacoKey: updateMonacoKey,
     }),
-    [
-      clientDataUpdatedAt,
-      clientIsAuthoritative,
-      serverUpdatedAt,
-      text,
-      textUpdate,
-      updateMonacoKey,
-    ]
+    [clientIsAuthoritative, text, textSaved, textUpdate, updateMonacoKey]
   );
 }

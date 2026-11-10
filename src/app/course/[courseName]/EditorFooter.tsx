@@ -16,9 +16,11 @@ import {
   NextIcon,
   PreviousIcon,
   PublishIcon,
+  ReloadIcon,
   UploadIcon,
   WarningIcon,
 } from "@/components/icons/ActionIcons";
+import { useReloadCanvasData } from "@/features/canvas/hooks/useReloadCanvasData";
 import {
   PublishableItemType,
   usePublishInCanvasMutation,
@@ -101,6 +103,20 @@ export function EditorFooter({
   const { inMenu } = useActionsMenu();
   const publish = usePublishInCanvasMutation();
   const { data: git } = useGitStatusQuery();
+  const canvasData = useReloadCanvasData();
+  // beside the status it feeds: Canvas is otherwise read about once an hour
+  const reloadCanvas = (
+    <button
+      type="button"
+      className="unstyled btn inline-flex items-center gap-2 bg-transparent text-slate-300 hover:bg-slate-800 hover:text-slate-100 px-2!"
+      onClick={canvasData.reload}
+      disabled={canvasData.fetching}
+      title="Reload Canvas Data: read this course's Canvas items again now"
+      aria-label="Reload Canvas Data"
+    >
+      {canvasData.fetching ? <Spinner /> : <ReloadIcon />}
+    </button>
+  );
 
   const view: FooterAction | undefined = canvasUrl
     ? {
@@ -244,7 +260,10 @@ export function EditorFooter({
   if (inMenu)
     return (
       <div className="flex flex-col">
-        <div className="px-3 py-2">{status}</div>
+        <div className="px-3 py-2 flex flex-row items-center gap-2">
+          {status}
+          {reloadCanvas}
+        </div>
         {busy && <Spinner />}
         {primary && <ActionControl action={primary} className="btn" />}
         {sideActions.map((a) => (
@@ -321,6 +340,7 @@ export function EditorFooter({
       <div className="flex flex-row flex-wrap items-center justify-end gap-3">
         {busy && <Spinner />}
         {status}
+        {reloadCanvas}
         {sideActions.map((a) => (
           <ActionControl
             key={a.label}

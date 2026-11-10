@@ -4,12 +4,13 @@ import {
   LocalAssignment,
   localAssignmentMarkdown,
 } from "@/features/local/assignments/models/localAssignment";
-import { useEffect, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import AssignmentPreview from "./AssignmentPreview";
 import { useCourseContext } from "@/app/course/[courseName]/context/courseContext";
 import ClientOnly from "@/components/ClientOnly";
 import { SuspenseAndErrorHandling } from "@/components/SuspenseAndErrorHandling";
 import { AssignmentFooterButtons } from "./AssignmentFooterButtons";
+import { parsedOrNothing } from "@/app/course/[courseName]/utils/draft";
 import { useAuthoritativeUpdates } from "@/app/course/[courseName]/utils/useAuthoritativeUpdates";
 import EditAssignmentHeader from "./EditAssignmentHeader";
 import { UpdateAssignmentName } from "./UpdateAssignmentName";
@@ -27,27 +28,25 @@ export default function EditAssignment({
   moduleName: string;
 }) {
   const { courseName } = useCourseContext();
-  const {
-    data: assignment,
-    dataUpdatedAt: serverDataUpdatedAt,
-    isFetching: assignmentIsFetching,
-  } = useAssignmentQuery(moduleName, assignmentName);
+  const { data: assignment, isFetching: assignmentIsFetching } = useAssignmentQuery(
+    moduleName,
+    assignmentName,
+  );
   const updateAssignment = useUpdateAssignmentMutation();
 
-  const {
-    clientIsAuthoritative,
-    text,
-    textUpdate,
-    monacoKey,
-    serverUpdatedAt,
-    clientDataUpdatedAt,
-  } = useAuthoritativeUpdates({
-    itemKey: `assignment:${moduleName}/${assignmentName}`,
-    serverUpdatedAt: serverDataUpdatedAt,
-    startingText: localAssignmentMarkdown.toMarkdown(assignment),
-  });
+  const { clientIsAuthoritative, text, textUpdate, textSaved, monacoKey } =
+    useAuthoritativeUpdates({
+      itemKey: `assignment:${moduleName}/${assignmentName}`,
+      startingText: localAssignmentMarkdown.toMarkdown(assignment),
+    });
 
   const [error, setError] = useState("");
+  // the footer compares what is typed, ahead of the save; deferred so typing stays smooth
+  const settledText = useDeferredValue(text);
+  const draft = useMemo(
+    () => parsedOrNothing(() => localAssignmentMarkdown.parseMarkdown(settledText, assignmentName)),
+    [settledText, assignmentName],
+  );
 
   useEffect(() => {
     const delay = 500;
@@ -62,12 +61,11 @@ export default function EditAssignment({
         // make separate way to update name?
         const updatedAssignment: LocalAssignment =
           localAssignmentMarkdown.parseMarkdown(text, assignmentName);
-        if (
-          localAssignmentMarkdown.toMarkdown(assignment) !==
-          localAssignmentMarkdown.toMarkdown(updatedAssignment)
-        ) {
+        const updatedMarkdown = localAssignmentMarkdown.toMarkdown(updatedAssignment);
+        if (localAssignmentMarkdown.toMarkdown(assignment) !== updatedMarkdown) {
           if (clientIsAuthoritative) {
             console.log("updating assignment, client is authoritative");
+            textSaved(updatedMarkdown);
             updateAssignment.mutateAsync({
               assignment: updatedAssignment,
               moduleName,
@@ -77,13 +75,7 @@ export default function EditAssignment({
               courseName,
             });
           } else {
-            console.log(
-              "client not authoritative, updating client with server assignment",
-              "client updated",
-              clientDataUpdatedAt,
-              "server updated",
-              serverUpdatedAt,
-            );
+            console.log("client not authoritative, updating client with server assignment");
             textUpdate(localAssignmentMarkdown.toMarkdown(assignment), true);
           }
         }
@@ -100,13 +92,12 @@ export default function EditAssignment({
   }, [
     assignment,
     assignmentName,
-    clientDataUpdatedAt,
     clientIsAuthoritative,
     courseName,
     assignmentIsFetching,
     moduleName,
-    serverUpdatedAt,
     text,
+    textSaved,
     textUpdate,
     updateAssignment,
   ]);
@@ -141,6 +132,7 @@ export default function EditAssignment({
             <AssignmentFooterButtons
               moduleName={moduleName}
               assignmentName={assignmentName}
+              draft={draft}
             />
           </SuspenseAndErrorHandling>
         </ClientOnly>

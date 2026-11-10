@@ -4,6 +4,8 @@ import {
   MutationCache,
   QueryCache,
   QueryClient,
+  QueryKey,
+  SetDataOptions,
   isServer,
 } from "@tanstack/react-query";
 import {
@@ -13,20 +15,35 @@ import {
 import { getErrorMessage } from "@/services/utils/queryClient";
 
 /**
- * Every window of the app refreshes what any window refreshed: a save in a
- * pop-out reaches the window it came from at once, and the other way round,
- * instead of waiting for that window to be focused. Only the query key
- * travels (over a BroadcastChannel); each window fetches for itself.
+ * Every window of the app sees what any window learned: a save or a change
+ * to Canvas made in a pop-out reaches the window it came from at once, and
+ * the other way round, instead of waiting for that window to be focused.
+ * A refresh travels as its query key (each window fetches for itself); what a
+ * window wrote into its cache, Canvas's answer after a change, travels as the
+ * data, so no window downloads it again.
  */
-function shareInvalidations(client: QueryClient) {
+type CacheChange = { invalidate: QueryKey } | { set: QueryKey; data: unknown };
+function shareCacheChanges(client: QueryClient) {
   const invalidate = client.invalidateQueries.bind(client);
+  // the data's type is the caller's business; here it only travels
+  type SetData = (queryKey: QueryKey, updater: unknown, options?: SetDataOptions) => unknown;
+  const set = client.setQueryData.bind(client) as SetData;
   const channel = new BroadcastChannel("canvas-management-invalidations");
-  // from another window: refresh here, without telling the others again
-  channel.onmessage = (e) => invalidate({ queryKey: e.data });
+  // from another window: apply here with the unwrapped functions, so the others aren't told again
+  channel.onmessage = ({ data: change }: MessageEvent<CacheChange>) => {
+    if ("set" in change) set(change.set, change.data);
+    else if ("invalidate" in change) invalidate({ queryKey: change.invalidate });
+  };
   client.invalidateQueries = (filters?: InvalidateQueryFilters, options?: InvalidateOptions) => {
-    if (filters?.queryKey) channel.postMessage(filters.queryKey);
+    if (filters?.queryKey) channel.postMessage({ invalidate: filters.queryKey } satisfies CacheChange);
     return invalidate(filters, options);
   };
+  const share: SetData = (queryKey, updater, options) => {
+    const data = set(queryKey, updater, options);
+    if (data !== undefined) channel.postMessage({ set: queryKey, data } satisfies CacheChange);
+    return data;
+  };
+  client.setQueryData = share as typeof client.setQueryData;
 }
 
 function makeQueryClient() {
@@ -54,7 +71,14 @@ function makeQueryClient() {
       },
     },
   });
-  if (!isServer) shareInvalidations(client);
+  // Canvas is asked about once an hour. Nothing tells the app when Canvas
+  // changes, and if the app didn't change it, it almost never did; when the
+  // app does change it, the mutation writes Canvas's answer into the cache
+  // (features/canvas/hooks), and Reload Canvas Data asks at once. Local
+  // files need none of this: the server watches them and says when one
+  // changes. Every Canvas query key starts with "canvas", so this is all of them.
+  client.setQueryDefaults(["canvas"], { staleTime: 60 * 60 * 1000 });
+  if (!isServer) shareCacheChanges(client);
   return client;
 }
 

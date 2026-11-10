@@ -17,9 +17,8 @@ export const canvasCourseKeys = {
   assignmentGroupCounts: (canavasId: number) =>
     ["canvas", canavasId, "assignment group counts"] as const,
   courseListInTerm: (canvasTermId: number | undefined) =>
-    ["canvas courses in term", canvasTermId] as const,
-  students: (canvasId: number) =>
-    ["students in canvas course", canvasId] as const,
+    ["canvas", "courses in term", canvasTermId] as const,
+  students: (canvasId: number) => ["canvas", canvasId, "students"] as const,
 };
 
 export const useCourseListInTermQuery = (canvasTermId: number | undefined) =>

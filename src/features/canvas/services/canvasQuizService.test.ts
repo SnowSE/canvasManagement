@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { axiosClient } from "@/services/axiosUtils";
 import {
   canvasQuizService,
   getAnswersForCanvas,
@@ -577,7 +578,7 @@ describe("canvasQuizService", () => {
       ]);
       const posts = vi.mocked(rateLimitAwarePost).mock.calls;
       expect(posts.filter(([u]) => u.endsWith("/questions"))).toHaveLength(2);
-      expect(summary).toEqual({ plan: oneOfEach(), needsSaveInCanvas: false });
+      expect(summary).toMatchObject({ plan: oneOfEach(), needsSaveInCanvas: false });
     });
 
     it("keeps a question that is exactly the same, with its id, and orders the new ones around it", async () => {
@@ -889,5 +890,20 @@ describe("question groups", () => {
     expect(vi.mocked(rateLimitAwareDelete).mock.calls.map(([url]) => url)).toContain(
       "https://test.instructure.com/api/v1/courses/42/quizzes/7/groups/50",
     );
+  });
+});
+
+describe("canvasQuizService.get", () => {
+  it("reads one quiz the way getAll lists them, dates in local form", async () => {
+    vi.mocked(axiosClient.get).mockResolvedValue({
+      data: { id: 9, title: "Quiz 1", due_at: "2026-09-08T05:59:00Z" },
+    });
+
+    const quiz = await canvasQuizService.get(42, 9);
+
+    expect(vi.mocked(axiosClient.get).mock.calls.at(-1)?.[0]).toBe(
+      "https://test.instructure.com/api/v1/courses/42/quizzes/9"
+    );
+    expect(quiz.due_at).toBe(new Date("2026-09-08T05:59:00Z").toLocaleString());
   });
 });

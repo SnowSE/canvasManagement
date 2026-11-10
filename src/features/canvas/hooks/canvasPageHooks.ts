@@ -10,6 +10,7 @@ import { CanvasPage } from "../models/pages/canvasPageModel";
 import { useCanvasLinkTargets } from "./useCanvasLinkTargets";
 import { useCommitAfterPublish } from "@/features/local/git/gitHooks";
 import { usePrepareImagesForCanvas } from "./usePrepareImagesForCanvas";
+import { byPageId, remove, upsert } from "./cachedList";
 
 export const canvasPageKeys = {
   pagesInCourse: (courseCanvasId: number) => [
@@ -51,12 +52,9 @@ export const useCreateCanvasPageMutation = () => {
         publishSettings,
         canvasLinkTargets
       );
-      // in the cached list at once, so the page shows as in Canvas right
-      // away; the refetch below confirms it in the background
-      queryClient.setQueryData(
-        canvasPageKeys.pagesInCourse(settings.canvasId),
-        (list: (typeof canvasPage)[] | undefined) => list && [...list, canvasPage],
-      );
+      // Canvas answered with the page as it stored it: into the cached list
+      // it goes, so the page shows as in Canvas at once
+      queryClient.setQueryData(canvasPageKeys.pagesInCourse(settings.canvasId), upsert(byPageId, canvasPage));
       await addToModule(moduleName, {
         type: "Page",
         id: canvasPage.page_id,
@@ -67,9 +65,6 @@ export const useCreateCanvasPageMutation = () => {
     },
     onSuccess: (_data, variables) => {
       commitAfterPublish(`page "${variables.page.name}"`);
-      queryClient.invalidateQueries({
-        queryKey: canvasPageKeys.pagesInCourse(settings.canvasId),
-      });
     },
   });
 };
@@ -134,10 +129,19 @@ export const useDeleteCanvasPageMutation = () => {
   return useMutation({
     mutationFn: async (canvasPageId: number) =>
       canvasPageService.delete(settings.canvasId, canvasPageId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: canvasPageKeys.pagesInCourse(settings.canvasId),
-      });
+    onSuccess: (_data, canvasPageId) => {
+      queryClient.setQueryData(canvasPageKeys.pagesInCourse(settings.canvasId), remove(byPageId, canvasPageId));
     },
   });
+};
+
+/** After the app changed a page in Canvas: reads that one back into the cached list. */
+export const useRefreshCanvasPage = () => {
+  const { data: settings } = useLocalCourseSettingsQuery();
+  const queryClient = useQueryClient();
+  return async (canvasPageId: number) =>
+    queryClient.setQueryData(
+      canvasPageKeys.pagesInCourse(settings.canvasId),
+      upsert(byPageId, await canvasPageService.get(settings.canvasId, canvasPageId)),
+    );
 };

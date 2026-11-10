@@ -403,6 +403,12 @@ function checkRubric(
   return fields;
 }
 
+/** Whether Update in Canvas can leave the rubric alone: the compare view's rubric section shows no difference. */
+export const rubricInSync = (
+  localRubric: RubricItem[],
+  canvasRubric: CanvasRubricCriteria[] | undefined,
+) => checkRubric(localRubric, canvasRubric).every((f) => f.same);
+
 function checkDescription(
   render: () => string,
   canvasHtml: string | undefined,

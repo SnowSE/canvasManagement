@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getSyncReport, getSyncStatus } from "./getAssignmentSyncStatus";
+import { getSyncReport, getSyncStatus, rubricInSync } from "./getAssignmentSyncStatus";
 import { LocalQuiz } from "@/features/local/quizzes/models/localQuiz";
 import { CanvasQuiz } from "@/features/canvas/models/quizzes/canvasQuizModel";
 import { LocalAssignment } from "@/features/local/assignments/models/localAssignment";
@@ -226,6 +226,17 @@ describe("getSyncStatus - assignment", () => {
       settings: baseSettings,
     });
     expect(result.status).toBe("published");
+  });
+});
+
+describe("rubricInSync", () => {
+  const row = (points: number): CanvasRubricCriteria => ({ id: "1", description: "Code Quality", long_description: "", points });
+  it("is whether the compare view shows no rubric difference", () => {
+    const local = [{ label: "Code Quality", points: 10 }];
+    expect(rubricInSync(local, [row(10)])).toBe(true);
+    expect(rubricInSync(local, [row(8)])).toBe(false);
+    expect(rubricInSync(local, undefined)).toBe(false);
+    expect(rubricInSync([], undefined)).toBe(true);
   });
 });
 

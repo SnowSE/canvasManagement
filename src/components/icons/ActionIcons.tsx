@@ -128,6 +128,13 @@ export const ExternalLinkIcon = () => (
   </ActionIcon>
 );
 
+export const ReloadIcon = () => (
+  <ActionIcon>
+    <path d="M20 12a8 8 0 1 1-2.34-5.66" />
+    <path d="M20 4v5h-5" />
+  </ActionIcon>
+);
+
 export const CompareIcon = () => (
   <ActionIcon>
     <path d="M7 4 3 8l4 4" />

@@ -22,22 +22,31 @@ export interface CanvasAssignmentPublishOptions {
   overrides?: OverrideSpec[];
 }
 
+// Overrides ride along so the calendar can check scheduled students. Canvas
+// otherwise reports dates with the overrides applied (for a teacher, the
+// latest of them), so ask for the assignment's own dates, the ones its file sets.
+const ownDates = "include[]=overrides&override_assignment_dates=false";
+
+/** An assignment as the app lists them: dates in local form. */
+const asListed = (a: CanvasAssignment): CanvasAssignment => ({
+  ...a,
+  due_at: a.due_at ? new Date(a.due_at).toLocaleString() : undefined, // timezones?
+  lock_at: a.lock_at ? new Date(a.lock_at).toLocaleString() : undefined, // timezones?
+  unlock_at: a.unlock_at ? new Date(a.unlock_at).toLocaleString() : undefined, // timezones?
+});
+
 export const canvasAssignmentService = {
   async getAll(courseId: number): Promise<CanvasAssignment[]> {
-    // overrides ride along so the calendar can check scheduled students.
-    // Canvas otherwise reports dates with the overrides applied (for a
-    // teacher, the latest of them), so ask for the assignment's own dates,
-    // the ones its file sets.
-    const url = `${canvasApi}/courses/${courseId}/assignments?include[]=overrides&override_assignment_dates=false`;
+    const url = `${canvasApi}/courses/${courseId}/assignments?${ownDates}`;
     const assignments = await paginatedRequest<CanvasAssignment[]>({ url });
-    return assignments.map((a) => ({
-      ...a,
-      due_at: a.due_at ? new Date(a.due_at).toLocaleString() : undefined, // timezones?
-      lock_at: a.lock_at ? new Date(a.lock_at).toLocaleString() : undefined, // timezones?
-      unlock_at: a.unlock_at
-        ? new Date(a.unlock_at).toLocaleString()
-        : undefined, // timezones?
-    }));
+    return assignments.map(asListed);
+  },
+
+  /** One assignment, as getAll lists it: for the cached list after the app changed it. */
+  async get(courseId: number, canvasAssignmentId: number): Promise<CanvasAssignment> {
+    const url = `${canvasApi}/courses/${courseId}/assignments/${canvasAssignmentId}?${ownDates}`;
+    const { data } = await axiosClient.get<CanvasAssignment>(url);
+    return asListed(data);
   },
 
   async create(
@@ -86,16 +95,7 @@ export const canvasAssignmentService = {
     };
 
     const response = await rateLimitAwarePost<CanvasAssignment>(url, body);
-    const canvasAssignment = response.data;
-
-    await createRubric(canvasCourseId, canvasAssignment.id, localAssignment);
-    await syncStudentOverrides(
-      canvasCourseId,
-      canvasAssignment,
-      publishOptions?.overrides
-    );
-
-    return canvasAssignment;
+    return asListed(response.data);
   },
 
   async update(
@@ -146,13 +146,27 @@ export const canvasAssignmentService = {
       url,
       body
     );
-    await createRubric(courseId, canvasAssignmentId, localAssignment);
-    await syncStudentOverrides(
-      courseId,
-      canvasAssignment,
-      publishOptions?.overrides
-    );
-    return canvasAssignment;
+    return asListed(canvasAssignment);
+  },
+
+  /**
+   * The rest of a save, after create or update has answered: the rubric and
+   * the Schedule's student overrides, which Canvas takes as separate requests.
+   * Apart so the app can show the saved assignment while these run. A rubric
+   * Canvas already has as the file has it is left alone (`rubricUnchanged`).
+   */
+  async syncRubricAndOverrides(
+    courseId: number,
+    saved: CanvasAssignment,
+    localAssignment: LocalAssignment,
+    overrides: OverrideSpec[] | undefined,
+    { rubricUnchanged = false } = {}
+  ) {
+    const [, overridesChanged] = await Promise.all([
+      rubricUnchanged ? undefined : createRubric(courseId, saved.id, localAssignment),
+      syncStudentOverrides(courseId, saved, overrides),
+    ]);
+    return { overridesChanged };
   },
 
   async getOverrides(
@@ -206,17 +220,33 @@ const groupFields = (options?: CanvasAssignmentPublishOptions) => ({
   grade_group_students_individually: options?.gradeIndividually ?? false,
 });
 
+/**
+ * After an update, whether Canvas's answer already is the assignment as a
+ * readback would list it, so none is needed: nothing else was sent, and with
+ * no overrides its dates are its own (Canvas otherwise answers with the
+ * overrides applied).
+ */
+export const answerIsWhole = (
+  saved: { has_overrides?: boolean },
+  {
+    rubricUnchanged,
+    overridesChanged,
+    placed,
+  }: { rubricUnchanged: boolean; overridesChanged: boolean; placed: "already" | "moved" | "added" }
+) => rubricUnchanged && !overridesChanged && placed === "already" && !saved.has_overrides;
+
 // Replace the assignment's per-student overrides with the scheduled ones.
 // Section overrides (no student_ids) are left alone, and so is everything
 // when the file has no Schedule (`wanted` undefined): those overrides are
-// set in Canvas, like an extension for one student.
+// set in Canvas, like an extension for one student. Answers whether anything
+// was changed.
 const syncStudentOverrides = async (
   courseId: number,
   canvasAssignment: CanvasAssignment,
   wanted: OverrideSpec[] | undefined
-) => {
-  if (!wanted) return;
-  if (wanted.length === 0 && !canvasAssignment.has_overrides) return;
+): Promise<boolean> => {
+  if (!wanted) return false;
+  if (wanted.length === 0 && !canvasAssignment.has_overrides) return false;
 
   const existing = await canvasAssignmentService.getOverrides(
     courseId,
@@ -227,16 +257,14 @@ const syncStudentOverrides = async (
   );
   const baseUrl = `${canvasApi}/courses/${courseId}/assignments/${canvasAssignment.id}/overrides`;
 
-  for (const override of studentOverrides) {
-    await rateLimitAwareDelete(`${baseUrl}/${override.id}`);
-  }
-  for (const spec of wanted) {
-    await rateLimitAwarePost(baseUrl, { assignment_override: spec });
-  }
+  // the old ones go before the new ones come, so no student has two
+  await Promise.all(studentOverrides.map((o) => rateLimitAwareDelete(`${baseUrl}/${o.id}`)));
+  await Promise.all(wanted.map((spec) => rateLimitAwarePost(baseUrl, { assignment_override: spec })));
   if (studentOverrides.length > 0 || wanted.length > 0)
     console.log(
       `Replaced ${studentOverrides.length} student override(s) with ${wanted.length} for ${canvasAssignment.name}`
     );
+  return true;
 };
 
 const createRubric = async (

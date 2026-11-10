@@ -1,9 +1,10 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { canvasService } from "../services/canvasService";
 
+// every Canvas key starts with "canvas": see the query defaults in providersQueryClientUtils
 export const canvasKeys = {
-  allTerms: ["all canvas terms"] as const,
-  allAroundDate: (date: Date) => ["all canvas terms", date] as const,
+  allTerms: ["canvas", "terms"] as const,
+  allAroundDate: (date: Date) => ["canvas", "terms", date] as const,
 };
 
 export const useAllCanvasTermsQuery = () =>

@@ -14,6 +14,7 @@ import {
   usePrepareImagesForCanvas,
 } from "./usePrepareImagesForCanvas";
 import toast from "react-hot-toast";
+import { byId, merge, remove, upsert } from "./cachedList";
 import { showActionNeededToast, showErrorToast } from "@/app/MyToaster";
 import { baseCanvasUrl } from "../services/canvasServiceUtils";
 import {
@@ -39,6 +40,22 @@ export const useCanvasQuizzesQuery = () => {
     queryKey: canvasQuizKeys.quizzes(settings.canvasId),
     queryFn: async () => canvasQuizService.getAll(settings.canvasId),
   });
+};
+
+/**
+ * After the app changed a quiz in Canvas: reads that one back into the cached
+ * list, and lets its questions be read again when next shown.
+ */
+export const useRefreshCanvasQuiz = () => {
+  const { data: settings } = useLocalCourseSettingsQuery();
+  const queryClient = useQueryClient();
+  return async (canvasQuizId: number) => {
+    queryClient.setQueryData(
+      canvasQuizKeys.quizzes(settings.canvasId),
+      upsert(byId, await canvasQuizService.get(settings.canvasId, canvasQuizId)),
+    );
+    queryClient.invalidateQueries({ queryKey: canvasQuizKeys.questions(settings.canvasId, canvasQuizId) });
+  };
 };
 
 /** A quiz's questions as Canvas has them, in quiz order. */
@@ -78,7 +95,7 @@ export const useCanvasAttemptQuestionsQuery = (attemptId: number | undefined) =>
 
 export const useAddQuizToCanvasMutation = () => {
   const { data: settings } = useLocalCourseSettingsQuery();
-  const queryClient = useQueryClient();
+  const refresh = useRefreshCanvasQuiz();
   const addToModule = useAddToCanvasModule();
   const canvasLinkTargets = useCanvasLinkTargets();
   const prepareImages = usePrepareImagesForCanvas();
@@ -105,17 +122,13 @@ export const useAddQuizToCanvasMutation = () => {
         assignmentGroup?.canvasId,
         canvasLinkTargets
       );
-      await addToModule(moduleName, {
-        type: "Quiz",
-        id: canvasQuizId,
-        title: quiz.name,
-      });
+      await Promise.all([
+        refresh(canvasQuizId),
+        addToModule(moduleName, { type: "Quiz", id: canvasQuizId, title: quiz.name }),
+      ]);
     },
     onSuccess: (_data, variables) => {
       commitAfterPublish(`quiz "${variables.quiz.name}"`);
-      queryClient.invalidateQueries({
-        queryKey: canvasQuizKeys.quizzes(settings.canvasId),
-      });
     },
     onError: (error) => showErrorToast(error.message),
   });
@@ -138,6 +151,7 @@ Update anyway?`;
 export const useUpdateQuizInCanvasMutation = () => {
   const { data: settings } = useLocalCourseSettingsQuery();
   const queryClient = useQueryClient();
+  const refresh = useRefreshCanvasQuiz();
   const canvasLinkTargets = useCanvasLinkTargets();
   const prepareImages = usePrepareImagesForCanvas();
   const placeInModule = usePlaceInCanvasModule();
@@ -198,11 +212,12 @@ export const useUpdateQuizInCanvasMutation = () => {
               planQuestionUpdates(quiz.questions, canvasQuestions, publishSettings),
           }
         );
-        await placeInModule(moduleName, {
-          type: "Quiz",
-          id: canvasQuizId,
-          title: quiz.name,
-        });
+        // Canvas's answer colours the quiz now; the read-back confirms it
+        queryClient.setQueryData(canvasQuizKeys.quizzes(settings.canvasId), merge(byId, summary.quiz));
+        await Promise.all([
+          refresh(canvasQuizId),
+          placeInModule(moduleName, { type: "Quiz", id: canvasQuizId, title: quiz.name }),
+        ]);
         const changes = describeQuestionPlan(summary.plan);
         const updated = changes
           ? `Updated "${quiz.name}" in Canvas: settings, and ${changes}.`
@@ -231,9 +246,6 @@ export const useUpdateQuizInCanvasMutation = () => {
     onSuccess: (updated, variables) => {
       // false: cancelled at the "students already started" question
       if (updated) commitAfterPublish(`quiz "${variables.quiz.name}"`);
-      queryClient.invalidateQueries({
-        queryKey: canvasQuizKeys.quizzes(settings.canvasId),
-      });
     },
     onError: (error) => {
       console.error("Failed to update quiz in Canvas:", error);
@@ -249,10 +261,8 @@ export const useDeleteQuizFromCanvasMutation = () => {
     mutationFn: async (canvasQuizId: number) => {
       await canvasQuizService.delete(settings.canvasId, canvasQuizId);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: canvasQuizKeys.quizzes(settings.canvasId),
-      });
+    onSuccess: (_data, canvasQuizId) => {
+      queryClient.setQueryData(canvasQuizKeys.quizzes(settings.canvasId), remove(byId, canvasQuizId));
     },
   });
 };

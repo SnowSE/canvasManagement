@@ -57,7 +57,7 @@ export function CourseFrame({ children }: { children: ReactNode }) {
           <div className="min-h-0 flex-1 flex flex-col overflow-y-auto">
             {pane ? <pane.Content {...ctx} /> : <PaneNote>There is no pane called {popOut}.</PaneNote>}
           </div>
-          <BottomBar onCoursePage={onCoursePage} />
+          <BottomBar />
         </div>
         {children}
       </>
@@ -94,7 +94,7 @@ export function CourseFrame({ children }: { children: ReactNode }) {
             </Pane>
           ))}
         </div>
-        <BottomBar onCoursePage={onCoursePage} />
+        <BottomBar />
       </div>
       {children}
     </>
@@ -115,9 +115,10 @@ function TopBar({ onCoursePage }: { onCoursePage: boolean }) {
   return onCoursePage ? <CourseNavigation /> : parts?.topBar;
 }
 
-function BottomBar({ onCoursePage }: { onCoursePage: boolean }) {
+/** The open item's footer; on the course page, that is the lecture of the day the editor shows. */
+function BottomBar() {
   const parts = useItemParts();
-  return onCoursePage ? null : parts?.bottomBar;
+  return parts?.bottomBar;
 }
 
 /** The frame with the pane strip around it, for the course route. */

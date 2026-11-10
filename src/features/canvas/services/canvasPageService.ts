@@ -49,6 +49,13 @@ const moveFrontPageMarker = async (courseId: number, fromUrl: string, toUrl: str
 };
 
 export const canvasPageService = {
+  /** One page, with its body as getAll lists them: for the cached list after the app changed it. */
+  async get(courseId: number, canvasPageId: number): Promise<CanvasPage> {
+    const url = `${canvasApi}/courses/${courseId}/pages/${canvasPageId}`;
+    const { data } = await axiosClient.get<CanvasPage>(url);
+    return data;
+  },
+
   async getAll(courseId: number): Promise<CanvasPage[]> {
     try {
       // body lets the sync status compare page content

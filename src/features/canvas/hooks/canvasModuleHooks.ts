@@ -3,17 +3,22 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   canvasModuleService,
   canvasModuleNames,
+  modulesHolding,
   ModuleItemContent,
 } from "../services/canvasModuleService";
+import { CanvasModule } from "../models/modules/canvasModule";
 import { IModuleItem } from "@/features/local/modules/IModuleItem";
 import toast from "react-hot-toast";
 import { byOrderingDate, positionInModule } from "@/features/local/modules/moduleItemOrder";
 import { useTRPC } from "@/services/serverFunctions/trpcClient";
 import { useCourseContext } from "@/app/course/[courseName]/context/courseContext";
 import { useMemo } from "react";
+import { byId, upsert } from "./cachedList";
 
 export const canvasCourseModuleKeys = {
   modules: (canvasId: number) => ["canvas", canvasId, "module list"] as const,
+  // under the module list's key, so whatever refreshes the list refreshes this
+  modulesWithItems: (canvasId: number) => ["canvas", canvasId, "module list", "items"] as const,
 };
 
 export const useCanvasModulesQuery = () => {
@@ -29,11 +34,29 @@ export const useCanvasModulesQuery = () => {
 export const useCanvasModulesWithItemsQuery = () => {
   const { data: settings } = useLocalCourseSettingsQuery();
   return useQuery({
-    // under the module list's key, so whatever refreshes the list refreshes this
-    queryKey: [...canvasCourseModuleKeys.modules(settings.canvasId), "items"],
+    queryKey: canvasCourseModuleKeys.modulesWithItems(settings.canvasId),
     queryFn: () =>
       canvasModuleService.getCourseModulesWithItems(settings.canvasId),
   });
+};
+
+/**
+ * After the app changed a module's items: reads those modules back from
+ * Canvas into both cached module lists, instead of downloading every module
+ * and its items again.
+ */
+export const useRefreshCanvasModules = () => {
+  const { data: settings } = useLocalCourseSettingsQuery();
+  const queryClient = useQueryClient();
+  return async (moduleIds: number[]) => {
+    const modules = await Promise.all(
+      moduleIds.map((id) => canvasModuleService.getModuleWithItems(settings.canvasId, id))
+    );
+    for (const m of modules) {
+      queryClient.setQueryData(canvasCourseModuleKeys.modules(settings.canvasId), upsert(byId, m));
+      queryClient.setQueryData(canvasCourseModuleKeys.modulesWithItems(settings.canvasId), upsert(byId, m));
+    }
+  };
 };
 
 /**
@@ -115,9 +138,9 @@ const usePositionInCanvasModule = () => {
 /** For Add to Canvas: adds a new item to the module named after its folder, in date order. */
 export const useAddToCanvasModule = () => {
   const { data: settings } = useLocalCourseSettingsQuery();
-  const queryClient = useQueryClient();
   const moduleIdByName = useCanvasModuleIdByName();
   const positionIn = usePositionInCanvasModule();
+  const refreshModules = useRefreshCanvasModules();
   return async (moduleName: string, item: ModuleItemContent) => {
     const moduleId = await moduleIdByName(moduleName);
     await canvasModuleService.addModuleItem(
@@ -126,25 +149,32 @@ export const useAddToCanvasModule = () => {
       item,
       await positionIn(moduleName, moduleId, item.title)
     );
-    queryClient.invalidateQueries({
-      queryKey: canvasCourseModuleKeys.modules(settings.canvasId),
-    });
+    await refreshModules([moduleId]);
   };
 };
 
 /**
  * For Update in Canvas: makes the Canvas module named after an item's folder
  * the only one holding it, so moving a file to another module moves it in
- * Canvas too.
+ * Canvas too. Answers how the item was placed.
  */
 export const usePlaceInCanvasModule = () => {
   const { data: settings } = useLocalCourseSettingsQuery();
   const queryClient = useQueryClient();
   const moduleIdByName = useCanvasModuleIdByName();
   const positionIn = usePositionInCanvasModule();
+  const refreshModules = useRefreshCanvasModules();
   return async (moduleName: string, item: ModuleItemContent) => {
+    // the modules as last read holding the item in its module and no other:
+    // nothing to do, and nothing to ask Canvas (a module changed in Canvas
+    // since shows after Reload Canvas Data, like any other change made there)
+    const lastRead = queryClient.getQueryData<CanvasModule[]>(
+      canvasCourseModuleKeys.modulesWithItems(settings.canvasId)
+    );
+    const holding = lastRead && modulesHolding(lastRead, item);
+    if (holding?.length === 1 && holding[0].name === moduleName) return "already";
     const moduleId = await moduleIdByName(moduleName);
-    const { placed, removed } = await canvasModuleService.placeInModule(
+    const { placed, removed, modules } = await canvasModuleService.placeInModule(
       settings.canvasId,
       moduleId,
       item,
@@ -157,18 +187,15 @@ export const usePlaceInCanvasModule = () => {
       removed > 0 &&
         `removed it from ${removed} other module${removed === 1 ? "" : "s"}`,
     ].filter(Boolean);
-    if (changes.length > 0) {
-      toast.success(`In Canvas, ${changes.join(" and ")}: "${item.title}".`);
-      queryClient.invalidateQueries({
-        queryKey: canvasCourseModuleKeys.modules(settings.canvasId),
-      });
-    }
+    if (changes.length > 0) toast.success(`In Canvas, ${changes.join(" and ")}: "${item.title}".`);
+    await refreshModules(modules);
+    return placed;
   };
 };
 
 export const useReorderCanvasModuleItemsMutation = () => {
   const { data: settings } = useLocalCourseSettingsQuery();
-  const queryClient = useQueryClient();
+  const refreshModules = useRefreshCanvasModules();
   return useMutation({
     mutationFn: async ({
       moduleId,
@@ -197,17 +224,12 @@ export const useReorderCanvasModuleItemsMutation = () => {
         .map((localItem) => canvasItems.find((canvasItem) => canvasItem.title === localItem.name)?.id)
         .filter((id): id is number => typeof id === "number");
 
-      return await canvasModuleService.reorderModuleItems(
+      await canvasModuleService.reorderModuleItems(
         settings.canvasId,
         moduleId,
         orderedIds
       );
-    },
-    onSuccess: (_data) => {
-      if (!settings?.canvasId) return;
-      queryClient.invalidateQueries({
-        queryKey: canvasCourseModuleKeys.modules(settings.canvasId),
-      });
+      await refreshModules([moduleId]);
     },
   });
 };
