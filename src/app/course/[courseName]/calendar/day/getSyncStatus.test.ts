@@ -97,6 +97,18 @@ describe("getSyncStatus - assignment", () => {
     expect(result.message).toContain("due date");
   });
 
+  it("counts a lock or unlock date that only Canvas has as a difference, which Update clears", () => {
+    const report = getSyncReport({
+      item: { ...baseLocalAssignment, lockAt: undefined, unlockAt: undefined },
+      canvasItem: { ...baseCanvasAssignment, lock_at: "2024-09-21T05:59:00Z", unlock_at: "2024-09-01T06:00:00Z" },
+      type: "assignment",
+      settings: baseSettings,
+    });
+    const dates = report.differences.filter((d) => d.section === "dates").map((d) => `${d.key}: ${d.local} vs ${d.canvas}`);
+    expect(dates.some((d) => d.startsWith("lockAt: — vs"))).toBe(true);
+    expect(dates.some((d) => d.startsWith("unlockAt: — vs"))).toBe(true);
+  });
+
   it("returns incomplete when lock date missing in canvas but set locally", () => {
     const result = getSyncStatus({
       item: { ...baseLocalAssignment, lockAt: "08/21/2023 23:59:00" },

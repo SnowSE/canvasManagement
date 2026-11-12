@@ -349,6 +349,10 @@ describe("canvasQuizService", () => {
       await canvasQuizService.create(42, { ...quiz, timeLimit: 5 }, {} as never);
       await canvasQuizService.create(42, quiz, {} as never);
       expect(sentTimeLimits()).toEqual([5, null]);
+      // the same for a date the file doesn't have: null clears it in Canvas
+      const sent = vi.mocked(rateLimitAwarePost).mock.calls.filter(([url]) => url.endsWith("/quizzes"));
+      const last = (sent[sent.length - 1][1] as { quiz: { lock_at: unknown; unlock_at: unknown } }).quiz;
+      expect([last.lock_at, last.unlock_at]).toEqual([null, null]);
     });
 
     it("sends a multiple dropdowns question with one [blank] per prompt", async () => {

@@ -390,18 +390,10 @@ const quizSettingsForCanvas = (
   time_limit: localQuiz.timeLimit ?? null,
   one_question_at_a_time: localQuiz.oneQuestionAtATime,
   cant_go_back: false,
-  due_at: localQuiz.dueAt
-    ? getDateFromStringOrThrow(localQuiz.dueAt, "publishing quiz").toISOString()
-    : undefined,
-  lock_at: localQuiz.lockAt
-    ? getDateFromStringOrThrow(localQuiz.lockAt, "publishing quiz").toISOString()
-    : undefined,
-  unlock_at: localQuiz.unlockAt
-    ? getDateFromStringOrThrow(
-        localQuiz.unlockAt,
-        "publishing quiz"
-      ).toISOString()
-    : undefined,
+  // null clears a date in Canvas (like time_limit), so the file decides either way
+  due_at: localQuiz.dueAt ? getDateFromStringOrThrow(localQuiz.dueAt, "publishing quiz").toISOString() : null,
+  lock_at: localQuiz.lockAt ? getDateFromStringOrThrow(localQuiz.lockAt, "publishing quiz").toISOString() : null,
+  unlock_at: localQuiz.unlockAt ? getDateFromStringOrThrow(localQuiz.unlockAt, "publishing quiz").toISOString() : null,
   assignment_group_id: canvasAssignmentGroupId,
 });
 

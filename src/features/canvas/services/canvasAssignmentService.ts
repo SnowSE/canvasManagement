@@ -81,12 +81,9 @@ export const canvasAssignmentService = {
         ),
         description: content,
         due_at: getDateFromString(localAssignment.dueAt)?.toISOString(),
-        lock_at:
-          localAssignment.lockAt &&
-          getDateFromString(localAssignment.lockAt)?.toISOString(),
-        unlock_at:
-          localAssignment.unlockAt &&
-          getDateFromString(localAssignment.unlockAt)?.toISOString(),
+        // null clears a date in Canvas, so the file decides either way
+        lock_at: localAssignment.lockAt ? getDateFromString(localAssignment.lockAt)?.toISOString() : null,
+        unlock_at: localAssignment.unlockAt ? getDateFromString(localAssignment.unlockAt)?.toISOString() : null,
         points_possible: assignmentPoints(localAssignment.rubric),
         assignment_group_id: canvasAssignmentGroupId,
         ...groupFields(publishOptions),
@@ -129,12 +126,9 @@ export const canvasAssignmentService = {
           canvasLinkTargets,
         }),
         due_at: getDateFromString(localAssignment.dueAt)?.toISOString(),
-        lock_at:
-          localAssignment.lockAt &&
-          getDateFromString(localAssignment.lockAt)?.toISOString(),
-        unlock_at:
-          localAssignment.unlockAt &&
-          getDateFromString(localAssignment.unlockAt)?.toISOString(),
+        // null clears a date in Canvas, so the file decides either way
+        lock_at: localAssignment.lockAt ? getDateFromString(localAssignment.lockAt)?.toISOString() : null,
+        unlock_at: localAssignment.unlockAt ? getDateFromString(localAssignment.unlockAt)?.toISOString() : null,
         points_possible: assignmentPoints(localAssignment.rubric),
         assignment_group_id: canvasAssignmentGroupId,
         ...groupFields(publishOptions),
