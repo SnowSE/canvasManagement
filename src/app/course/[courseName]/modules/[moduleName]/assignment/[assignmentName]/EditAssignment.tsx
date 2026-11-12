@@ -51,7 +51,7 @@ export default function EditAssignment({
   useEffect(() => {
     const delay = 500;
 
-    const handler = setTimeout(() => {
+    const save = () => {
       try {
         if (assignmentIsFetching || updateAssignment.isPending) {
           console.log("network requests in progress, not updating assignments");
@@ -84,10 +84,18 @@ export default function EditAssignment({
       } catch (e: any) {
         setError(e.toString());
       }
-    }, delay);
+    };
+    const handler = setTimeout(save, delay);
+    // a pending save goes out when the window loses focus, before typing goes on elsewhere
+    const flush = () => {
+      clearTimeout(handler);
+      save();
+    };
+    window.addEventListener("blur", flush, { once: true });
 
     return () => {
       clearTimeout(handler);
+      window.removeEventListener("blur", flush);
     };
   }, [
     assignment,

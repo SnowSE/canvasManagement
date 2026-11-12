@@ -43,7 +43,7 @@ export default function EditLecture({ lectureDay }: { lectureDay: string }) {
   useEffect(() => {
     const delay = 500;
 
-    const handler = setTimeout(() => {
+    const save = () => {
       try {
         if (isFetching || updateLecture.isPending) {
           console.log("network requests in progress, not updating page");
@@ -73,10 +73,18 @@ export default function EditLecture({ lectureDay }: { lectureDay: string }) {
       } catch (e: any) {
         setError(e.toString());
       }
-    }, delay);
+    };
+    const handler = setTimeout(save, delay);
+    // a pending save goes out when the window loses focus, before typing goes on elsewhere
+    const flush = () => {
+      clearTimeout(handler);
+      save();
+    };
+    window.addEventListener("blur", flush, { once: true });
 
     return () => {
       clearTimeout(handler);
+      window.removeEventListener("blur", flush);
     };
   }, [
     clientIsAuthoritative,
