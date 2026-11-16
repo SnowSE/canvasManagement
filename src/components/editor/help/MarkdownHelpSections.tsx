@@ -35,7 +35,21 @@ export function MarkdownBasicsHelp() {
 | Part one |     10 |
 | Part two |      5 |
 `}</Example>
-      <P>Code blocks:</P>
+      <P>
+        Code blocks. Name the language after the opening fence and the code is
+        syntax highlighted, in Canvas as well as here (python, js, ts, csharp,
+        java, cpp, go, rust, sql, bash, yaml, json, html, css, dockerfile and
+        most other common languages). With no language, or one the highlighter
+        doesn&apos;t know, the block stays plain.
+      </P>
+      <P>
+        Typing after the opening fence offers the language names, the ones the
+        block&apos;s code looks like first. On a bare <C>```</C> with code under
+        it, the likely language shows in grey: Tab takes it. A language the
+        highlighter doesn&apos;t know is underlined in yellow, and its quick fix
+        (Ctrl+.) offers the likely spelling. Write <C>text</C> for a block that
+        is meant to be plain.
+      </P>
       <Example>{`
 \`\`\`python
 print("hello")

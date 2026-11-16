@@ -6,6 +6,7 @@ import pako from "pako";
 import { LocalCourseSettings } from "@/features/local/course/localCourseSettings";
 import { CanvasLinkTargets, resolveRelativeMdHrefsForCanvas } from "./urlUtils";
 import { listTableExtension } from "./listTable";
+import { highlightCode } from "./codeHighlight";
 
 // Deflated and base64url encoded, which is what mermaid.ink expects.
 export function pakoDeflateBase64Url(raw: string) {
@@ -120,6 +121,11 @@ marked.use({
 
       if (encodedName) encodedBlocks.set(encodedName, token.text);
       if (hide) return "";
+
+      // Same markup as marked's own renderer, with the code colored.
+      const highlighted = highlightCode(token.text.replace(/\n$/, ""), language);
+      if (highlighted !== undefined)
+        return `<pre><code class="language-${language}">${highlighted}\n</code></pre>\n`;
 
       // Returning false asks marked to render the block with its own default
       // renderer. That reads only token.lang, so narrowing lang to the bare

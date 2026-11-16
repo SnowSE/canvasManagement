@@ -13,6 +13,7 @@ import { EditorAssistData } from "./editorAssistData";
 import { useParams } from "@tanstack/react-router";
 import { useBankFilesQuery } from "@/features/local/quizzes/quizHooks";
 import { bankPathFromQuiz } from "@/features/local/quizzes/questionBankPaths";
+import { useCodeLanguagesQuery } from "@/features/local/course/localCoursesHooks";
 
 export function useEditorAssistData(): EditorAssistData {
   const { data: settings } = useLocalCourseSettingsQuery();
@@ -20,6 +21,7 @@ export function useEditorAssistData(): EditorAssistData {
   const { data: groupSets } = useRosterGroupSetsQuery();
   const { moduleName } = useParams({ strict: false }) as { moduleName?: string };
   const { data: bankFiles } = useBankFilesQuery();
+  const { data: courseCodeLanguages } = useCodeLanguagesQuery();
   const quizModule = moduleName ? decodeURIComponent(moduleName) : undefined;
 
   return useMemo(
@@ -42,6 +44,7 @@ export function useEditorAssistData(): EditorAssistData {
       bankPaths: quizModule
         ? (bankFiles ?? []).map((file) => bankPathFromQuiz(quizModule, file))
         : [],
+      courseCodeLanguages: courseCodeLanguages ?? {},
       calendar: {
         daysOfWeek: settings.daysOfWeek,
         holidays: settings.holidays
@@ -54,6 +57,6 @@ export function useEditorAssistData(): EditorAssistData {
         defaultDueTime: settings.defaultDueTime,
       },
     }),
-    [settings, roster, groupSets, quizModule, bankFiles]
+    [settings, roster, groupSets, quizModule, bankFiles, courseCodeLanguages]
   );
 }

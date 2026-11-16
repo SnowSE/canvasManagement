@@ -200,3 +200,42 @@ select {
   background-color: rgb(250 204 21 / 0.35);
   color: white;
 }
+
+/* Highlighted code blocks (src/services/codeHighlight.ts) carry GitHub light
+   colors as inline styles, because that is all Canvas keeps. The preview's code
+   blocks are dark, so recolor them here with GitHub dark. */
+.markdownPreview pre code [class^="hljs-"] {
+  color: #e6edf3 !important;
+}
+.markdownPreview pre code :is(.hljs-keyword, .hljs-doctag, .hljs-template-tag, .hljs-template-variable, .hljs-type) {
+  color: #ff7b72 !important;
+}
+.markdownPreview pre code .hljs-title {
+  color: #d2a8ff !important;
+}
+.markdownPreview pre code :is(.hljs-attr, .hljs-attribute, .hljs-literal, .hljs-meta, .hljs-number, .hljs-operator, .hljs-variable, .hljs-selector-attr, .hljs-selector-class, .hljs-selector-id, .hljs-section) {
+  color: #79c0ff !important;
+}
+.markdownPreview pre code :is(.hljs-string, .hljs-regexp) {
+  color: #a5d6ff !important;
+}
+.markdownPreview pre code :is(.hljs-built_in, .hljs-symbol) {
+  color: #ffa657 !important;
+}
+.markdownPreview pre code :is(.hljs-comment, .hljs-code, .hljs-formula) {
+  color: #8b949e !important;
+}
+.markdownPreview pre code :is(.hljs-name, .hljs-quote, .hljs-selector-tag, .hljs-selector-pseudo) {
+  color: #7ee787 !important;
+}
+.markdownPreview pre code .hljs-bullet {
+  color: #f2cc60 !important;
+}
+.markdownPreview pre code .hljs-addition {
+  color: #aff5b4 !important;
+  background-color: #033a16 !important;
+}
+.markdownPreview pre code .hljs-deletion {
+  color: #ffdcd7 !important;
+  background-color: #67060c !important;
+}

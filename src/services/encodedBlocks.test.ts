@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { markdownToHtmlNoImages, pakoDeflateBase64Url } from "./htmlMarkdownUtils";
+import { htmlToTextLines } from "./utils/htmlTextDiff";
 
 // undo `base64`: percent-escaping, then base64, then utf-8
 const decodeBase64Param = (param: string) => {
@@ -130,9 +131,9 @@ a b
 Rendered: ![circle](data:image/svg+xml,{{c:urlencoded}})`
     );
     expect(html).toContain('<pre><code class="language-svg">');
-    // < and > stay escaped; DOMPurify re-serializes text content, where a
-    // double quote needs no escaping.
-    expect(html).toContain('&lt;svg id="x"/&gt;');
+    // shown as code (highlighted, so split across spans), not as markup
+    expect(html).not.toContain("<svg");
+    expect(htmlToTextLines(html)[0]).toBe('<svg id="x"/>');
     expect(srcIn(html)).toBe(
       `data:image/svg+xml,${encodeURIComponent('<svg id="x"/>')}`
     );
@@ -204,8 +205,9 @@ describe("hide, on its own", () => {
 
 describe("blocks with no attributes are untouched", () => {
   it("renders an ordinary fenced block exactly as before", () => {
-    const html = markdownToHtmlNoImages('```js\nconst x = 1 < 2 && "a";\n```');
-    expect(html).toContain('<pre><code class="language-js">');
+    // a language highlight.js doesn't know, so the block isn't colored
+    const html = markdownToHtmlNoImages('```pseudo\nconst x = 1 < 2 && "a";\n```');
+    expect(html).toContain('<pre><code class="language-pseudo">');
     expect(html).toContain("const x = 1 &lt; 2 &amp;&amp; \"a\";");
   });
 

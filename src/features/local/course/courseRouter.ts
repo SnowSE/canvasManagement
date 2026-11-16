@@ -8,6 +8,7 @@ import { getCoursePathByName } from "../globalSettings/globalSettingsFileStorage
 import path from "path";
 import fs from "fs/promises";
 import { directoryOrFileExists } from "../utils/fileSystemUtils";
+import { countCourseCodeLanguages } from "./codeLanguageCounts";
 
 const courseItemTypes: CourseItemType[] = ["Assignment", "Quiz", "Page"];
 
@@ -27,6 +28,9 @@ async function getValidatedModuleNames(courseName: string) {
 }
 
 export const courseRouter = router({
+  codeLanguages: publicProcedure
+    .input(z.string())
+    .query(async ({ input: courseName }) => await countCourseCodeLanguages(courseName)),
   listCourses: publicProcedure.query(async () => {
     return await getValidatedCourseNames();
   }),

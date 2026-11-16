@@ -11,6 +11,8 @@ export interface EditorAssistData {
   fileUploadTypes: string[];
   /** Question bank files, each as the path a quiz in this module writes after Bank:. */
   bankPaths: string[];
+  /** How many code blocks in the course name each language, for guessing a block's language. */
+  courseCodeLanguages: Record<string, number>;
   calendar: {
     daysOfWeek: DayOfWeek[];
     holidays: string[]; // MM/DD/YYYY
@@ -28,6 +30,7 @@ export const emptyAssistData: EditorAssistData = {
   assignmentGroupNames: [],
   fileUploadTypes: [],
   bankPaths: [],
+  courseCodeLanguages: {},
   calendar: {
     daysOfWeek: [],
     holidays: [],

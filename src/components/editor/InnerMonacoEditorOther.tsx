@@ -12,6 +12,12 @@ import {
 } from "./assist/completionProvider";
 import { markerOwner, scheduleMarkers } from "./assist/scheduleMarkers";
 import { classroom50Markers } from "./assist/classroom50Markers";
+import {
+  codeFenceMarkers,
+  codeFenceQuickFixes,
+  fenceLanguageCompletions,
+  fenceLanguageGhostText,
+} from "./assist/codeFences";
 import { scheduleInlayHints } from "./assist/scheduleInlayHints";
 import {
   DATE_KEYS,
@@ -99,6 +105,7 @@ export default function InnerMonacoEditorOther({
     monaco.editor.setModelMarkers(model, markerOwner, [
       ...scheduleMarkers(monaco, model, assistDataRef.current),
       ...classroom50Markers(monaco, model),
+      ...codeFenceMarkers(monaco, model),
     ]);
   }, []);
 
@@ -172,9 +179,30 @@ export default function InnerMonacoEditorOther({
       monaco.languages.registerCompletionItemProvider("markdown", {
         triggerCharacters: [" ", ":"],
         provideCompletionItems: (model, position) =>
+          fenceLanguageCompletions(
+            monaco,
+            model,
+            position,
+            assistDataRef.current.courseCodeLanguages,
+          ) ??
           buildCompletions(monaco, model, position, assistDataRef.current) ?? {
             suggestions: [],
           },
+      });
+      monaco.languages.registerInlineCompletionsProvider("markdown", {
+        provideInlineCompletions: (model, position) =>
+          fenceLanguageGhostText(model, position, assistDataRef.current.courseCodeLanguages),
+        disposeInlineCompletions: () => {},
+      });
+      monaco.languages.registerCodeActionProvider("markdown", {
+        provideCodeActions: (model, _range, context) => ({
+          actions: codeFenceQuickFixes(
+            model,
+            context.markers,
+            assistDataRef.current.courseCodeLanguages,
+          ),
+          dispose: () => {},
+        }),
       });
       inlayHintsChanged = new monaco.Emitter<void>();
       monaco.languages.registerInlayHintsProvider("markdown", {
@@ -278,6 +306,9 @@ export default function InnerMonacoEditorOther({
             // only our frontmatter suggestions, not every word in the document
             wordBasedSuggestions: "off",
             suggest: { showWords: false, preview: false },
+            // Monaco's markdown grammar marks a code fence line as a string, so
+            // without this typing a language after ``` wouldn't open the list
+            quickSuggestions: { other: "on", strings: "on", comments: "off" },
             inlayHints: { enabled: "on" },
           }}
           defaultLanguage="markdown"

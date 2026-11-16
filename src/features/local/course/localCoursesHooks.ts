@@ -2,6 +2,7 @@
 import { useCourseContext } from "@/app/course/[courseName]/context/courseContext";
 import { useTRPC } from "@/services/serverFunctions/trpcClient";
 import {
+  useQuery,
   useSuspenseQuery,
   useMutation,
   useQueryClient,
@@ -18,6 +19,17 @@ export const useLocalCourseSettingsQuery = () => {
   return useSuspenseQuery(
     trpc.settings.courseSettings.queryOptions(courseName),
   );
+};
+
+/** How many code blocks in the course name each language; the editor's language guess leans on it. */
+export const useCodeLanguagesQuery = () => {
+  const { courseName } = useCourseContext();
+  const trpc = useTRPC();
+  return useQuery({
+    ...trpc.course.codeLanguages.queryOptions(courseName),
+    // changes slowly, and a stale count only nudges a guess
+    staleTime: 5 * 60 * 1000,
+  });
 };
 
 export const useCreateLocalCourseMutation = () => {
