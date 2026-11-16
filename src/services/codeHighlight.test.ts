@@ -24,13 +24,27 @@ describe("syntax highlighting fenced code blocks", () => {
   });
 
   it("accepts language aliases", () => {
-    for (const lang of ["js", "ts", "cs", "py", "sh", "yml", "html", "dockerfile"]) {
+    for (const lang of ["js", "ts", "cs", "py", "sh", "yml", "html", "dockerfile", "kql", "cshtml"]) {
       expect(markdownToHtmlNoImages("```" + lang + "\nx = 1\n```")).toContain(
         `<code class="language-${lang}">`,
       );
     }
     expect(markdownToHtmlNoImages("```cs\nclass Foo {}\n```")).toContain(
       'style="color:#d73a49">class</span>',
+    );
+  });
+
+  it("colors the languages course material uses beyond highlight.js's common set", () => {
+    expect(markdownToHtmlNoImages("```elixir\ndefmodule A do\nend\n```")).toContain(
+      '<span class="hljs-keyword" style="color:#d73a49">defmodule</span>',
+    );
+    expect(markdownToHtmlNoImages("```erlang\n-module(a).\n```")).toContain("hljs-");
+    const kql = markdownToHtmlNoImages("```kusto\nrequests\n| where timestamp > ago(1h)\n| project-away itemId\n```");
+    expect(kql).toContain('style="color:#d73a49">where</span>');
+    expect(kql).toContain('style="color:#d73a49">project-away</span>');
+    expect(kql).toContain('style="color:#e36209">ago</span>');
+    expect(markdownToHtmlNoImages("```razor\n<div>@Model.Name</div>\n```")).toContain(
+      '<span class="hljs-name" style="color:#22863a">div</span>',
     );
   });
 
@@ -96,6 +110,15 @@ describe("guessLanguages", () => {
 
   it("drops runners-up that score well under the first guess", () => {
     expect(guessLanguages(order, { file: ["csharp"] })).toEqual(["csharp"]);
+  });
+
+  it("doesn't turn text with nothing code-like in it into a guess from the course alone", () => {
+    expect(guessLanguages("Hello", { course: { csharp: 50 } })).toEqual([]);
+  });
+
+  it("guesses elixir", () => {
+    const genServer = "defmodule Counter do\n  use GenServer\n  def handle_call(:get, _from, state), do: {:reply, state, state}\nend";
+    expect(guessLanguages(genServer)[0]).toBe("elixir");
   });
 
   it("guesses nothing for an empty block", () => {

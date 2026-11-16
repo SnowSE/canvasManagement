@@ -3,14 +3,22 @@ import dockerfile from "highlight.js/lib/languages/dockerfile";
 import nginx from "highlight.js/lib/languages/nginx";
 import powershell from "highlight.js/lib/languages/powershell";
 import protobuf from "highlight.js/lib/languages/protobuf";
+import elixir from "highlight.js/lib/languages/elixir";
+import erlang from "highlight.js/lib/languages/erlang";
+import { kusto } from "./kustoLanguage";
 
 // The common set (python, javascript, typescript, csharp, java, c, cpp, go,
 // rust, sql, bash, shell, json, yaml, xml/html, css, diff, markdown, ...) plus
-// a few that turn up in course material and aren't in it.
+// the ones course material uses that aren't in it.
 hljs.registerLanguage("dockerfile", dockerfile);
 hljs.registerLanguage("nginx", nginx);
 hljs.registerLanguage("powershell", powershell);
 hljs.registerLanguage("protobuf", protobuf);
+hljs.registerLanguage("elixir", elixir);
+hljs.registerLanguage("erlang", erlang);
+hljs.registerLanguage("kusto", kusto);
+// highlight.js has no Razor; its HTML coloring covers most of a .cshtml file
+hljs.registerAliases(["razor", "cshtml"], { languageName: "xml" });
 
 // Canvas drops <style> blocks and has no highlight.js stylesheet, so the
 // colors have to travel as inline styles on each span. These are GitHub's
@@ -146,7 +154,7 @@ const guessable = [
   "python", "javascript", "typescript", "csharp", "java", "c", "cpp", "go",
   "rust", "sql", "bash", "json", "yaml", "xml", "css", "scss", "dockerfile",
   "powershell", "kotlin", "swift", "php", "diff", "makefile", "ini",
-  "graphql", "protobuf", "nginx", "markdown",
+  "graphql", "protobuf", "nginx", "markdown", "elixir",
 ];
 
 /** Languages a guess leans toward: the file's other code blocks, and the course's. */
@@ -179,9 +187,11 @@ export function guessLanguages(code: string, context: GuessContext = {}, count =
       .map(([name]) => canonicalLanguage(name)),
   );
   const scored: { name: string; score: number }[] = [];
+  let evidence = 0;
   for (const name of guessable) {
     const result = hljs.highlight(sample, { language: name, ignoreIllegals: false });
     if (result.illegal) continue;
+    evidence = Math.max(evidence, result.relevance);
     const score = inFile.has(name)
       ? result.relevance * 2 + 5
       : inCourse.has(name)
@@ -189,6 +199,9 @@ export function guessLanguages(code: string, context: GuessContext = {}, count =
         : result.relevance;
     if (score > 0) scored.push({ name, score });
   }
+  // Nothing looks like any language: the file's and course's languages alone
+  // shouldn't turn prose into a guess.
+  if (evidence === 0) return [];
   scored.sort((a, b) => b.score - a.score);
   return scored
     .slice(0, count)

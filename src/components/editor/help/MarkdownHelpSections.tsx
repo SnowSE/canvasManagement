@@ -38,8 +38,8 @@ export function MarkdownBasicsHelp() {
       <P>
         Code blocks. Name the language after the opening fence and the code is
         syntax highlighted, in Canvas as well as here (python, js, ts, csharp,
-        java, cpp, go, rust, sql, bash, yaml, json, html, css, dockerfile and
-        most other common languages). With no language, or one the highlighter
+        java, cpp, go, rust, sql, bash, powershell, yaml, json, html, css,
+        dockerfile, elixir, kusto and most other common languages). With no language, or one the highlighter
         doesn&apos;t know, the block stays plain.
       </P>
       <P>
