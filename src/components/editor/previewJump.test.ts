@@ -34,3 +34,27 @@ describe("sourceOffsetOf", () => {
     expect(sourceOffsetOf(source, "rendered only", 0.5)).toBeUndefined();
   });
 });
+
+describe("jumpWhenEditorOpens", () => {
+  it("moves the next editor to open to the offset, once", async () => {
+    const { jumpWhenEditorOpens, followPreviewClicks } = await import("./previewJump");
+    const moves: unknown[] = [];
+    const fakeEditor = () =>
+      ({
+        getModel: () => ({ getPositionAt: (offset: number) => ({ offset }) }),
+        setPosition: (p: unknown) => moves.push(p),
+        revealPositionInCenter: () => {},
+        focus: () => {},
+        onDidDispose: () => {},
+      }) as unknown as Parameters<typeof followPreviewClicks>[0];
+
+    jumpWhenEditorOpens(42);
+    followPreviewClicks(fakeEditor());
+    await new Promise((r) => setTimeout(r));
+    expect(moves).toEqual([{ offset: 42 }]);
+
+    followPreviewClicks(fakeEditor());
+    await new Promise((r) => setTimeout(r));
+    expect(moves).toHaveLength(1);
+  });
+});

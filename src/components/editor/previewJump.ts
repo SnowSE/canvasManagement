@@ -28,13 +28,40 @@ export function sourceOffsetOf(source: string, snippet: string, fraction: number
 
 // the editor on screen; there is only ever one
 let current: editor.IStandaloneCodeEditor | undefined;
+// where the next editor to open should start, from a page without one
+let pendingJump: number | undefined;
+
 /** Makes `ed` the editor that preview clicks move, until it is disposed. */
 export const followPreviewClicks = (ed: editor.IStandaloneCodeEditor) => {
   current = ed;
   ed.onDidDispose(() => {
     if (current === ed) current = undefined;
   });
+  if (pendingJump !== undefined) {
+    const offset = pendingJump;
+    pendingJump = undefined;
+    // after the editor has laid itself out, or the reveal scrolls nowhere
+    setTimeout(() => jumpEditorTo(offset));
+  }
 };
+
+/** The text in the editor on screen, if there is one. */
+export const editorSource = () => current?.getModel()?.getValue();
+
+/** Moves the editor on screen to an offset in its text. */
+export function jumpEditorTo(offset: number) {
+  const model = current?.getModel();
+  if (!current || !model) return;
+  const position = model.getPositionAt(offset);
+  current.setPosition(position);
+  current.revealPositionInCenter(position);
+  current.focus();
+}
+
+/** Moves the next editor to open to an offset in its text: for a page that is about to open one. */
+export function jumpWhenEditorOpens(offset: number) {
+  pendingJump = offset;
+}
 
 /** Moves the editor to the text clicked in `preview`, if it can find it. */
 export function jumpToClickedText(preview: Element, event: MouseEvent) {
@@ -56,8 +83,13 @@ export function jumpToClickedText(preview: Element, event: MouseEvent) {
   const fraction = before.toString().length / Math.max(1, preview.textContent?.length ?? 0);
   const at = sourceOffsetOf(model.getValue(), snippet.text, fraction);
   if (at === undefined) return;
-  const position = model.getPositionAt(at + offset - snippet.start);
-  current.setPosition(position);
-  current.revealPositionInCenter(position);
-  current.focus();
+  jumpEditorTo(at + offset - snippet.start);
+}
+
+/** How far into `root`'s text `node` starts, 0 to 1: where in the preview something is. */
+export function fractionThrough(root: Element, node: Node) {
+  const before = document.createRange();
+  before.setStart(root, 0);
+  before.setEnd(node, 0);
+  return before.toString().length / Math.max(1, root.textContent?.length ?? 0);
 }

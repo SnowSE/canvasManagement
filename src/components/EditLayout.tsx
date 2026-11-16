@@ -1,7 +1,8 @@
 "use client";
 import { FC, ReactNode, useRef, useState } from "react";
 import { MobileActionsMenu } from "./MobileActionsMenu";
-import { jumpToClickedText } from "./editor/previewJump";
+import { editorSource, jumpEditorTo, jumpToClickedText } from "./editor/previewJump";
+import { PreviewTableMenu } from "./preview/PreviewTableMenu";
 import { clamp, ResizeHandle } from "./ResizeHandle";
 import { CoursePageLayout } from "@/app/course/[courseName]/CoursePageLayout";
 
@@ -98,7 +99,16 @@ export const EditLayout: FC<{
             // clicking text in the preview moves the editor to it
             onClick={(e) => jumpToClickedText(e.currentTarget, e.nativeEvent)}
           >
-            {Preview}
+            <PreviewTableMenu
+              source={editorSource}
+              onEditHere={(offset) => {
+                // on a phone the editor is hidden behind the Edit tab
+                setMobileView("edit");
+                requestAnimationFrame(() => jumpEditorTo(offset));
+              }}
+            >
+              {Preview}
+            </PreviewTableMenu>
           </div>
         </div>
         <div className="max-md:hidden">{Footer}</div>

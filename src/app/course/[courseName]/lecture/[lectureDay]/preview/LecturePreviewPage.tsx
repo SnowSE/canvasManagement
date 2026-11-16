@@ -1,12 +1,15 @@
 "use client";
 
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import LecturePreview from "../LecturePreview";
 import EditLectureTitle from "../EditLectureTitle";
 import { useLecturesSuspenseQuery } from "@/features/local/lectures/lectureHooks";
 import { CoursePageLayout } from "@/app/course/[courseName]/CoursePageLayout";
 import { useCourseContext } from "@/app/course/[courseName]/context/courseContext";
 import { getLectureUrl } from "@/services/urlUtils";
+import { lectureToString } from "@/features/local/lectures/lectureUtils";
+import { PreviewTableMenu } from "@/components/preview/PreviewTableMenu";
+import { jumpWhenEditorOpens } from "@/components/editor/previewJump";
 
 export default function LecturePreviewPage({
   lectureDay,
@@ -14,6 +17,7 @@ export default function LecturePreviewPage({
   lectureDay: string;
 }) {
   const { courseName } = useCourseContext();
+  const navigate = useNavigate();
   const { data: weeks } = useLecturesSuspenseQuery();
   const lecture = weeks
     .flatMap(({ lectures }) => lectures.map((lecture) => lecture))
@@ -42,7 +46,16 @@ export default function LecturePreviewPage({
       {lecture ? (
         <div className="flex min-h-0 flex-1 justify-center px-2 pb-1">
           <div className="w-full max-w-screen-lg overflow-auto rounded-md border-4 border-slate-700 bg-gray-900/50 p-3">
-            <LecturePreview lecture={lecture} />
+            <PreviewTableMenu
+              // the editor opens on the same text, lectureToString of the file
+              source={() => lectureToString(lecture)}
+              onEditHere={(offset) => {
+                jumpWhenEditorOpens(offset);
+                navigate({ to: getLectureUrl(courseName, lectureDay) });
+              }}
+            >
+              <LecturePreview lecture={lecture} />
+            </PreviewTableMenu>
           </div>
         </div>
       ) : (
