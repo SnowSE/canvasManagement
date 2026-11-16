@@ -1,37 +1,53 @@
 "use client";
 
+import { Link } from "@tanstack/react-router";
 import LecturePreview from "../LecturePreview";
+import EditLectureTitle from "../EditLectureTitle";
 import { useLecturesSuspenseQuery } from "@/features/local/lectures/lectureHooks";
+import { CoursePageLayout } from "@/app/course/[courseName]/CoursePageLayout";
+import { useCourseContext } from "@/app/course/[courseName]/context/courseContext";
+import { getLectureUrl } from "@/services/urlUtils";
 
 export default function LecturePreviewPage({
   lectureDay,
 }: {
   lectureDay: string;
 }) {
+  const { courseName } = useCourseContext();
   const { data: weeks } = useLecturesSuspenseQuery();
   const lecture = weeks
     .flatMap(({ lectures }) => lectures.map((lecture) => lecture))
     .find((l) => l.date === lectureDay);
 
-  if (!lecture) {
-    return <div>lecture not found for day</div>;
-  }
-  return (
-    <div className="flex h-full xl:flex-row flex-col ">
-      <div className="flex-shrink flex-1 pb-1 ms-3 xl:ms-0 flex flex-row flex-wrap gap-3 content-start ">
+  // The same top bar as the editor, with "edit" where "preview" was: it stays
+  // put while the lecture scrolls, so the split view is always one click away.
+  const topBar = (
+    <>
+      <div className="min-w-0 flex-auto">
+        <EditLectureTitle lectureDay={lectureDay} />
       </div>
-      <div className="flex  justify-center min-h-0 px-2">
-        <div
-          className="
-            w-full max-w-screen-lg 
-            border-slate-700 border-4 rounded-md bg-gray-900/50
-            p-3 overflow-auto 
-          "
+      <div className="flex-none ms-auto px-1">
+        <Link
+          className="btn inline text-center flex-grow m-1"
+          to={getLectureUrl(courseName, lectureDay)}
         >
-          <LecturePreview lecture={lecture} />
-        </div>
+          edit
+        </Link>
       </div>
-      <div className="flex-shrink flex-1"></div>
-    </div>
+    </>
+  );
+
+  return (
+    <CoursePageLayout topBar={topBar}>
+      {lecture ? (
+        <div className="flex min-h-0 flex-1 justify-center px-2 pb-1">
+          <div className="w-full max-w-screen-lg overflow-auto rounded-md border-4 border-slate-700 bg-gray-900/50 p-3">
+            <LecturePreview lecture={lecture} />
+          </div>
+        </div>
+      ) : (
+        <div>lecture not found for day</div>
+      )}
+    </CoursePageLayout>
   );
 }
