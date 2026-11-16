@@ -1,4 +1,5 @@
 "use client";
+import { useMemo } from "react";
 import {
   getDateFromStringOrThrow,
   getDateOnlyMarkdownString,
@@ -17,9 +18,10 @@ import {
 } from "./UnparsableItemInDay";
 
 export default function Day({ day, month }: { day: string; month: number }) {
-  const dayAsDate = getDateFromStringOrThrow(
-    day,
-    "calculating same month in day",
+  // one Date per day, so the title (memoized on it) is left alone when the items change
+  const dayAsDate = useMemo(
+    () => getDateFromStringOrThrow(day, "calculating same month in day"),
+    [day],
   );
   const isToday =
     getDateOnlyMarkdownString(new Date()) ===
