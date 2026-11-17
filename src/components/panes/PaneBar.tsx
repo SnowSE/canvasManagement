@@ -1,7 +1,7 @@
 "use client";
-import { useRef } from "react";
-import { PopOutLink } from "./PopOutLink";
+import { ReactNode, useRef, useState } from "react";
 import { MaxRule } from "./PaneRules";
+import { PanesIcon } from "../icons/ActionIcons";
 
 // pointer travel that counts as a drag rather than a click
 const dragThreshold = 4;
@@ -64,7 +64,7 @@ export function ResizeSquare({
   sides: Partial<Record<Side, string>>;
   onDrag: (e: React.PointerEvent, startX: number, side: Side) => void;
   onDragEnd: () => void;
-  /** Double-click on a half: that side's pane's limits back to its own. */
+  /** Double-click on a half: that side's pane back to its own width and limits. */
   onReset: (side: Side) => void;
 }) {
   return (
@@ -72,11 +72,15 @@ export function ResizeSquare({
       data-resize-square
       // flush with the bar's top, its border over the bar's; the square is the square's, border
       // included: the bar's edge-drag cursor stops at it
-      className="flex-none grid grid-cols-2 w-[calc(100%+2px)] -mx-px -mt-px h-6 rounded border border-slate-600 overflow-hidden divide-x divide-slate-600 cursor-default"
+      className="relative flex-none grid grid-cols-2 w-[calc(100%+2px)] -mx-px -mt-px h-6 rounded border border-slate-600 overflow-hidden divide-x divide-slate-600 cursor-default"
       onPointerDown={(e) => e.stopPropagation()}
     >
       <Half side="left" label={sides.left} onDrag={onDrag} onDragEnd={onDragEnd} onReset={onReset} />
       <Half side="right" label={sides.right} onDrag={onDrag} onDragEnd={onDragEnd} onReset={onReset} />
+      {/* says what the square is for; the halves under it take the pointer */}
+      <span aria-hidden className="pointer-events-none absolute inset-0 flex items-center justify-center text-[11px] leading-none text-slate-400">
+        ↔
+      </span>
     </div>
   );
 }
@@ -102,7 +106,7 @@ function Half({
       aria-label={label ? `Resize ${label}` : "Move this edge"}
       title={
         label
-          ? `Drag: move this edge, with ${label} giving or taking room past its narrowest or widest width if need be (they follow). Double-click: its limits back to its own`
+          ? `Drag: move this edge, with ${label} giving or taking room past its narrowest or widest width if need be (they follow). Double-click: ${label} back to its own width and limits`
           : "Drag: move this edge within the panes' limits"
       }
       className={"h-full touch-none hover:bg-slate-500 " + (side === "left" ? "cursor-w-resize" : "cursor-e-resize")}
@@ -115,12 +119,147 @@ function Half({
   );
 }
 
+/** A view a pane can show, as the bars offer it. */
+export type ViewChoice = { id: string; label: string; icon: ReactNode };
+/** A view icon clicked: which view, and the click (its modifiers say what to do with it). */
+export type OnView = (view: string, e: React.MouseEvent) => void;
+
 /**
- * A pane's bar, on its left edge: its name along it, bottom-up. A click
+ * The views on a bar: a menu icon that lists them by name (with their
+ * icons), and, with `stack`, one icon each under it. Each is a link to the
+ * view's pop-out url (the middle button opens it in a tab, tied to
+ * nothing); any other click goes to `onView`. The view this bar's pane
+ * shows, if any, is marked. The menu icon dragged is the bar dragged
+ * (`drag`), and the menu can end in more actions (`extras`).
+ */
+export function ViewIcons({
+  views,
+  current,
+  stack = true,
+  hint,
+  hrefOf,
+  onView,
+  menuSide,
+  drag,
+  extras = [],
+}: {
+  views: ViewChoice[];
+  current?: string;
+  /** The icons under the menu icon; without, the menu alone. */
+  stack?: boolean;
+  /** What a click does, after the view's name in the tooltip. */
+  hint: string;
+  hrefOf: (view: string) => string;
+  onView: OnView;
+  /** Where the menu opens: beside a vertical bar, or below a button in a horizontal one. */
+  menuSide: "left" | "right" | "below";
+  /** A drag of the menu icon: the bar's own drag (see PaneBar). */
+  drag?: { onDrag: (e: React.PointerEvent, startX: number) => void; onDragEnd: (e: React.PointerEvent) => void };
+  /** More items at the end of the menu. */
+  extras?: { label: string; onClick: () => void }[];
+}) {
+  const [menuAt, setMenuAt] = useState<{ top: number; left?: number; right?: number } | null>(null);
+  const menuButton = useRef<HTMLButtonElement>(null);
+  const toggleMenu = () => {
+    const r = menuButton.current?.getBoundingClientRect();
+    if (!r) return;
+    const at = menuSide === "right" ? { top: r.top, left: r.right + 2 } : menuSide === "left" ? { top: r.top, right: window.innerWidth - r.left + 2 } : { top: r.bottom + 2, left: r.left };
+    setMenuAt(menuAt ? null : at);
+  };
+  const none = () => {};
+  const menuHandlers = useDragHandlers(drag?.onDrag ?? none, drag?.onDragEnd ?? none, toggleMenu);
+  const click = (view: string) => (e: React.MouseEvent) => {
+    // a middle click is no click; the rest are ours
+    e.preventDefault();
+    e.stopPropagation();
+    setMenuAt(null);
+    onView(view, e);
+  };
+  // a touch smaller than the bar's text, so the stack sits well inside the bar
+  const icon = "unstyled !p-0 flex-none flex items-center justify-center size-5 text-[0.85em] rounded ";
+  return (
+    <>
+      <button
+        ref={menuButton}
+        className={icon + "text-slate-500 hover:text-slate-200 touch-none"}
+        aria-label="Views by name"
+        aria-expanded={menuAt !== null}
+        title={`The views by name. Each: ${hint}${drag ? ". Drag: move this edge" : ""}`}
+        {...menuHandlers}
+      >
+        <PanesIcon />
+      </button>
+      {menuAt && (
+        <>
+          <div className="fixed inset-0 z-40 cursor-default" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); setMenuAt(null); }} />
+          <div
+            role="menu"
+            className="fixed z-50 rounded-xl border border-slate-700 bg-gray-900 shadow-lg shadow-black/50 p-1 text-sm font-normal cursor-default"
+            style={menuAt}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            {views.map((v) => (
+              <a
+                key={v.id}
+                role="menuitem"
+                href={hrefOf(v.id)}
+                className={"flex items-center gap-2 rounded px-2 py-1 hover:bg-slate-800/60 hover:text-white " + (v.id === current ? "text-blue-300" : "text-slate-300")}
+                title={`${v.label}: ${hint}`}
+                onClick={click(v.id)}
+              >
+                {v.icon}
+                {v.label}
+              </a>
+            ))}
+            {extras.map((extra, i) => (
+              <button
+                key={extra.label}
+                role="menuitem"
+                className={"unstyled w-full rounded px-2 py-1 text-left text-slate-400 hover:bg-slate-800/60 hover:text-white " + (i === 0 ? "mt-1 border-t border-slate-800" : "")}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenuAt(null);
+                  extra.onClick();
+                }}
+              >
+                {extra.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+      {stack &&
+        views.map((v) =>
+          v.id === current ? (
+          <span key={v.id} className={icon + "text-blue-300"} title={`${v.label}, this pane's view`}>
+            {v.icon}
+          </span>
+        ) : (
+          <a
+            key={v.id}
+            href={hrefOf(v.id)}
+            className={icon + "text-slate-500 hover:text-slate-200"}
+            aria-label={v.label}
+            title={`${v.label}: ${hint}`}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={click(v.id)}
+          >
+            {v.icon}
+          </a>
+        ),
+        )}
+    </>
+  );
+}
+
+/**
+ * A pane's bar, on its left edge: under the resize square a menu of the
+ * views (a pick gives the pane that view, see Pane), then its name along
+ * it, bottom-up. A click
  * collapses or expands the pane; a drag moves the edge within every pane's
  * limits (the caller says what that resizes; it gets where the drag
  * started); the resize square at the top resizes one pane past its limits,
- * which then follow; under it, the pop-out link; a drag of the name moves
+ * which then follow; a drag of the name moves
  * the pane along the row, and dropped outside the window, the pane goes
  * into a window of its own; the × at the bottom hides the pane.
  */
@@ -130,6 +269,9 @@ export function PaneBar({
   maxWidth,
   onMax,
   popOutHref,
+  views,
+  onView,
+  closeActions,
   square,
   onMove,
   onMoveEnd,
@@ -144,8 +286,13 @@ export function PaneBar({
   /** The widest the pane may be made (Infinity: no limit), for the max rule, and setting it from the rule. */
   maxWidth: number;
   onMax: (max: number | undefined) => void;
-  /** The pane in its own window: what the page shows, and which pane. */
+  /** What the page shows and which view this pane shows: the view icons' pop-out urls, and the marked one. */
   popOutHref: { pathname: string; pane: string };
+  /** The views the pane can show, offered in the bar's menu. */
+  views?: ViewChoice[];
+  onView?: OnView;
+  /** Closing panes in bulk, at the end of the view menu. */
+  closeActions?: { label: string; onClick: () => void }[];
   /** The nearest open pane on either side of the bar, for the resize square. */
   square: Partial<Record<Side, string>>;
   /** Moves this pane along the row to where the pointer is (a drag of its name). */
@@ -183,13 +330,34 @@ export function PaneBar({
       }}
     >
       <ResizeSquare sides={square} onDrag={onDrag} onDragEnd={onDragEnd} onReset={onReset} />
-      <PopOutLink label={label} pathname={popOutHref.pathname} pane={popOutHref.pane} />
+      {views && onView && (
+        <ViewIcons
+          views={views}
+          current={popOutHref.pane}
+          stack={false}
+          hint="show it in this pane. Ctrl: a new pane of it next to this one. Ctrl+Shift: at the end of the row. Shift: in a new window following this one"
+          hrefOf={(view) => `${popOutHref.pathname}?pane=${view}`}
+          onView={onView}
+          menuSide="right"
+          drag={{ onDrag: (e, x) => onDrag(e, x), onDragEnd }}
+          extras={closeActions}
+        />
+      )}
       <span
         className="[writing-mode:vertical-rl] rotate-180 whitespace-nowrap touch-none cursor-move hover:text-white"
         title={`Drag: move ${label} along the row, or out of the window into one of its own`}
         {...nameHandlers}
       >
         {label}
+      </span>
+      {/* a grip under the name: the name is the handle to move the pane by */}
+      <span
+        aria-hidden
+        className="select-none touch-none cursor-move leading-none text-slate-500 hover:text-slate-200"
+        title={`Drag: move ${label} along the row, or out of the window into one of its own`}
+        {...nameHandlers}
+      >
+        ⋮⋮
       </span>
       {collapsed && (
         <span className="mt-auto">
@@ -201,13 +369,13 @@ export function PaneBar({
   );
 }
 
-/** The × that takes a pane off the page; the View menu puts it back. */
+/** The × that takes a pane off the page; the bar after the last pane adds views back. */
 export function HideButton({ label, onHide }: { label: string; onHide: () => void }) {
   return (
     <button
       className="unstyled !p-0 !px-1 leading-none text-slate-500 hover:text-red-300"
       aria-label={`Hide ${label}`}
-      title={`Hide ${label} (show it again from the View menu)`}
+      title={`Take ${label} off the page (the bar after the last pane adds views)`}
       onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => {
         e.stopPropagation();

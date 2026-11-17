@@ -28,9 +28,9 @@ export function instanceId(): string {
 /** The url that opens `pane` in its own window for what `pathname` shows (untied; a bookmark). */
 export const popOutUrl = (pathname: string, pane: string) => `${pathname}?pane=${pane}`;
 
-/** Opens `pane` in its own window, tied to this instance; the same pane again reuses that window. */
-export const openPopOut = (pathname: string, pane: string) => {
-  window.open(popOutUrl(pathname, pane), `${namePrefix}${instanceId()}:${pane}`);
+/** Opens `pane` in its own tab (or window), tied to this instance (from a pop-out: to the one it follows); the same pane again reuses it. */
+export const openPopOut = (pathname: string, pane: string, newWindow = false) => {
+  window.open(popOutUrl(pathname, pane), `${namePrefix}${tiedTo() ?? instanceId()}:${pane}`, newWindow ? "popup" : undefined);
 };
 
 /** The instance this pop-out follows, if it was opened from one. */
@@ -55,10 +55,32 @@ export function announcePath(pathname: string) {
   own.postMessage(pathname);
 }
 
-/** A pop-out follows the instance it's tied to; returns the way to stop. */
+/** A full instance goes where a pop-out tied to it went on its own (a link clicked there); returns the way to stop. */
+export function followPopOuts(onPath: (pathname: string) => void) {
+  own ??= channel(instanceId());
+  own.onmessage = (e) => {
+    if (typeof e.data === "object" && e.data?.from === "popOut") onPath(String(e.data.path));
+  };
+  return () => {
+    if (own) own.onmessage = null;
+  };
+}
+
+// a pop-out's channel to its instance, kept open like the instance's own (see above)
+let toInstance: BroadcastChannel | undefined;
+
+/** A pop-out tells the instance it's tied to where it went on its own. */
+export function tellInstance(id: string, pathname: string) {
+  toInstance ??= channel(id);
+  toInstance.postMessage({ from: "popOut", path: pathname });
+}
+
+/** A pop-out follows the instance it's tied to (a path, not a pop-out's message); returns the way to stop. */
 export function followPaths(id: string, onPath: (pathname: string) => void) {
   const c = channel(id);
-  c.onmessage = (e) => onPath(String(e.data));
+  c.onmessage = (e) => {
+    if (typeof e.data === "string") onPath(e.data);
+  };
   return () => c.close();
 }
 
