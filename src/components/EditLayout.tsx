@@ -100,6 +100,8 @@ export const EditLayout: FC<{
             onClick={(e) => jumpToClickedText(e.currentTarget, e.nativeEvent)}
           >
             <PreviewTableMenu
+              // the previews are h-full and scroll themselves: pass the height through
+              className="h-full"
               source={editorSource}
               onEditHere={(offset) => {
                 // on a phone the editor is hidden behind the Edit tab

@@ -45,10 +45,13 @@ function placeFor(table: HTMLTableElement) {
 export function PreviewTableMenu({
   source,
   onEditHere,
+  className,
   children,
 }: {
   source: () => string | undefined;
   onEditHere: (offset: number) => void;
+  /** for the wrapper: "h-full" where the preview fills its pane and scrolls itself */
+  className?: string;
   children: ReactNode;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -164,6 +167,7 @@ export function PreviewTableMenu({
   return (
     <div
       ref={rootRef}
+      className={className}
       onPointerOver={(e) => showFor(e.target)}
       onPointerLeave={() => !open && hideSoon()}
       // a touch screen has no hover: a tap on a table shows its button
