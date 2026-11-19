@@ -1,9 +1,9 @@
 "use client";
 import { MonacoEditor } from "@/components/editor/MonacoEditor";
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import QuizPreview from "./QuizPreview";
 import { QuizButtons } from "./QuizButton";
-import { parsedOrNothing } from "@/app/course/[courseName]/utils/draft";
+import { parsedOrNothing, useSettledText } from "@/app/course/[courseName]/utils/draft";
 import ClientOnly from "@/components/ClientOnly";
 import { SuspenseAndErrorHandling } from "@/components/SuspenseAndErrorHandling";
 import { useCourseContext } from "@/app/course/[courseName]/context/courseContext";
@@ -51,10 +51,10 @@ export default function EditQuiz({
   const bankPaths = useMemo(() => quizMarkdownUtils.bankPaths(text), [text]);
   const { data: bankFiles } = useQuizBanksQuery(moduleName, bankPaths);
   // the footer compares what is typed, ahead of the save; deferred so typing stays smooth
-  const settledText = useDeferredValue(text);
+  const settledText = useSettledText(text, `${moduleName}/${quizName}`);
   const draft = useMemo(
     () =>
-      parsedOrNothing(() => {
+      settledText === undefined ? undefined : parsedOrNothing(() => {
         const banks: Record<string, string> = {};
         for (const p of quizMarkdownUtils.bankPaths(settledText)) {
           const bank = bankFiles?.[p];
