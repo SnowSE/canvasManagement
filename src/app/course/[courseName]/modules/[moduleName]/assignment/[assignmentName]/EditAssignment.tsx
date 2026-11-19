@@ -4,13 +4,13 @@ import {
   LocalAssignment,
   localAssignmentMarkdown,
 } from "@/features/local/assignments/models/localAssignment";
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AssignmentPreview from "./AssignmentPreview";
 import { useCourseContext } from "@/app/course/[courseName]/context/courseContext";
 import ClientOnly from "@/components/ClientOnly";
 import { SuspenseAndErrorHandling } from "@/components/SuspenseAndErrorHandling";
 import { AssignmentFooterButtons } from "./AssignmentFooterButtons";
-import { parsedOrNothing } from "@/app/course/[courseName]/utils/draft";
+import { parsedOrNothing, useSettledText } from "@/app/course/[courseName]/utils/draft";
 import { useAuthoritativeUpdates } from "@/app/course/[courseName]/utils/useAuthoritativeUpdates";
 import EditAssignmentHeader from "./EditAssignmentHeader";
 import { UpdateAssignmentName } from "./UpdateAssignmentName";
@@ -42,16 +42,16 @@ export default function EditAssignment({
 
   const [error, setError] = useState("");
   // the footer compares what is typed, ahead of the save; deferred so typing stays smooth
-  const settledText = useDeferredValue(text);
+  const settledText = useSettledText(text, `${moduleName}/${assignmentName}`);
   const draft = useMemo(
-    () => parsedOrNothing(() => localAssignmentMarkdown.parseMarkdown(settledText, assignmentName)),
+    () => (settledText === undefined ? undefined : parsedOrNothing(() => localAssignmentMarkdown.parseMarkdown(settledText, assignmentName))),
     [settledText, assignmentName],
   );
 
   useEffect(() => {
     const delay = 500;
 
-    const handler = setTimeout(() => {
+    const save = () => {
       try {
         if (assignmentIsFetching || updateAssignment.isPending) {
           console.log("network requests in progress, not updating assignments");
@@ -84,10 +84,18 @@ export default function EditAssignment({
       } catch (e: any) {
         setError(e.toString());
       }
-    }, delay);
+    };
+    const handler = setTimeout(save, delay);
+    // a pending save goes out when the window loses focus, before typing goes on elsewhere
+    const flush = () => {
+      clearTimeout(handler);
+      save();
+    };
+    window.addEventListener("blur", flush, { once: true });
 
     return () => {
       clearTimeout(handler);
+      window.removeEventListener("blur", flush);
     };
   }, [
     assignment,

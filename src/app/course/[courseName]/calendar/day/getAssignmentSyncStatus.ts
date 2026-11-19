@@ -151,9 +151,21 @@ function checkOptionalDate(
   localValue: string | undefined,
   canvasValue: string | undefined,
 ): SyncField | null {
-  if (!localValue) return null;
-  const local = formatDate(localValue) ?? localValue;
   const canvas = formatDate(canvasValue);
+  // neither has one: nothing to say; only Canvas has one: Update clears it
+  if (!localValue)
+    return canvas
+      ? field({
+          key,
+          label,
+          section: "dates",
+          local: UNSET,
+          canvas,
+          same: false,
+          message: `${label.toLowerCase()} date in canvas but not in the file`,
+        })
+      : null;
+  const local = formatDate(localValue) ?? localValue;
   if (!canvas)
     return field({
       key,

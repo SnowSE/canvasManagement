@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import { useAuthoritativeUpdates } from "./useAuthoritativeUpdates";
 
@@ -16,6 +16,8 @@ import { useAuthoritativeUpdates } from "./useAuthoritativeUpdates";
  * echo of the editor's own save, however late, must not replace the typing.
  */
 describe("useAuthoritativeUpdates", () => {
+  afterEach(() => vi.restoreAllMocks());
+
   const renderForItem = (itemKey: string, startingText: string) =>
     renderHook(
       (props: { itemKey: string; startingText: string }) => useAuthoritativeUpdates(props),
@@ -100,7 +102,44 @@ describe("useAuthoritativeUpdates", () => {
     expect(result.current.clientIsAuthoritative).toBe(false);
   });
 
-  it("is authoritative on the server's text once it has taken it", () => {
+  it("after taking another window's text, its own earlier save coming back is a change to take too, not a reason to save (two windows no longer take turns undoing each other)", () => {
+    const { result, rerender } = renderForItem("quiz:exam-1", "v0");
+    // this window typed and saved v1; the other window's v2 landed meanwhile
+    act(() => result.current.textUpdate("v1"));
+    act(() => result.current.textSaved("v1"));
+    rerender({ itemKey: "quiz:exam-1", startingText: "v2" });
+    expect(result.current.clientIsAuthoritative).toBe(false);
+    act(() => result.current.textUpdate("v2", true));
+    // now this window's own v1 echoes back from the server
+    rerender({ itemKey: "quiz:exam-1", startingText: "v1" });
+    expect(result.current.clientIsAuthoritative).toBe(false);
+  });
+
+  it("keeps unsaved typing over another window's save while this window has the focus, and saves it", () => {
+    vi.spyOn(document, "hasFocus").mockReturnValue(true);
+    const { result, rerender } = renderForItem("quiz:exam-1", "v0");
+    act(() => result.current.textUpdate("v0 plus my typing"));
+    rerender({ itemKey: "quiz:exam-1", startingText: "v2 from the other window" });
+    expect(result.current.clientIsAuthoritative).toBe(true);
+    expect(result.current.text).toBe("v0 plus my typing");
+  });
+
+  it("takes another window's save when this window has no unsaved typing, focus or not, and when it has typing but not the focus", () => {
+    vi.spyOn(document, "hasFocus").mockReturnValue(true);
+    const idle = renderForItem("quiz:exam-1", "v0");
+    act(() => idle.result.current.textUpdate("v1"));
+    act(() => idle.result.current.textSaved("v1"));
+    idle.rerender({ itemKey: "quiz:exam-1", startingText: "v2 from the other window" });
+    expect(idle.result.current.clientIsAuthoritative).toBe(false);
+
+    vi.spyOn(document, "hasFocus").mockReturnValue(false);
+    const unfocused = renderForItem("quiz:exam-1", "v0");
+    act(() => unfocused.result.current.textUpdate("v0 plus my typing"));
+    unfocused.rerender({ itemKey: "quiz:exam-1", startingText: "v2 from the other window" });
+    expect(unfocused.result.current.clientIsAuthoritative).toBe(false);
+  });
+
+  it("is authoritative on the server's text once it has taken it, and typed on it", () => {
     const { result, rerender } = renderForItem("page:lab-02", "lab 2");
     const keyBefore = result.current.monacoKey;
 
@@ -108,6 +147,9 @@ describe("useAuthoritativeUpdates", () => {
     act(() => result.current.textUpdate("lab 2 changed in another window", true));
 
     expect(result.current.monacoKey).not.toBe(keyBefore);
+    // taking the server's text is not typing: nothing to save until the user types
+    expect(result.current.clientIsAuthoritative).toBe(false);
+    act(() => result.current.textUpdate("lab 2 changed in another window, edited"));
     expect(result.current.clientIsAuthoritative).toBe(true);
   });
 });

@@ -166,7 +166,9 @@ export const ItemInDay: FC<{
             {...tooltipProps}
           />
         )}
-        {type === "assignment" && (
+        {/* a menu is built when it opens: with one on every item, their query
+            hooks were most of what a calendar re-render cost */}
+        {modalControl.isOpen && type === "assignment" && (
           <AssignmentDayItemContextMenu
             modalControl={modalControl}
             item={item}
@@ -174,7 +176,7 @@ export const ItemInDay: FC<{
             differenceCount={differences.length}
           />
         )}
-        {type === "quiz" && (
+        {modalControl.isOpen && type === "quiz" && (
           <QuizDayItemContextMenu
             modalControl={modalControl}
             item={item}
@@ -182,7 +184,7 @@ export const ItemInDay: FC<{
             differenceCount={differences.length}
           />
         )}
-        {type === "page" && (
+        {modalControl.isOpen && type === "page" && (
           <PageDayItemContextMenu
             modalControl={modalControl}
             item={item}

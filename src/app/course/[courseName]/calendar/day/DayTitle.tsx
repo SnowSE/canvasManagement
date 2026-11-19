@@ -8,10 +8,12 @@ import { useDragStyleContext } from "../../context/drag/dragStyleContext";
 import { getLectureForDay } from "@/features/local/utils/lectureUtils";
 import { useLecturesSuspenseQuery } from "@/features/local/lectures/lectureHooks";
 import ClientOnly from "@/components/ClientOnly";
+import { memo } from "react";
 import { Tooltip } from "@/components/Tooltip";
 import { useTooltip } from "@/components/useTooltip";
 
-export function DayTitle({ day, dayAsDate }: { day: string; dayAsDate: Date }) {
+// memoized: a save re-renders every day of the calendar, and the title has no part in it
+export const DayTitle = memo(function DayTitle({ day, dayAsDate }: { day: string; dayAsDate: Date }) {
   const { courseName } = useCourseContext();
   const { data: weeks } = useLecturesSuspenseQuery();
   const { setIsDragging } = useDragStyleContext();
@@ -143,4 +145,4 @@ export function DayTitle({ day, dayAsDate }: { day: string; dayAsDate: Date }) {
       </Modal>
     </div>
   );
-}
+});

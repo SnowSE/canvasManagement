@@ -10,7 +10,17 @@ import { useState, useMemo, useCallback } from "react";
  * echo of its own save, or a late read from before a newer save) is not a
  * change, however long after the last keystroke it lands, so it never replaces
  * what is being typed. A text from outside (another window, another program,
- * git) is, and then the server wins.
+ * git) is, and then the server wins: the editor takes it, and from then on
+ * that text is the only one it knows. Its own earlier saves are history: one
+ * of them coming back later is a change to take as well, never a reason to
+ * save, or two windows with the same item open would take turns undoing
+ * each other after their saves once crossed. Taking the server's text is not
+ * typing, so nothing is saved until the user types again.
+ *
+ * One exception: the window the user is typing in wins. An outside change
+ * that lands while this window has unsaved typing and the focus is not
+ * taken; the typing stays and is saved over it. (An idle window, or one the
+ * user has left, takes the change, so two windows can't take turns.)
  */
 export function useAuthoritativeUpdates({
   itemKey,
@@ -29,6 +39,8 @@ export function useAuthoritativeUpdates({
   const [text, setText] = useState(startingText);
   // the server texts this editor has loaded, adopted or saved, newest first
   const [known, setKnown] = useState([startingText]);
+  // the text as it was last loaded, adopted or saved: typing since is unsaved
+  const [synced, setSynced] = useState(startingText);
   const [updateMonacoKey, setUpdateMonacoKey] = useState(1);
   const [openItemKey, setOpenItemKey] = useState(itemKey);
   const [clientHasEdited, setClientHasEdited] = useState(false);
@@ -41,13 +53,15 @@ export function useAuthoritativeUpdates({
     setOpenItemKey(itemKey);
     setText(startingText);
     setKnown([startingText]);
+    setSynced(startingText);
     setClientHasEdited(false);
     setUpdateMonacoKey((k) => k + 1);
   }
 
   // Only keystrokes make the client authoritative. Merely opening or
   // re-rendering an item must never be enough to trigger a save.
-  const clientIsAuthoritative = clientHasEdited && known.includes(startingText);
+  const typingHere = text !== synced && typeof document !== "undefined" && document.hasFocus();
+  const clientIsAuthoritative = clientHasEdited && (known.includes(startingText) || typingHere);
 
   // a few, not one: late reads of earlier saves can still land
   const remember = (serverText: string) =>
@@ -56,15 +70,22 @@ export function useAuthoritativeUpdates({
   /** Typing; or, with `fromServer`, taking the server's text in place of what was here. */
   const textUpdate = useCallback((t: string, fromServer: boolean = false) => {
     setText(t);
-    setClientHasEdited(true);
+    setClientHasEdited(!fromServer);
     if (fromServer) {
-      remember(t);
+      setKnown([t]);
+      setSynced(t);
       setUpdateMonacoKey((k) => k + 1);
     }
   }, []);
 
-  /** The text just sent to the server (normalized): its echo is not a change. */
-  const textSaved = useCallback((normalized: string) => remember(normalized), []);
+  /** The text just sent to the server (normalized): its echo is not a change, and the typing so far is saved. */
+  const textSaved = useCallback(
+    (normalized: string) => {
+      remember(normalized);
+      setSynced(text);
+    },
+    [text],
+  );
 
   return useMemo(
     () => ({

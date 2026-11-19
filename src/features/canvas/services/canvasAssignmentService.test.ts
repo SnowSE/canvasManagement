@@ -70,6 +70,15 @@ describe("canvasAssignmentService.update", () => {
   });
 });
 
+describe("canvasAssignmentService.update dates", () => {
+  it("sends null for a lock or unlock date the file doesn't have, so Canvas clears it", async () => {
+    await canvasAssignmentService.update(42, 5, assignment, settings);
+    const body = vi.mocked(axiosClient.put).mock.calls[0][1] as { assignment: { lock_at: unknown; unlock_at: unknown } };
+    expect(body.assignment.lock_at).toBeNull();
+    expect(body.assignment.unlock_at).toBeNull();
+  });
+});
+
 describe("canvasAssignmentService.syncRubricAndOverrides", () => {
   const rubricUrl = "https://test.instructure.com/api/v1/courses/42/rubrics";
   const saved = { id: 5, name: "Essay", has_overrides: false } as CanvasAssignment;

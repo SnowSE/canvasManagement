@@ -9,7 +9,8 @@ import { GlobalSettings } from "@/features/local/globalSettings/globalSettingsMo
 
 interface ServerToClientEvents {
   message: (data: string) => void;
-  fileChanged: (filePath: string) => void;
+  /** The files changed within a moment, each once (see websocket-standalone.js). */
+  filesChanged: (filePaths: string[]) => void;
   folderChanged: (folderPath: string) => void;
 }
 
@@ -46,32 +47,40 @@ function getCourseNameByPath(
 export function ClientCacheInvalidation() {
   const invalidateCache = useFilePathInvalidation();
   const invalidateModuleNames = useModuleNamesInvalidation();
-  // io() connects on its own; after a connect_error it stays disconnected
+  const queryClient = useQueryClient();
+  // io() connects on its own and keeps trying after a connection error (the
+  // server restarting, the machine waking); the file changes it missed while
+  // disconnected are caught up by refetching everything on reconnect
   useEffect(() => {
     socket.on("connect", () => {
       console.log("Socket connected successfully.");
     });
+    const catchUp = () => {
+      console.log("Socket reconnected: refetching everything");
+      queryClient.invalidateQueries();
+    };
+    socket.io.on("reconnect", catchUp);
 
     socket.on("message", (data) => {
       console.log("Received message:", data);
     });
 
-    socket.on("fileChanged", invalidateCache);
+    socket.on("filesChanged", invalidateCache);
     socket.on("folderChanged", invalidateModuleNames);
 
     socket.on("connect_error", (error) => {
       console.error("Connection error:", error);
-      console.error("File system real time updates disabled");
-      socket.disconnect();
     });
 
     return () => {
+      socket.io.off("reconnect", catchUp);
+      socket.off("connect");
       socket.off("message");
-      socket.off("fileChanged");
+      socket.off("filesChanged");
       socket.off("folderChanged");
       socket.off("connect_error");
     };
-  }, [invalidateCache, invalidateModuleNames]);
+  }, [invalidateCache, invalidateModuleNames, queryClient]);
 
   return <></>;
 }
@@ -97,24 +106,32 @@ const useFilePathInvalidation = () => {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const { data: settings } = useGlobalSettingsQuery();
-
+  const invalidateFile = useFileInvalidation();
   return useCallback(
-    (filePath: string) => {
-      const courseName = getCourseNameByPath(filePath, settings);
-      // console.log(filePath, settings, courseName);
-      if (!courseName) {
-        console.log(
-          "no course settings found for file path, not invalidating cache",
-          filePath
-        );
-        return;
+    (filePaths: string[]) => {
+      const courses = new Set<string>();
+      for (const filePath of filePaths) {
+        const courseName = getCourseNameByPath(filePath, settings);
+        if (!courseName) {
+          console.log("no course settings found for file path, not invalidating cache", filePath);
+          continue;
+        }
+        courses.add(courseName);
+        invalidateFile(filePath, courseName);
       }
+      // any change in a course folder can change what git has to commit: once per course per batch
+      for (const courseName of courses) queryClient.invalidateQueries({ queryKey: trpc.git.status.queryKey(courseName) });
+    },
+    [queryClient, trpc.git.status, settings, invalidateFile]
+  );
+};
 
-      // any change in the course folder can change what git has to commit
-      queryClient.invalidateQueries({
-        queryKey: trpc.git.status.queryKey(courseName),
-      });
-
+/** The queries one changed file makes stale, by what the file is. */
+const useFileInvalidation = () => {
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
+  return useCallback(
+    (filePath: string, courseName: string) => {
       const splitPath = filePath.split("/");
       const [moduleOrLectures, itemType, itemFile] = splitPath.slice(-3);
 
@@ -232,7 +249,6 @@ const useFilePathInvalidation = () => {
       trpc.assignment.getAllAssignments,
       trpc.assignment.getAssignment,
       trpc.lectures.getLectures,
-      trpc.git.status,
       trpc.quiz.getBanks,
       trpc.quiz.listBankFiles,
       trpc.module.getInvalidItems,
@@ -244,7 +260,6 @@ const useFilePathInvalidation = () => {
       trpc.quiz.getQuiz,
       trpc.settings.allCoursesSettings,
       trpc.settings.courseSettings,
-      settings,
     ]
   );
 };
