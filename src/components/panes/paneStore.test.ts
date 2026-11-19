@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { fitOpening, leadId, maxWidthFor, moveEdge, withLead, movePane, paneActions, PaneSpec, parseDoc, ruleLengthFor, shareRow, showingPane, viewPanes, widthRule } from "./paneStore";
+import { fitOpening, leadId, limitsAfter, maxRuleShare, moveEdge, withLead, movePane, paneActions, PaneSpec, parseDoc, relax, showingPane, viewOf, viewPanes, widthRule } from "./paneStore";
 
 const spec = (id: string, extra: Partial<PaneSpec> = {}): PaneSpec => ({
   id,
@@ -58,7 +58,8 @@ describe("showingPane", () => {
   it("on a phone, the first open pane shows; with none open, the first on the page", () => {
     expect(showingPane(viewPanes(specs, {}, true))).toBe("calendar");
     expect(showingPane(viewPanes(specs, paneActions.jumpTo({}, ids, "editor"), true))).toBe("editor");
-    expect(showingPane(viewPanes(specs, paneActions.setAllCollapsed({ panes: { help: { hidden: true } } }, ids, true), true))).toBe("calendar");
+    const allCollapsed = Object.fromEntries(ids.map((id) => [id, { collapsed: true, hidden: id === "help" }]));
+    expect(showingPane(viewPanes(specs, { panes: allCollapsed }, true))).toBe("calendar");
     expect(showingPane([])).toBeUndefined();
   });
 });
@@ -75,16 +76,7 @@ describe("paneActions", () => {
     expect(paneActions.move({}, ids, "preview", 1).order).toEqual(["help", "preview", "calendar", "modules", "editor"]);
   });
 
-  it("opens the panes given at the widths given, leaving the others alone", () => {
-    const doc = paneActions.openAll({ panes: { help: { hidden: true, collapsed: true }, editor: { width: 650, collapsed: true } } }, { editor: 300.4, calendar: 300.4 });
-    expect(doc.panes?.help).toEqual({ hidden: true, collapsed: true });
-    expect(doc.panes?.editor).toEqual({ width: 300.4, collapsed: false });
-    expect(doc.panes?.calendar).toEqual({ width: 300.4, collapsed: false });
-  });
 
-  it("reset forgets everything", () => {
-    expect(paneActions.reset()).toEqual({});
-  });
 });
 
 describe("moveEdge", () => {
@@ -106,38 +98,59 @@ describe("moveEdge", () => {
 describe("fitOpening", () => {
   const p = (id: string, width: number, minWidth = 100) => ({ id, width, minWidth, maxWidth: Infinity });
   it("takes the empty room first and changes nobody when it's enough", () => {
-    expect(fitOpening([p("a", 300), p("new", 300)], "new", 277, 300, 23)).toEqual({ widths: { a: 300, new: 300 }, collapse: [] });
+    expect(fitOpening([p("a", 300), p("new", 300)], "new", 277, 300, 23)).toEqual({ widths: { a: 300, new: 300 }, collapse: [], short: 0 });
   });
   it("then shrinks the others, those after it first, to their min", () => {
     expect(fitOpening([p("a", 300), p("new", 300), p("c", 300)], "new", 277, 0, 23).widths).toEqual({ a: 223, new: 300, c: 100 });
   });
   it("then closes open panes from the right, not the one opening", () => {
-    expect(fitOpening([p("a", 100), p("new", 300), p("c", 100)], "new", 277, 0, 23)).toEqual({ widths: { new: 300 }, collapse: ["c", "a"] });
-  });
-});
-
-describe("shareRow", () => {
-  const p = (id: string, minWidth: number, maxWidth = Infinity) => ({ id, width: 0, minWidth, maxWidth });
-  it("gives each its min, then shares the rest by headroom, nobody past its max", () => {
-    const { widths, collapse } = shareRow([p("a", 100, 200), p("b", 100)], 1000, 20);
-    expect(collapse).toEqual([]);
-    expect(widths.a).toBeCloseTo(180);
-    expect(widths.b).toBeCloseTo(820);
-  });
-  it("collapses a pane whose min doesn't fit, handing mins out from the left", () => {
-    expect(shareRow([p("a", 500), p("b", 500)], 700, 20).collapse).toEqual(["b"]);
+    expect(fitOpening([p("a", 100), p("new", 300), p("c", 100)], "new", 277, 0, 23)).toEqual({ widths: { new: 300 }, collapse: ["c", "a"], short: 123 });
   });
 });
 
 describe("the max rule", () => {
-  it("is as long as the drop from the corner that makes the bound, bar included", () => {
-    expect(ruleLengthFor(520, 320, 20)).toBeCloseTo(400);
-    expect(maxWidthFor(400, 320, 20, 900)).toBe(520);
+  it("shows how much wider the pane may still be made, of what the row allows, from the top", () => {
+    expect(maxRuleShare(400, 300, 700)).toBeCloseTo(0.25);
+    expect(maxRuleShare(400, 400, 700)).toBe(0);
+    expect(maxRuleShare(400, 500, 700)).toBe(0);
+    expect(maxRuleShare(700, 300, 700)).toBe(1);
   });
-  it("is empty when the pane is as wide as it may be, and no bound at its full length", () => {
-    expect(ruleLengthFor(320, 320, 20)).toBe(0);
-    expect(ruleLengthFor(Infinity, 320, 20)).toBe(Infinity);
-    expect(maxWidthFor(898, 320, 20, 900)).toBeUndefined();
+  it("is the whole rule when there is no widest width", () => {
+    expect(maxRuleShare(Infinity, 300, 700)).toBe(1);
+  });
+});
+
+describe("a drag from a resize square", () => {
+  const p = (id: string, width: number, minWidth = 100, maxWidth = Infinity) => ({ id, width, minWidth, maxWidth });
+  it("gets its way: the pane it is for is free of its limits for the drag, the others keep theirs", () => {
+    const b = p("b", 300, 300, 300);
+    expect(moveEdge([p("a", 300), b, p("c", 300)], 2, 50, 0)).toEqual({ a: 350, b: 300, c: 250 });
+    const open = relax([p("a", 300), b, p("c", 300)], "b");
+    expect(moveEdge(open, 2, 50, 0)).toEqual({ a: 300, b: 350, c: 250 });
+    expect(moveEdge(open, 2, -250, 0)).toEqual({ a: 300, b: 50, c: 550 });
+  });
+  it("moves only the limit the drag crossed, to where the pane ended", () => {
+    const b = { minWidth: 200, maxWidth: 400 };
+    expect(limitsAfter(b, 300)).toEqual({});
+    expect(limitsAfter(b, 150.4)).toEqual({ min: 150 });
+    expect(limitsAfter(b, 450)).toEqual({ max: 450 });
+    expect(limitsAfter({ minWidth: 120, maxWidth: Infinity }, 80)).toEqual({ min: 80 });
+  });
+  it("a min pushed under the pane's own minimum holds, and the floor is still known", () => {
+    const view = viewPanes(specs, paneActions.setLimits({}, "editor", { min: 80 }), true).find((v) => v.id === "editor")!;
+    expect([view.minWidth, view.maxWidth, view.floor]).toEqual([80, Infinity, 120]);
+    expect(JSON.parse(JSON.stringify(paneActions.setLimits({ panes: { editor: { min: 80 } } }, "editor", { min: undefined })))).toEqual({ panes: { editor: {} } });
+  });
+});
+
+describe("the row's right end", () => {
+  const p = (id: string, width: number, minWidth = 100) => ({ id, width, minWidth, maxWidth: Infinity });
+  it("the end bar dragged right widens the last pane into the empty room, and no further", () => {
+    expect(moveEdge([p("a", 300), p("b", 300)], 2, 50, 80)).toEqual({ a: 300, b: 350 });
+    expect(moveEdge([p("a", 300), p("b", 300)], 2, 100, 80)).toEqual({ a: 300, b: 380 });
+  });
+  it("dragged left, the last pane narrows to its min, then the one before it, leaving empty room", () => {
+    expect(moveEdge([p("a", 300), p("b", 300)], 2, -250, 0)).toEqual({ a: 250, b: 100 });
   });
 });
 
@@ -151,5 +164,45 @@ describe("the row's left end", () => {
   });
   it("the lead is remembered apart from the panes", () => {
     expect(paneActions.setWidths({}, { [leadId]: 40.4, a: 300 })).toEqual({ lead: 40, panes: { a: { width: 300 } } });
+  });
+});
+
+describe("panes added beyond the catalogue", () => {
+  const ids = ["calendar", "editor", "editor#2"];
+  it("adds a view's next free copy, open, at the end, and makes it current", () => {
+    const doc = paneActions.add({ panes: { editor: { collapsed: true } } }, ids, "editor");
+    expect(doc.added).toEqual(["editor#3"]);
+    expect(doc.panes?.["editor#3"]).toEqual({ collapsed: false });
+    expect(viewOf("editor#3")).toBe("editor");
+    expect(viewOf("editor")).toBe("editor");
+  });
+  it("removes a copy with everything remembered about it", () => {
+    const doc = paneActions.remove({ added: ["editor#2"], order: ["editor#2", "calendar"], panes: { "editor#2": { width: 300 } } }, "editor#2");
+    expect(doc).toEqual({ added: [], order: ["calendar"], panes: {} });
+  });
+});
+
+describe("a pane switched to another view", () => {
+  const ids = ["calendar", "editor"];
+  it("takes the pane's place, width and limits; a catalogue pane is hidden, a copy removed", () => {
+    const doc = paneActions.switchView({ panes: { calendar: { width: 500, max: 600 } } }, ids, "calendar", "editor");
+    expect(doc.order).toEqual(["editor#2", "editor"]);
+    expect(doc.panes?.["editor#2"]).toEqual({ width: 500, max: 600, collapsed: false });
+    expect(doc.panes?.calendar).toEqual({ width: 500, max: 600, hidden: true });
+    const again = paneActions.switchView(doc, ["editor#2", "editor"], "editor#2", "preview");
+    expect(again.order).toEqual(["preview#2", "editor"]);
+    expect(again.added).toEqual(["preview#2"]);
+    expect(again.panes?.["editor#2"]).toBeUndefined();
+  });
+  it("adds at a place in the row when asked", () => {
+    expect(paneActions.add({}, ids, "editor", 1).order).toEqual(["calendar", "editor#2", "editor"]);
+    expect(paneActions.add({}, ids, "editor", 0).order).toEqual(["editor#2", "calendar", "editor"]);
+  });
+});
+
+describe("closing panes in bulk", () => {
+  it("hides catalogue panes and removes copies, as × does", () => {
+    const doc = paneActions.close({ added: ["editor#2"], panes: { "editor#2": { width: 1 } } }, ["calendar", "editor#2"]);
+    expect(doc).toEqual({ added: [], order: undefined, panes: { calendar: { hidden: true } } });
   });
 });

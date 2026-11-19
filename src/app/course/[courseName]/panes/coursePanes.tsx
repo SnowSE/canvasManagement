@@ -43,7 +43,7 @@ export type PaneContext = {
 
 /**
  * One entry per pane of a course, in their default order. The frame
- * renders them; the View menu and the phone's row list them; the pane
+ * renders them; the bars and the phone's row list them; the pane
  * store remembers what the user does with them. To add a pane, add an entry.
  */
 export type CoursePane = {
@@ -84,9 +84,18 @@ const sameCourse = (a: PaneContext, b: PaneContext) => a.courseName === b.course
 const Calendar = memo(function Calendar({ courseName }: PaneContext) {
   return <CourseCalendar key={courseName} />;
 }, sameCourse);
+// its own boundary, like Home: it fetches when it mounts, and a suspension
+// with no boundary in the pane climbs to the route and remounts the whole frame
 const Modules = memo(function Modules({ courseName }: PaneContext) {
-  return <ModulesContent key={courseName} />;
+  return (
+    <SuspenseAndErrorHandling>
+      <ModulesContent key={courseName} />
+    </SuspenseAndErrorHandling>
+  );
 }, sameCourse);
+
+/** How narrow a pane may be made unless set otherwise: where the calendar's week grid appears (--container-week in globals.css). */
+export const paneMinWidth = 440;
 
 /** A pane with nothing to show here says so instead. */
 export function PaneNote({ children }: { children: ReactNode }) {
@@ -152,7 +161,8 @@ export const coursePanes: CoursePane[] = [
   },
   {
     id: "calendar",
-    defaultWidth: 560,
+    // wide enough for the week grid with the day names spelled out (see --container-names)
+    defaultWidth: 800,
     label: "Calendar",
     icon: <CalendarIcon />,
     Content: Calendar,
@@ -162,7 +172,7 @@ export const coursePanes: CoursePane[] = [
     defaultWidth: 220,
     label: "Modules",
     icon: <ModulesIcon />,
-    collapsedByDefault: () => window.innerWidth <= 1400,
+    collapsedByDefault: () => true,
     Content: Modules,
   },
   {
@@ -170,6 +180,7 @@ export const coursePanes: CoursePane[] = [
     defaultWidth: 300,
     label: "Editor",
     icon: <EditIcon />,
+    collapsedByDefault: () => true,
     Content: Editor,
   },
   {
@@ -177,6 +188,7 @@ export const coursePanes: CoursePane[] = [
     defaultWidth: 260,
     label: "Preview",
     icon: <PreviewIcon />,
+    collapsedByDefault: () => true,
     Content: Preview,
   },
   {
@@ -224,11 +236,13 @@ export const coursePanes: CoursePane[] = [
     collapsedByDefault: () => true,
     Content: memo(function Import() {
       return (
-        <div className="flex justify-center pt-3">
-          <div className="w-full max-w-7xl min-w-0 px-3 pb-12">
-            <ImportFromCanvas />
+        <SuspenseAndErrorHandling>
+          <div className="flex justify-center pt-3">
+            <div className="w-full max-w-7xl min-w-0 px-3 pb-12">
+              <ImportFromCanvas />
+            </div>
           </div>
-        </div>
+        </SuspenseAndErrorHandling>
       );
     }),
   },
@@ -241,9 +255,11 @@ export const coursePanes: CoursePane[] = [
     collapsedByDefault: () => true,
     Content: memo(function Errors() {
       return (
-        <ClientOnly>
-          <ErrorLogPage />
-        </ClientOnly>
+        <SuspenseAndErrorHandling>
+          <ClientOnly>
+            <ErrorLogPage />
+          </ClientOnly>
+        </SuspenseAndErrorHandling>
       );
     }),
   },
@@ -255,11 +271,13 @@ export const coursePanes: CoursePane[] = [
     collapsedByDefault: () => true,
     Content: memo(function Settings() {
       return (
-        <div className="flex justify-center pt-3">
-          <div className="w-full max-w-3xl min-w-0 px-3 pb-12">
-            <AllSettings />
+        <SuspenseAndErrorHandling>
+          <div className="flex justify-center pt-3">
+            <div className="w-full max-w-3xl min-w-0 px-3 pb-12">
+              <AllSettings />
+            </div>
           </div>
-        </div>
+        </SuspenseAndErrorHandling>
       );
     }),
   },

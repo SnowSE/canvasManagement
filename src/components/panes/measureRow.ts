@@ -21,19 +21,28 @@ export type Row = {
  */
 export function measureRow(panes: PaneView[]): Row {
   const width = (p: PaneView) => paneElement(p.id)?.getBoundingClientRect().width ?? p.width;
-  const open = panes.filter(isShown).map((p) => ({ id: p.id, width: width(p), minWidth: p.minWidth, maxWidth: p.maxWidth }));
+  // a pane with no widest width set may take half the row
+  const sized = (room: number) =>
+    panes.filter(isShown).map((p) => ({ id: p.id, width: width(p), minWidth: p.minWidth, maxWidth: Number.isFinite(p.maxWidth) ? p.maxWidth : room / 2 }));
   const shown = panes.filter((p) => !p.hidden);
   const row = shown.map((p) => paneElement(p.id)?.parentElement).find(Boolean);
-  if (!row) return { open, free: 0, bar: 23, room: 0 };
+  if (!row) return { open: sized(Infinity), free: 0, bar: 23, room: 0 };
   const box = row.getBoundingClientRect();
-  const end = Math.max(...[...row.children].map((el) => el.getBoundingClientRect().right));
+  // the start and end bars sit outside every pane: the empty room is what's
+  // left before the end bar, and the room the panes share leaves both out
+  const edgeBars = [...row.querySelectorAll<HTMLElement>("[data-pane-edge]")];
+  const end = Math.max(...[...row.children].filter((el) => !edgeBars.includes(el as HTMLElement)).map((el) => el.getBoundingClientRect().right));
+  const endBarWidth = edgeBars.reduce((total, el) => total + el.getBoundingClientRect().width + gapOf(row), 0);
   const collapsed = shown.find((p) => p.collapsed);
   const barEl = collapsed ? paneElement(collapsed.id) : paneElement(shown[0].id)?.firstElementChild;
-  const gap = parseFloat(getComputedStyle(row).columnGap) || 0;
+  const gap = gapOf(row);
+  const room = row.clientWidth - endBarWidth - gap * Math.max(shown.length - 1, 0);
   return {
-    open,
-    free: Math.max(box.right - end, 0),
+    open: sized(room),
+    free: Math.max(box.right - endBarWidth - end, 0),
     bar: barEl?.getBoundingClientRect().width ?? 23,
-    room: row.clientWidth - gap * Math.max(shown.length - 1, 0),
+    room,
   };
 }
+
+const gapOf = (row: Element) => parseFloat(getComputedStyle(row).columnGap) || 0;

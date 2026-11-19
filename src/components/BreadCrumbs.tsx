@@ -6,7 +6,7 @@ import HomeIcon from "./icons/HomeIcon";
 import { RightSingleChevron } from "./icons/RightSingleChevron";
 import { CourseMenu } from "@/app/course/[courseName]/CourseMenu";
 
-/** home › term › course ▾ › …; the term is the course's semester, when known. The home icon opens this page as a full window: a new one (a plain link, so Ctrl and Shift clicks do what the browser does with them), or in a pop-out the same window unless the click asks for a new one. */
+/** home › term › course ▾ › …; the term is the course's semester, when known. The home icon goes to the home page (a plain link, so Ctrl and Shift open it in a new window); in a pop-out, a plain click makes this window a full one unless the click asks for a new one. */
 export const BreadCrumbs = ({ term, popOut = false }: { term?: string; popOut?: boolean }) => {
   const location = useLocation();
   const router = useRouter();
@@ -68,18 +68,20 @@ export const BreadCrumbs = ({ term, popOut = false }: { term?: string; popOut?: 
       <span className={sharedBackgroundClassNames}>
         <a
           className="flex items-center gap-1 rounded-lg h-full"
-          href={pathname}
-          target={popOut ? undefined : "_blank"}
-          aria-label={popOut ? "Open this as a full window" : "Open this page in a new window"}
+          href={popOut ? pathname : "/"}
+          aria-label={popOut ? "Open this as a full window" : "Home"}
           title={
             popOut
               ? "This window as a full one, with every pane, no longer following the window it came from (Ctrl or Shift: a new window instead)"
-              : "This page in a new window, with every pane"
+              : "The home page (Ctrl or Shift: in a new window)"
           }
           onClick={(e) => {
-            // a plain click in a pop-out: the same window; with Ctrl, Shift or the middle button, the browser opens a new one
-            if (!popOut || e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return;
+            // with Ctrl, Shift or the middle button, the browser opens a new window; a plain click
+            // in a regular window goes home, in a pop-out makes it a full window
+            if (e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return;
             e.preventDefault();
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            if (!popOut) return void router.navigate({ to: "/" as any });
             leavePopOut();
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             router.navigate({ to: pathname, search: { pane: undefined }, replace: true } as any);

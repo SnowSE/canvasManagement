@@ -1,17 +1,20 @@
 "use client";
 import { ReactNode, useMemo } from "react";
-import { useMatches } from "@tanstack/react-router";
+import { useMatches, useRouter, useRouterState } from "@tanstack/react-router";
+import { ViewIcons } from "@/components/panes/ViewIcons";
+import { openPopOut, popOutUrl } from "./popOut";
 import { Pane } from "@/components/panes/Pane";
+import { EdgeBar } from "@/components/panes/EdgeBar";
 import { PaneStrip, usePanes, usePinned } from "@/components/panes/PaneStrip";
-import { PanesMenu } from "@/components/panes/PanesMenu";
 import { PaneSelect } from "@/components/panes/PaneSelect";
+import { orderPanes, viewOf } from "@/components/panes/paneStore";
 import { FoldedBars, PinButton, topPin } from "@/components/panes/PinnedBars";
 import { BreadCrumbs } from "@/components/BreadCrumbs";
 import { useCourseContext } from "../context/courseContext";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import { getTermName } from "@/features/local/utils/timeUtils";
 import { CurrentItem, defaultLectureDay, useCurrentItem } from "../currentItem";
-import { coursePanes, PaneContext, PaneNote } from "./coursePanes";
+import { coursePanes, PaneContext, PaneNote, paneMinWidth } from "./coursePanes";
 import { usePopOutPane } from "./popOut";
 import { FollowNavigation } from "./FollowNavigation";
 import { ItemEditing } from "./ItemEditing";
@@ -40,17 +43,49 @@ export function CourseFrame({ children }: { children: ReactNode }) {
     return lectureDay ? { kind: "lecture", lectureDay } : undefined;
   }, [urlItem, onCoursePage, settings]);
   const [topPinned] = usePinned(topPin);
+  const { added, views: prefs } = usePanes();
+  // the catalogue's pane of each view, then the copies added (see paneActions.add), each with its view's spec
+  const panes = [
+    ...coursePanes,
+    ...added.flatMap((id) => {
+      const view = coursePanes.find((p) => p.id === viewOf(id));
+      return view ? [{ ...view, id }] : [];
+    }),
+  ];
+  // as the menus list them: in the order chosen there, those below the divider off the icon stacks
+  const views = orderPanes(
+    coursePanes.map(({ id, label, icon }) => ({ id, label, icon, hidden: prefs.hidden?.includes(id) })),
+    prefs.order,
+  );
   const popOut = usePopOutPane();
+  const router = useRouter();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   // the same object while nothing changed, so memoized pane contents are skipped
   const ctx: PaneContext = useMemo(() => ({ courseName, item, onCoursePage }), [courseName, item, onCoursePage]);
   if (popOut) {
-    const pane = coursePanes.find((p) => p.id === popOut);
+    const pane = coursePanes.find((p) => p.id === viewOf(popOut));
     return (
       <>
         <FollowNavigation />
         <ItemEditing item={item} />
         <div className="h-full flex flex-col px-1 w-full bg-gray-900 rounded">
           <div className="py-1 flex flex-row flex-nowrap items-center gap-x-2">
+            {/* the view this window shows, or with Ctrl or Shift another window of a view, following the same page */}
+            <ViewIcons
+              views={views}
+              current={viewOf(popOut)}
+              stack={false}
+              hint="show it in this window. Ctrl or Shift: in another window following the same page"
+              hrefOf={(view) => popOutUrl(pathname, view)}
+              onPopOut={(view) => openPopOut(pathname, view)}
+              onView={(view, e) =>
+                e.ctrlKey || e.metaKey || e.shiftKey
+                  ? openPopOut(pathname, view, e.shiftKey)
+                  : // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    router.navigate({ to: pathname as any, search: { pane: view } as any })
+              }
+              menuSide="below"
+            />
             <BreadCrumbs term={settings?.startDate ? getTermName(settings.startDate) : undefined} popOut />
             <TopBar onCoursePage={onCoursePage} />
           </div>
@@ -77,22 +112,21 @@ export function CourseFrame({ children }: { children: ReactNode }) {
           }
         >
           <PinButton pin={topPin} label="the breadcrumbs and view row" className="md:hidden" />
-          <span className="hidden md:contents">
-            <PanesMenu />
-          </span>
           <BreadCrumbs term={settings?.startDate ? getTermName(settings.startDate) : undefined} />
           <TopBar onCoursePage={onCoursePage} />
         </div>
-        <PaneSelect />
+        <PaneSelect views={views} />
         {/* narrow: one grid cell every pane shares, the selected one visible */}
         <div className="min-h-0 flex-1 md:flex md:flex-row md:gap-0.5 max-md:grid">
+          <EdgeBar end="start" views={views} />
           <LeadSpacer />
-          {coursePanes.map(({ Content, ...pane }) => (
+          {panes.map(({ Content, ...pane }) => (
             // the server renders what the first screen shows: the course page's calendar
-            <Pane key={pane.id} {...pane} ssr={pane.id === "calendar" && onCoursePage}>
+            <Pane key={pane.id} {...pane} minWidth={paneMinWidth} views={views} ssr={pane.id === "calendar" && onCoursePage}>
               <Content {...ctx} />
             </Pane>
           ))}
+          <EdgeBar end="end" views={views} />
         </div>
         <BottomBar />
       </div>
@@ -121,10 +155,14 @@ function BottomBar() {
   return parts?.bottomBar;
 }
 
-/** The frame with the pane strip around it, for the course route. */
+/** The frame with the pane strip around it, for the course route; a pop-out's links to a view switch the pop-out's view, and it never writes the layout. */
 export function CourseFrameWithPanes({ children }: { children: ReactNode }) {
+  const popOut = usePopOutPane();
+  const router = useRouter();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   return (
-    <PaneStrip>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    <PaneStrip onShowPane={popOut ? (view) => router.navigate({ to: pathname as any, search: { pane: view } as any }) : undefined}>
       <CourseFrame>{children}</CourseFrame>
     </PaneStrip>
   );
