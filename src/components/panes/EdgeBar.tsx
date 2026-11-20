@@ -1,7 +1,7 @@
 "use client";
 import { useRouterState } from "@tanstack/react-router";
 import { usePanes } from "./PaneStrip";
-import { useEdgeDrag } from "./useEdgeDrag";
+import { useRowDrag } from "./useEdgeDrag";
 import { barClass, ResizeSquare, Side, useDragHandlers } from "./PaneBar";
 import { ViewChoice, ViewIcons } from "./ViewIcons";
 import { isShown } from "./paneStore";
@@ -21,8 +21,10 @@ import { openPopOut, popOutUrl } from "@/app/course/[courseName]/panes/popOut";
  * view in a new window following this one.
  */
 export function EdgeBar({ end, views }: { end: "start" | "end"; views: ViewChoice[] }) {
-  const { panes, narrow, setLimits, addPane, showView, close } = usePanes();
-  const { dragEdge, endDrag } = useEdgeDrag();
+  const { panes, narrow, setLimits, addPane, showView, close, restoreDefaults } = usePanes();
+  const rowDrag = useRowDrag();
+  const dragEdge = rowDrag.edge;
+  const endDrag = rowDrag.end;
   const at = end === "start" ? 0 : panes.length;
   const handlers = useDragHandlers((e, x) => dragEdge(at, e.clientX - x), endDrag);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -59,7 +61,10 @@ export function EdgeBar({ end, views }: { end: "start" | "end"; views: ViewChoic
         onView={(view, e) => (e.shiftKey && !e.ctrlKey && !e.metaKey ? openPopOut(pathname, view, true) : e.ctrlKey || e.metaKey ? add(view) : showView(view, end))}
         menuSide={inner}
         drag={{ onDrag: (e, x) => dragEdge(at, e.clientX - x), onDragEnd: endDrag }}
-        extras={[{ label: "Close every pane", onClick: () => close(panes.map((p) => p.id)) }]}
+        extras={[
+          { label: "Close every pane", onClick: () => close(panes.map((p) => p.id)) },
+          { label: "Restore the default layout", onClick: restoreDefaults },
+        ]}
       />
     </div>
   );

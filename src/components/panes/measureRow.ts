@@ -1,4 +1,5 @@
 "use client";
+import { Layout } from "./cascade";
 import { isShown, PaneView, Sized } from "./paneStore";
 
 export const paneElement = (id: string) => document.querySelector<HTMLElement>(`[data-pane="${id}"]`);
@@ -7,12 +8,14 @@ export const paneElement = (id: string) => document.querySelector<HTMLElement>(`
 export type Row = {
   /** The open panes, in order, at their widths on the page. */
   open: Sized[];
-  /** The room left empty at the row's end. */
+  /** The room left empty at the row's end; below zero, how far the panes reach past it. */
   free: number;
   /** How wide a collapsed pane is: its bar. */
   bar: number;
   /** The room the row has for the panes whose bars are on the page, gaps taken out. */
   room: number;
+  /** The space between two bars. */
+  gap: number;
 };
 
 /**
@@ -26,7 +29,7 @@ export function measureRow(panes: PaneView[]): Row {
     panes.filter(isShown).map((p) => ({ id: p.id, width: width(p), minWidth: p.minWidth, maxWidth: Number.isFinite(p.maxWidth) ? p.maxWidth : room / 2 }));
   const shown = panes.filter((p) => !p.hidden);
   const row = shown.map((p) => paneElement(p.id)?.parentElement).find(Boolean);
-  if (!row) return { open: sized(Infinity), free: 0, bar: 23, room: 0 };
+  if (!row) return { open: sized(Infinity), free: 0, bar: 23, room: 0, gap: 0 };
   const box = row.getBoundingClientRect();
   // the start and end bars sit outside every pane: the empty room is what's
   // left before the end bar, and the room the panes share leaves both out
@@ -39,10 +42,31 @@ export function measureRow(panes: PaneView[]): Row {
   const room = row.clientWidth - endBarWidth - gap * Math.max(shown.length - 1, 0);
   return {
     open: sized(room),
-    free: Math.max(box.right - endBarWidth - end, 0),
+    free: box.right - endBarWidth - end,
     bar: barEl?.getBoundingClientRect().width ?? 23,
     room,
+    gap,
   };
 }
 
 const gapOf = (row: Element) => parseFloat(getComputedStyle(row).columnGap) || 0;
+
+/** The row as the rules see it (see cascade): every pane, the open ones at their widths on the page; `lead` the room before the first. */
+export function measureLayout(panes: PaneView[], lead: number): Layout {
+  const r = measureRow(panes);
+  const measured = new Map(r.open.map((p) => [p.id, p]));
+  return {
+    slabs: panes.map((p) => ({
+      id: p.id,
+      width: measured.get(p.id)?.width ?? p.width,
+      minWidth: p.minWidth,
+      maxWidth: Number.isFinite(p.maxWidth) ? p.maxWidth : r.room / 2,
+      collapsed: p.collapsed,
+      hidden: p.hidden,
+    })),
+    lead,
+    free: r.free,
+    bar: r.bar,
+    gap: r.gap,
+  };
+}
