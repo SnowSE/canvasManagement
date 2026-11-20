@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { Layout, limitsAfter, makeRoom, pushEdge, resize, restore, Slab, squareDrag } from "./cascade";
+import { carriesOn, dragEdge, Layout, LetGo, limitsAfter, makeRoom, pushEdge, resize, restore, Row, Slab, squareDrag } from "./cascade";
 
 const slab = (id: string, width = 500, more: Partial<Slab> = {}): Slab => ({ id, width, minWidth: 400, maxWidth: Infinity, collapsed: false, hidden: false, ...more });
 // modules, calendar, editor and preview open, each 100 past its narrowest; bars 20 wide, no gaps
-const row: Layout = { slabs: ["modules", "calendar", "editor", "preview"].map((id) => slab(id)), lead: 0, free: 0, bar: 20, gap: 0 };
+const row: Layout = { slabs: ["modules", "calendar", "editor", "preview"].map((id) => slab(id)), lead: 0, free: 0, bar: 20, gap: 0, least: 20 };
 const look = (l: Layout) => l.slabs.map((s) => s.id + (s.hidden ? "-" : s.collapsed ? "_" : s.width)).join(" ");
 const kinds = (effects: { id: string; kind: string }[]) => effects.map((e) => `${e.kind} ${e.id}`);
 
@@ -21,6 +21,7 @@ describe("the calendar's bar dragged right (the edge before it)", () => {
     expect(at(300 + 380 * 3 + 60)).toBe("modules2000 calendar- editor- preview-");
     // nothing left to give: the drag goes no further
     expect(at(5000)).toBe(at(300 + 380 * 3 + 60));
+    expect(pushEdge(row, 1, 5000).moved).toBe(300 + 380 * 3 + 60);
   });
   it("remembers each effect in the order it happened", () => {
     expect(kinds(pushEdge(row, 1, 2000).effects)).toEqual([
@@ -102,6 +103,13 @@ describe("a resize square", () => {
     expect(kinds(squeezed.effects)).toEqual(["narrow calendar", "collapse calendar"]);
     expect(look(restore({ ...squeezed.layout, free: 480 }, squeezed.effects).layout)).toBe("modules980 calendar500 editor500 preview500");
   });
+  it("stops a pane at the least an open pane may be (wider than its bar), where it collapses, the rest left as empty room", () => {
+    const wide = { ...row, least: 50 };
+    expect(look(squareDrag(wide, 1, 440, "calendar").layout)).toBe("modules940 calendar60 editor500 preview500");
+    const collapsed = squareDrag(wide, 1, 450, "calendar").layout;
+    expect(look(collapsed)).toBe("modules950 calendar_ editor500 preview500");
+    expect(collapsed.free).toBe(30);
+  });
   it("left half: the pane before the bar, past its narrowest and its widest", () => {
     const capped = { ...row, slabs: row.slabs.map((s) => ({ ...s, maxWidth: 600 })) };
     expect(look(squareDrag(capped, 1, -300, "modules").layout)).toBe("modules200 calendar600 editor600 preview600");
@@ -112,5 +120,36 @@ describe("a resize square", () => {
     expect(limitsAfter({ minWidth: 400, maxWidth: 800 }, 300)).toEqual({ min: 300 });
     expect(limitsAfter({ minWidth: 400, maxWidth: 800 }, 900)).toEqual({ max: 900 });
     expect(limitsAfter({ minWidth: 400, maxWidth: 800 }, 600)).toEqual({});
+  });
+});
+
+describe("a drag let go and picked up again", () => {
+  const start: Row = { layout: row, records: [], limits: { modules: {}, calendar: { max: 900 }, editor: {}, preview: {} } };
+  const letGo = (d: number, relaxed?: string): LetGo => {
+    const step = dragEdge(start, 1, d, relaxed);
+    return { key: "1:" + (relaxed ?? ""), start, moved: step.moved, left: step.left };
+  };
+  it("carries on from where the edge stopped, not from where the pointer went past it", () => {
+    expect(letGo(5000).moved).toBe(300 + 380 * 3 + 60);
+    expect(letGo(-5000).moved).toBe(-500);
+  });
+  it("carries on with the same handle while the row is as it left it, give or take rounding", () => {
+    const last = letGo(150);
+    const now = { ...last.left, layout: { ...last.left.layout, free: last.left.layout.free + 3 } };
+    expect(carriesOn(last, "1:", now)).toBe(true);
+    expect(carriesOn(last, "2:", now)).toBe(false);
+    expect(carriesOn(null, "1:", now)).toBe(false);
+  });
+  it("starts afresh once anything else changed the row: a width, a pane's state, what is remembered, a limit", () => {
+    const last = letGo(150);
+    const changed = (f: (r: Row) => Row) => carriesOn(last, "1:", f(last.left));
+    expect(changed((r) => ({ ...r, layout: pushEdge(r.layout, 3, 10).layout }))).toBe(false);
+    expect(changed((r) => ({ ...r, layout: { ...r.layout, slabs: r.layout.slabs.map((s) => (s.id === "preview" ? { ...s, collapsed: true } : s)) } }))).toBe(false);
+    expect(changed((r) => ({ ...r, records: [] }))).toBe(false);
+    expect(changed((r) => ({ ...r, limits: { ...r.limits, editor: { min: 450 } } }))).toBe(false);
+  });
+  it("from a resize square, dragged back where it began, puts the limits it moved back as they were", () => {
+    expect(letGo(300, "calendar").left.limits.calendar).toEqual({ min: 200, max: 900 });
+    expect(letGo(0, "calendar").left).toEqual(start);
   });
 });

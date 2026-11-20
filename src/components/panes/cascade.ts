@@ -15,18 +15,20 @@
  *   the row's right end) undoes them, last first, as far as it goes: bars
  *   come back, then panes reopen at the width they had, then narrowed panes
  *   widen back.
- * - A pane narrowed to its bar collapses to it (only a resize square takes
- *   a pane below its narrowest).
+ * - No open pane is narrower than `least` (its bar, a scrollbar and as much
+ *   content again, so it never looks collapsed): one narrowed to it
+ *   collapses to its bar (only a resize square takes a pane below its
+ *   narrowest).
  * - A resize square is a drag like any other, but the panes giving way may
- *   go below their narrowest, down to their bars, and its own pane past its
+ *   go below their narrowest, down to `least`, and its own pane past its
  *   widest; where they end becomes their new limits (see squareDrag). A
  *   plain drag keeps every pane within its limits.
  */
 
 /** A pane in the row as the rules see it; `width` is its open width, also while collapsed or hidden. */
 export type Slab = { id: string; width: number; minWidth: number; maxWidth: number; collapsed: boolean; hidden: boolean };
-/** The row: every pane in order (hidden ones too), the empty room at each end, a collapsed pane's width (its bar), the space between bars. */
-export type Layout = { slabs: Slab[]; lead: number; free: number; bar: number; gap: number };
+/** The row: every pane in order (hidden ones too), the empty room at each end, a collapsed pane's width (its bar), the space between bars, the narrowest an open pane may be. */
+export type Layout = { slabs: Slab[]; lead: number; free: number; bar: number; gap: number; least: number };
 /** One thing a cascade did to a pane, undone as room returns: narrowed from `width`, collapsed at `width`, or taken off the page. */
 export type Effect = { id: string; kind: "narrow" | "collapse" | "hide"; width: number };
 type End = "lead" | "free";
@@ -51,9 +53,10 @@ function giveWay(layout: Layout, side: Slab[], need: number, end: End, effects: 
     effects.push({ id: s.id, kind: "narrow", width: s.width });
     s.width -= t;
     need -= t;
-    if (s.width <= layout.bar + 0.5) {
+    if (s.width <= layout.least + 0.5) {
       effects.push({ id: s.id, kind: "collapse", width: s.width });
       s.collapsed = true;
+      need -= s.width - layout.bar;
     }
   }
   for (const s of [...side].reverse().filter(open)) {
@@ -88,7 +91,8 @@ function grow(layout: Layout, side: Slab[], amount: number, end: End) {
  * The edge before `slabs[edge]` (`slabs.length`: the row's right end) moved
  * `d` px (right when positive): the side it moves toward gives way (see
  * giveWay), the other side's open panes grow, nearest first, each to its
- * widest, and what they don't take is empty room at that end of the row.
+ * widest, and what they don't take is empty room at that end of the row;
+ * `moved`: how far the edge got (short of `d` when nothing is left to give).
  */
 export function pushEdge(layout: Layout, edge: number, d: number) {
   const next = copy(layout);
@@ -98,7 +102,7 @@ export function pushEdge(layout: Layout, edge: number, d: number) {
   const [giving, growing, givingEnd, growingEnd]: [Slab[], Slab[], End, End] = d >= 0 ? [after, before, "free", "lead"] : [before, after, "lead", "free"];
   const got = Math.abs(d) - giveWay(next, giving, Math.abs(d), givingEnd, effects);
   grow(next, growing, got, growingEnd);
-  return { layout: next, effects };
+  return { layout: next, effects, moved: Math.sign(d) * got };
 }
 
 /**
@@ -188,14 +192,14 @@ export function restore(layout: Layout, records: Effect[]) {
  * A drag from a resize square for the pane `id` (the one on the square's
  * side of its bar): the edge pushed as any drag pushes it (see pushEdge),
  * but the panes on the side giving way may go below their narrowest, down
- * to their bars (where they collapse), and `id` past its widest; `limits`
+ * to `least` (where they collapse), and `id` past its widest; `limits`
  * are the narrowest and widest widths that moves, for the panes left open.
  */
 export function squareDrag(layout: Layout, edge: number, d: number, id: string) {
   const giving = new Set((d >= 0 ? layout.slabs.slice(edge) : layout.slabs.slice(0, edge)).map((s) => s.id));
-  const freed = { ...layout, slabs: layout.slabs.map((s) => ({ ...s, minWidth: giving.has(s.id) || s.id === id ? layout.bar : s.minWidth, maxWidth: s.id === id ? Infinity : s.maxWidth })) };
+  const freed = { ...layout, slabs: layout.slabs.map((s) => ({ ...s, minWidth: giving.has(s.id) || s.id === id ? layout.least : s.minWidth, maxWidth: s.id === id ? Infinity : s.maxWidth })) };
   const pushed = pushEdge(freed, edge, d);
-  const limits: Record<string, { min?: number; max?: number }> = {};
+  const limits: Limits = {};
   // the limits as they were, and where the drag moved them
   const slabs = pushed.layout.slabs.map((s, i) => {
     const was = layout.slabs[i];
@@ -203,7 +207,7 @@ export function squareDrag(layout: Layout, edge: number, d: number, id: string) 
     if (moved.min !== undefined || moved.max !== undefined) limits[s.id] = moved;
     return { ...s, minWidth: was.minWidth, maxWidth: was.maxWidth };
   });
-  return { layout: { ...pushed.layout, slabs }, effects: pushed.effects, limits };
+  return { layout: { ...pushed.layout, slabs }, effects: pushed.effects, moved: pushed.moved, limits };
 }
 
 /** After a drag from a resize square left the pane `width` wide: the limit it crossed, if any, moved to that width. */
@@ -211,3 +215,45 @@ export const limitsAfter = (pane: { minWidth: number; maxWidth: number }, width:
   ...(width < pane.minWidth ? { min: Math.round(width) } : {}),
   ...(width > pane.maxWidth ? { max: Math.round(width) } : {}),
 });
+
+/** The narrowest and widest width set for each pane (undefined: not set). */
+export type Limits = Record<string, { min?: number; max?: number }>;
+/** The row as a drag finds or leaves it: the layout, what cascades displaced, the limits set. */
+export type Row = { layout: Layout; records: Effect[]; limits: Limits };
+/** A drag let go: by which handle (`key`), the row it began from, how far its edge got, the row it left. */
+export type LetGo = { key: string; start: Row; moved: number; left: Row };
+
+/**
+ * A drag of the edge before `slabs[edge]` (`slabs.length`: the row's right
+ * end), `d` px from where it was in `start`; from a resize square for the
+ * pane `relaxed`, past the limits (see squareDrag). Every step is worked
+ * out from `start`, so dragging back undoes, step by step, what dragging on
+ * did; room it frees brings back what earlier cascades displaced. `moved`:
+ * how far the edge got, where a drag picked up again carries on from.
+ */
+export function dragEdge(start: Row, edge: number, d: number, relaxed?: string) {
+  const square = relaxed ? squareDrag(start.layout, edge, d, relaxed) : undefined;
+  const pushed = square ?? pushEdge(start.layout, edge, d);
+  const back = restore(pushed.layout, start.records);
+  const moved = square?.limits ?? {};
+  const limits = Object.fromEntries(Object.entries(start.limits).map(([id, l]) => [id, { ...l, ...moved[id] }]));
+  return { left: { layout: back.layout, records: [...back.records, ...pushed.effects], limits }, moved: pushed.moved };
+}
+
+/** Picked up again by the handle `key`, the row being `now`: the drag `last` let go carries on, unless anything else has changed the row since. */
+export const carriesOn = (last: LetGo | null, key: string, now: Row): last is LetGo =>
+  !!last &&
+  last.key === key &&
+  sameLayout(last.left.layout, now.layout) &&
+  JSON.stringify(last.left.records) === JSON.stringify(now.records) &&
+  Object.keys({ ...last.left.limits, ...now.limits }).every((id) => (last.left.limits[id]?.min ?? -1) === (now.limits[id]?.min ?? -1) && (last.left.limits[id]?.max ?? -1) === (now.limits[id]?.max ?? -1));
+
+/** The same row, but for rounding (each width is saved to the pixel). */
+const sameLayout = (a: Layout, b: Layout) =>
+  a.slabs.length === b.slabs.length &&
+  Math.abs(a.lead - b.lead) < 4 &&
+  Math.abs(a.free - b.free) < 4 &&
+  a.slabs.every((s, i) => {
+    const t = b.slabs[i];
+    return s.id === t.id && s.collapsed === t.collapsed && s.hidden === t.hidden && (s.collapsed || s.hidden || Math.abs(s.width - t.width) < 4);
+  });

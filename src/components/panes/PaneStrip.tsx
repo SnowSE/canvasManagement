@@ -21,8 +21,8 @@ const writePaneDoc = (json: string) => {
   sessionStorage.setItem(paneDocKey, json);
   remember(paneDocKey, json);
 };
-import { Effect, Layout, makeRoom, resize, restore } from "./cascade";
-import { measureLayout, measureRow } from "./measureRow";
+import { Effect, Layout, Limits, makeRoom, resize, restore } from "./cascade";
+import { measureLayout } from "./measureRow";
 import { isShown, paneActions, PaneDoc, paneDocKey, PaneSpec, PaneView, freeId, parseDoc, showingPane, viewOf, viewPanes } from "./paneStore";
 import { showWidths } from "./useEdgeDrag";
 
@@ -238,13 +238,12 @@ export function usePanes() {
   const ids = panes.map((p) => p.id);
   // measured when acted on, never while rendering; on a phone the widths
   // are the screen's and aren't kept
-  const row = () => (narrow ? undefined : measureRow(panes));
   const layout = () => (narrow ? undefined : measureLayout(panes, lead));
   // a toggle keeps every open pane at the width it has (a pane the row had
   // squeezed stays as it was), so the toggle only shifts the others
   const frozen = (doc: PaneDoc) => {
-    const r = row();
-    return r ? paneActions.setWidths(doc, Object.fromEntries(r.open.map((p) => [p.id, p.width]))) : doc;
+    const l = layout();
+    return l ? paneActions.setWidths(doc, Object.fromEntries(l.slabs.filter((s) => !s.collapsed && !s.hidden).map((s) => [s.id, s.width]))) : doc;
   };
   return {
     panes,
@@ -318,7 +317,7 @@ export function usePanes() {
       showWidths(next);
     },
     /** What a drag showed, written to the layout as it is, with the limits a resize square moved (see squareDrag). */
-    save: (next: Layout, remaining: Effect[], limits: Record<string, { min?: number; max?: number }> = {}) => {
+    save: (next: Layout, remaining: Effect[], limits: Limits = {}) => {
       previewWidths = undefined;
       setPreviewing(null);
       update((d) => Object.entries(limits).reduce((x, [id, l]) => paneActions.setLimits(x, id, l), paneActions.applyLayout(d, next, remaining)));
