@@ -36,6 +36,14 @@ export const renameEmbed = (frontPageHtml: string, fromUrl: string, toUrl: strin
   return frontPageHtml.replace(markerId, (_, before, after) => `${before}embed-${toUrl}${after}`);
 };
 
+/**
+ * `html` with its course-relative links (`../pages/…`, as page files write
+ * them) pointed at the course itself: Canvas shows the front page at the
+ * course root, where `../` leaves the course. Canvas's course copy
+ * rewrites such links to the new course.
+ */
+export const absoluteCourseLinks = (html: string, courseId: number) => html.replace(/\b(href|src)=(["'])\.\.\//g, `$1=$2/courses/${courseId}/`);
+
 const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /** Where the `</div>` closing an already open div starts. */

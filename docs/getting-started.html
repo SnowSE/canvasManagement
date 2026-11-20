@@ -394,6 +394,7 @@ AddToHome: true
 <p>Good to know:</p>
 <ul>
 <li><code>AddToHome: false</code> empties the page&rsquo;s spot on the next update, keeping the marker where it is. Without the setting, updating the page never touches the home page.</li>
+<li>Links to other pages, assignments and files work from the home page: the copy placed there points them at the course (<code>/courses/1234/pages/&hellip;</code>), since Canvas shows the home page at the course&rsquo;s own address, where the page&rsquo;s relative <code>../pages/&hellip;</code> links would lead out of the course. The page itself keeps its relative links, and Canvas&rsquo;s course copy points such links at the new course.</li>
 <li>The home page changes only when you update the page from the app. Edits saved only to the file don&rsquo;t reach it.</li>
 <li>Whatever is inside the marker is replaced on each update, so edit that page&rsquo;s file, not the copy in Canvas. Everything outside the marker is left as it is.</li>
 <li>Renaming a page in Canvas can change its address. A rename made in the app moves the marker to the new address; after a rename made in Canvas, the marker needs the new address by hand, or the next update adds the page at the end again.</li>
@@ -507,6 +508,7 @@ AddToHome: true
 <h2 id="changes">Recent changes</h2>
 <div class="tw"><table>
 <tr><th>When</th><th>What changed</th></tr>
+<tr><td style="white-space:nowrap">Nov 2026</td><td>Links in a page placed on the <a href="#embed">course home page</a> no longer lead to &ldquo;page not found&rdquo;: the home page&rsquo;s copy points them at the course, where the page&rsquo;s own relative links left it.</td></tr>
 <tr><td style="white-space:nowrap">Nov 2026</td><td>File changes keep arriving in an open window after the server restarts or the computer wakes: the window reconnects and refetches everything it may have missed, where before it silently stopped listening until a reload, leaving the calendar and the editor behind the files.</td></tr>
 <tr><td style="white-space:nowrap">Nov 2026</td><td>The app answers sooner after each save: a calendar item&rsquo;s right-click menu is built when it opens instead of living on every item, which was most of what re-drawing the calendar after a save cost.</td></tr>
 <tr><td style="white-space:nowrap">Nov 2026</td><td>Two windows with the same item open no longer take turns undoing each other&rsquo;s saves once their saves have crossed: a window that takes the other&rsquo;s text treats its own earlier save coming back as a change to take too, and saves nothing until you type again. The window you are typing in wins: a change from elsewhere that lands while it has unsaved typing and the focus is not taken, the typing is saved over it; and a pending save goes out the moment a window loses focus, so switching windows carries your typing with you.</td></tr>

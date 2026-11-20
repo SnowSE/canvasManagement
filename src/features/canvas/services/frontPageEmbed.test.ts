@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { fillEmbed, renameEmbed } from "./frontPageEmbed";
+import { absoluteCourseLinks, fillEmbed, renameEmbed } from "./frontPageEmbed";
 
 describe("fillEmbed", () => {
   it("replaces only what is inside the page's marker", () => {
@@ -60,5 +60,15 @@ describe("renameEmbed", () => {
     const home = '<div id="embed-old-schedule-2"></div>';
 
     expect(renameEmbed(home, "old-schedule", "new-schedule")).toBeUndefined();
+  });
+});
+
+describe("absoluteCourseLinks", () => {
+  it("points a course-relative link at the course, so it works where Canvas shows the front page (the course root)", () => {
+    expect(absoluteCourseLinks('<a href="../pages/belt-tour#:~:text=%C2%A71.1">Tour</a>', 1245955)).toBe('<a href="/courses/1245955/pages/belt-tour#:~:text=%C2%A71.1">Tour</a>');
+  });
+  it("leaves every other link alone", () => {
+    const html = '<a href="https://example.com/pages/x">x</a> <a href="#top">top</a>';
+    expect(absoluteCourseLinks(html, 1245955)).toBe(html);
   });
 });
