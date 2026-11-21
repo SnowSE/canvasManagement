@@ -60,3 +60,8 @@ temp/
 !.claude/skills/
 guide.md
 .codex
+
+# scripts/mutation-test.sh (its config and sandbox, while it runs, and its report)
+.stryker-tmp/
+.stryker.json
+reports/mutation/

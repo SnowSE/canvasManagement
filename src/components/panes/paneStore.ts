@@ -142,7 +142,6 @@ const withPane = (doc: PaneDoc, id: string, change: NonNullable<PaneDoc["panes"]
 
 /** What the bars, the links and the phone's row do to the document. */
 export const paneActions = {
-  setHidden: (doc: PaneDoc, id: string, hidden: boolean) => withPane(doc, id, { hidden }),
   setCollapsed: (doc: PaneDoc, id: string, collapsed: boolean) => withPane(doc, id, { collapsed }),
   /** Expanded and on the page. */
   show: (doc: PaneDoc, id: string) => withPane(doc, id, { hidden: false, collapsed: false }),
