@@ -1,6 +1,6 @@
 "use client";
 import { useRef } from "react";
-import { Effect, Layout, pushEdge, resize, restore, squareDrag } from "./cascade";
+import { carriesOn, dragEdge, Layout, LetGo, resize, Row } from "./cascade";
 import { usePanes } from "./PaneStrip";
 import { measureLayout, paneElement } from "./measureRow";
 import { widthRule } from "./paneStore";
@@ -13,42 +13,44 @@ export const applyWidth = (el: HTMLElement, pane: { minWidth: number; width: num
   el.style.maxWidth = rule.maxWidth;
 };
 
+// the last drag let go, for one picked up again to carry on (see carriesOn)
+let last: LetGo | null = null;
+
 /**
  * A drag that resizes the row: a bar (the edge before its pane), the bars
- * at either end, a resize square, or the narrowest box. Every step of the
- * drag is worked out by the rules (see cascade) from the row as it was when
- * the drag began, so dragging back undoes, step by step, what dragging on
- * did; it is shown live (see usePanes().preview) and written to the layout on
- * release, with what it displaced remembered so later room brings it back.
+ * at either end, a resize square, or the narrowest box, worked out by the
+ * rules (see dragEdge, resize), shown live (see usePanes().preview) and
+ * written to the layout on release. Letting go and picking the same handle
+ * up again is the same drag, until anything else changes the row.
  */
 export function useRowDrag() {
   const { panes, lead, preview, save, records } = usePanes();
-  type Result = { layout: Layout; records: Effect[]; limits?: Record<string, { min?: number; max?: number }> };
-  const drag = useRef<{ layout: Layout; records: Effect[]; result?: Result } | null>(null);
-  const begin = () => (drag.current ??= { layout: measureLayout(panes, lead), records });
-  const show = (result: Result) => {
-    drag.current!.result = result;
-    preview(result.layout);
+  const drag = useRef<{ key: string; start: Row; from: number; left?: Row; moved: number; relaxed?: string } | null>(null);
+  const begin = (key: string, relaxed?: string) => {
+    if (drag.current) return drag.current;
+    const limits = Object.fromEntries(panes.map((p) => [p.id, { min: p.minWidth === p.floor ? undefined : p.minWidth, max: Number.isFinite(p.maxWidth) ? p.maxWidth : undefined }]));
+    const now: Row = { layout: measureLayout(panes, lead), records, limits };
+    const on = carriesOn(last, key, now) ? last! : { start: now, moved: 0 };
+    return (drag.current = { key, start: on.start, from: on.moved, moved: on.moved, relaxed });
+  };
+  const show = (left: Row) => {
+    drag.current!.left = left;
+    preview(left.layout);
   };
   return {
-    /**
-     * Moves the edge before `panes[from]` (`panes.length`: the row's right
-     * end) `dx` px from where it was when the drag began; from a resize
-     * square for the pane `relaxed`, past the limits (see squareDrag).
-     */
+    /** Moves the edge before `panes[from]` (`panes.length`: the row's right end) `dx` px; from a resize square for the pane `relaxed` (see dragEdge). */
     edge: (from: number, dx: number, relaxed?: string) => {
-      const d = begin();
-      const pushed: { layout: Layout; effects: Effect[]; limits?: Result["limits"] } = relaxed ? squareDrag(d.layout, from, dx, relaxed) : pushEdge(d.layout, from, dx);
-      // room the drag frees brings back what earlier cascades displaced; dragging back undoes its own
-      const back = restore(pushed.layout, d.records);
-      show({ layout: back.layout, records: [...back.records, ...pushed.effects], limits: pushed.limits });
+      const d = begin(`${from}:${relaxed ?? ""}`, relaxed);
+      const step = dragEdge(d.start, from, d.from + dx, relaxed);
+      d.moved = step.moved;
+      show(step.left);
     },
     /** The pane `id` `width` wide by the cascade (the narrowest box dragged past the pane's width, or back); how wide it got. */
     resize: (id: string, width: number) => {
-      const d = begin();
-      const now = d.layout.slabs.find((s) => s.id === id)?.width ?? width;
-      const result = resize(d.layout, id, width - now, d.records);
-      show(result);
+      const { layout, records, limits } = begin(`min:${id}`).start;
+      const now = layout.slabs.find((s) => s.id === id)?.width ?? width;
+      const result = resize(layout, id, width - now, records);
+      show({ ...result, limits });
       return result.layout.slabs.find((s) => s.id === id)?.width ?? now;
     },
     /** The drag over: what it showed, written to the layout as it is, with the limits a resize square moved. */
@@ -56,8 +58,9 @@ export function useRowDrag() {
       const d = drag.current;
       drag.current = null;
       if (!d) return;
-      if (!d.result) return preview(null);
-      save(d.result.layout, d.result.records, d.result.limits);
+      if (!d.left) return preview(null);
+      last = { key: d.key, start: d.start, moved: d.moved, left: d.left };
+      save(d.left.layout, d.left.records, d.relaxed ? d.left.limits : undefined);
     },
   };
 }

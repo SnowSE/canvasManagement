@@ -6,7 +6,7 @@ import { LocalCourseSettings } from "@/features/local/course/localCourseSettings
 import { axiosClient } from "@/services/axiosUtils";
 import { markdownToHTMLSafe } from "@/services/htmlMarkdownUtils";
 import { CanvasLinkTargets } from "@/services/urlUtils";
-import { fillEmbed, placeEmbed, renameEmbed } from "./frontPageEmbed";
+import { absoluteCourseLinks, fillEmbed, placeEmbed, renameEmbed } from "./frontPageEmbed";
 
 // Puts a page's html in its marker on the course front page (adding the
 // marker at the end if needed), or with no html empties the marker, keeping
@@ -23,7 +23,7 @@ const updateFrontPage = async (courseId: number, pageUrl: string, html?: string)
   }
   if (frontPage.url === pageUrl) return;
   const body = frontPage.body ?? "";
-  const updated = html === undefined ? fillEmbed(body, pageUrl, "") : placeEmbed(body, pageUrl, html);
+  const updated = html === undefined ? fillEmbed(body, pageUrl, "") : placeEmbed(body, pageUrl, absoluteCourseLinks(html, courseId));
   if (updated === undefined || updated === body) return;
   console.log(`Updating ${pageUrl} on the front page`);
   const { data } = await axiosClient.put<CanvasPage>(frontPageUrl, {

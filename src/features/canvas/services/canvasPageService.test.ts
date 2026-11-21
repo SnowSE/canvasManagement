@@ -15,7 +15,7 @@ vi.mock("./canvasServiceUtils", () => ({
   paginatedRequest: vi.fn(),
 }));
 vi.mock("@/services/htmlMarkdownUtils", () => ({
-  markdownToHTMLSafe: () => "<p>schedule</p>",
+  markdownToHTMLSafe: ({ markdownString }: { markdownString: string }) => `<p>${markdownString}</p>`,
 }));
 
 const api = "https://test.instructure.com/api/v1/courses/42";
@@ -65,6 +65,17 @@ describe("updating a page", () => {
         body: '<h2>Hi</h2><div id="embed-course-schedule"><p>schedule</p></div>',
       },
     });
+  });
+
+  it("points its course links at the course on the front page, and only there", async () => {
+    frontPageInCanvas({ url: "home", body: '<div id="embed-course-schedule"></div>' });
+
+    await canvasPageService.update(42, schedule, { ...embedded, text: '<a href="../pages/tour">Tour</a>' }, settings);
+
+    expect(vi.mocked(axiosClient.put).mock.calls.map(([, data]) => (data as { wiki_page: { body: string } }).wiki_page.body)).toEqual([
+      '<p><a href="../pages/tour">Tour</a></p>',
+      '<div id="embed-course-schedule"><p><a href="/courses/42/pages/tour">Tour</a></p></div>',
+    ]);
   });
 
   it("doesn't read the front page without AddToHome", async () => {

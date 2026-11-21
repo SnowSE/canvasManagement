@@ -54,3 +54,10 @@ python3 scripts/docs_images.py embed docs/getting-started.html
 
 Course files store students by Canvas id only; names are resolved at render
 time. Never write student names into repo files, fixtures or docs.
+
+## Mutation testing
+
+`scripts/mutation-test.sh [file] [its tests]` runs StrykerJS (fetched into a
+throwaway container, nothing in the repo depends on it) against one module,
+`src/components/panes/cascade.ts` by default. A surviving mutant is either a
+behaviour no test pins down (add the test) or code that can go (delete it).
