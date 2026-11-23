@@ -1,13 +1,15 @@
 "use client";
+import { pullFromCanvas } from "@/features/canvas/import/pullFromCanvas";
+import Modal, { useModal } from "@/components/Modal";
 import { FC, ReactNode, useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import DOMPurify from "isomorphic-dompurify";
 import { Spinner } from "@/components/Spinner";
 import { useCourseContext } from "@/app/course/[courseName]/context/courseContext";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
-import { useAssignmentQuery } from "@/features/local/assignments/assignmentHooks";
-import { useQuizQuery } from "@/features/local/quizzes/quizHooks";
-import { usePageQuery } from "@/features/local/pages/pageHooks";
+import { useAssignmentQuery, useUpdateAssignmentMutation } from "@/features/local/assignments/assignmentHooks";
+import { useQuizQuery, useUpdateQuizMutation } from "@/features/local/quizzes/quizHooks";
+import { usePageQuery, useUpdatePageMutation } from "@/features/local/pages/pageHooks";
 import {
   useCanvasPagesQuery,
   useUpdateCanvasPageMutation,
@@ -33,10 +35,11 @@ import {
 } from "@/features/canvas/roster/rosterHooks";
 import { baseCanvasUrl } from "@/features/canvas/services/canvasServiceUtils";
 import {
-  getSyncReport,
   SyncField,
   SyncReport,
   SyncSection,
+  descriptionRenderer,
+  getSyncReport,
 } from "@/app/course/[courseName]/calendar/day/getAssignmentSyncStatus";
 import { getModuleItemUrl } from "@/services/urlUtils";
 import {
@@ -82,6 +85,8 @@ export function CompareAssignmentWithCanvas({
   const { data: rosterStudents } = useRosterStudentsQuery();
   const { data: rosterGroupSets } = useRosterGroupSetsQuery();
   const update = useUpdateAssignmentInCanvasMutation();
+  const save = useUpdateAssignmentMutation();
+  const { courseName } = useCourseContext();
 
   const canvasAssignment = canvasAssignments?.find(
     (a) => a.name === assignmentName,
@@ -122,6 +127,13 @@ export function CompareAssignmentWithCanvas({
     ],
   );
 
+  const pull = useMemo(
+    () =>
+      canvasAssignment &&
+      pullFromCanvas("assignment", assignment, canvasAssignment, report.differences, settings, descriptionRenderer("assignment", assignment, settings, { assignments: canvasAssignments, quizzes: canvasQuizzes })),
+    [assignment, canvasAssignment, canvasAssignments, canvasQuizzes, report, settings],
+  );
+
   return (
     <CompareLayout
       type="assignment"
@@ -149,7 +161,8 @@ export function CompareAssignmentWithCanvas({
           moduleName,
         })
       }
-      updating={update.isPending}
+      updating={update.isPending || save.isPending}
+      pull={pull && { ...pull, onPull: () => save.mutate({ assignment: pull.item, moduleName, assignmentName, previousModuleName: moduleName, previousAssignmentName: assignmentName, courseName }) }}
       updateNote="Update Canvas pushes the file's dates, group settings, rubric and description, and moves the assignment to the file's module. Submissions and grades are untouched."
     />
   );
@@ -172,6 +185,8 @@ export function CompareQuizWithCanvas({
   } = useCanvasQuizzesQuery();
   const { data: canvasAssignments } = useCanvasAssignmentsQuery();
   const update = useUpdateQuizInCanvasMutation();
+  const save = useUpdateQuizMutation();
+  const { courseName } = useCourseContext();
 
   const canvasQuiz = canvasQuizzes?.find((q) => q.title === quizName);
   const { names: canvasModules, refetch: refetchModules } =
@@ -216,6 +231,11 @@ export function CompareQuizWithCanvas({
     ],
   );
 
+  const pull = useMemo(
+    () => canvasQuiz && pullFromCanvas("quiz", quiz, canvasQuiz, report.differences, settings, descriptionRenderer("quiz", quiz, settings, { assignments: canvasAssignments, quizzes: canvasQuizzes })),
+    [quiz, canvasQuiz, canvasAssignments, canvasQuizzes, report, settings],
+  );
+
   return (
     <CompareLayout
       type="quiz"
@@ -246,7 +266,8 @@ export function CompareQuizWithCanvas({
         canvasQuiz &&
         update.mutate({ quiz, canvasQuizId: canvasQuiz.id, moduleName })
       }
-      updating={update.isPending}
+      updating={update.isPending || save.isPending}
+      pull={pull && { ...pull, onPull: () => save.mutate({ quiz: pull.item, moduleName, quizName, previousModuleName: moduleName, previousQuizName: quizName, courseName }) }}
       updateNote="Update Canvas pushes the file's settings, moves the quiz to the file's module and, if any question differs, replaces the questions in Canvas with the file's. When it replaces them on a published quiz, students keep getting the old questions until you click Save it now on the quiz page in Canvas (the API can't do that). If students have started, it warns first: they keep the questions they got and are not regraded. It refuses to change the point total they were scored out of."
     >
       {versions?.map((v, i) => (
@@ -280,6 +301,8 @@ export function ComparePageWithCanvas({
   const { data: canvasAssignments } = useCanvasAssignmentsQuery();
   const { data: canvasQuizzes } = useCanvasQuizzesQuery();
   const update = useUpdateCanvasPageMutation();
+  const save = useUpdatePageMutation();
+  const { courseName } = useCourseContext();
 
   const canvasPage = canvasPages?.find((p) => p.title === pageName);
   const { names: canvasModules, refetch: refetchModules } =
@@ -314,6 +337,11 @@ export function ComparePageWithCanvas({
     ],
   );
 
+  const pull = useMemo(
+    () => canvasPage && pullFromCanvas("page", page, canvasPage, report.differences, settings, descriptionRenderer("page", page, settings, { assignments: canvasAssignments, quizzes: canvasQuizzes })),
+    [page, canvasPage, canvasAssignments, canvasQuizzes, report, settings],
+  );
+
   return (
     <CompareLayout
       type="page"
@@ -336,7 +364,8 @@ export function ComparePageWithCanvas({
         canvasPage &&
         update.mutate({ page, canvasPage, moduleName })
       }
-      updating={update.isPending}
+      updating={update.isPending || save.isPending}
+      pull={pull && { ...pull, onPull: () => save.mutate({ page: pull.item, moduleName, pageName, previousModuleName: moduleName, previousPageName: pageName, courseName }) }}
       updateNote="Update in Canvas replaces the page's content with the file's and moves the page to the file's module."
     />
   );
@@ -395,6 +424,8 @@ const CompareLayout: FC<{
   onUpdate: () => void;
   updating: boolean;
   updateNote: string;
+  /** Pull from Canvas (see pullFromCanvas): what it would set in the file, what it leaves, and doing it. */
+  pull?: { pulled: SyncField[]; left: SyncField[]; onPull: () => void };
   /** Extra sections after the settings and questions, such as what students got. */
   children?: ReactNode;
 }> = ({
@@ -412,6 +443,7 @@ const CompareLayout: FC<{
   onUpdate,
   updating,
   updateNote,
+  pull,
   children,
 }) => {
   const { courseName } = useCourseContext();
@@ -486,6 +518,7 @@ const CompareLayout: FC<{
               Open in Canvas ↗
             </a>
           )}
+          {pull && <PullFromCanvas {...pull} busy={updating} />}
           <button
             disabled={!inCanvas || updating || differenceCount === 0}
             title={
@@ -500,6 +533,65 @@ const CompareLayout: FC<{
         </div>
       </div>
     </div>
+  );
+};
+
+/**
+ * Pull from Canvas: the other way from Update Canvas. The file takes
+ * Canvas's value in the rows that differ (the ones that can be taken: see
+ * pullFromCanvas), after a confirmation that lists them, since what the
+ * file had there is lost.
+ */
+const PullFromCanvas: FC<{ pulled: SyncField[]; left: SyncField[]; onPull: () => void; busy: boolean }> = ({ pulled, left, onPull, busy }) => {
+  const confirm = useModal();
+  return (
+    <>
+      <button
+        className="unstyled btn-outline"
+        disabled={busy || pulled.length === 0}
+        title={pulled.length === 0 ? "Nothing that differs can be pulled into the file" : "Make the file match Canvas where they differ"}
+        onClick={() => confirm.openModal()}
+      >
+        Pull from Canvas…
+      </button>
+      <Modal modalControl={confirm} modalWidth="w-150">
+        {({ closeModal }) => (
+          <div className="flex flex-col gap-3 text-sm">
+            <div className="font-semibold text-rose-300">The file&apos;s own values for these are lost: Canvas&apos;s replace them.</div>
+            <ul className="list-disc ps-5">
+              {pulled.map((f) => (
+                <li key={f.key}>
+                  {f.key === "description" ? (
+                    <>{f.label}: the blocks that differ (a paragraph, a list…) become Canvas&apos;s own HTML; the rest stays as written</>
+                  ) : (
+                    <>
+                      {f.label}: <span className="text-green-300">{f.local}</span> becomes <span className="text-rose-300">{f.canvas}</span>
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
+            {left.length > 0 && (
+              <div className="text-slate-400">Not pulled, staying as the file has them: {left.map((f) => f.label).join(", ")}.</div>
+            )}
+            <div className="flex gap-2 justify-end">
+              <button className="unstyled btn-outline" onClick={closeModal}>
+                Cancel
+              </button>
+              <button
+                className="btn"
+                onClick={() => {
+                  closeModal();
+                  onPull();
+                }}
+              >
+                Replace the file&apos;s {pulled.length === 1 ? "value" : `${pulled.length} values`} with Canvas&apos;s
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+    </>
   );
 };
 

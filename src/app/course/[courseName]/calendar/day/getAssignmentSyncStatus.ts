@@ -421,6 +421,21 @@ export const rubricInSync = (
   canvasRubric: CanvasRubricCriteria[] | undefined,
 ) => checkRubric(localRubric, canvasRubric).every((f) => f.same);
 
+/**
+ * How the compare page renders an item's description (a page's text), for
+ * any text put in its place: what Pull from Canvas checks its result with
+ * (see pullDescription).
+ */
+export const descriptionRenderer =
+  (type: "assignment" | "quiz" | "page", item: LocalAssignment | LocalQuiz | LocalCoursePage, settings: LocalCourseSettings, canvasLinkTargets?: CanvasLinkTargets) =>
+  (markdownString: string) =>
+    markdownToHTMLSafe({
+      markdownString,
+      settings,
+      canvasLinkTargets,
+      replaceText: type === "assignment" ? getClassroomReplaceText({ assignment: item as LocalAssignment, settings }) : [],
+    });
+
 function checkDescription(
   render: () => string,
   canvasHtml: string | undefined,
