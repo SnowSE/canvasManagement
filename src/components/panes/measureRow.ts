@@ -1,72 +1,64 @@
 "use client";
 import { Layout } from "./cascade";
-import { isShown, PaneView, Sized } from "./paneStore";
+import { PaneView } from "./paneStore";
 
 export const paneElement = (id: string) => document.querySelector<HTMLElement>(`[data-pane="${id}"]`);
 
-/** The panes' row as it is on the page, for the sizing rules (see paneStore). */
-export type Row = {
-  /** The open panes, in order, at their widths on the page. */
-  open: Sized[];
-  /** The room left empty at the row's end; below zero, how far the panes reach past it. */
-  free: number;
-  /** How wide a collapsed pane is: its bar. */
-  bar: number;
-  /** The room the row has for the panes whose bars are on the page, gaps taken out. */
-  room: number;
-  /** The space between two bars. */
-  gap: number;
-};
-
-/**
- * Measures the row. The only place the sizing reads the page: everything
- * it decides is from these numbers, by the pure rules in paneStore.
- */
-export function measureRow(panes: PaneView[]): Row {
-  const width = (p: PaneView) => paneElement(p.id)?.getBoundingClientRect().width ?? p.width;
-  // a pane with no widest width set may take half the row
-  const sized = (room: number) =>
-    panes.filter(isShown).map((p) => ({ id: p.id, width: width(p), minWidth: p.minWidth, maxWidth: Number.isFinite(p.maxWidth) ? p.maxWidth : room / 2 }));
-  const shown = panes.filter((p) => !p.hidden);
-  const row = shown.map((p) => paneElement(p.id)?.parentElement).find(Boolean);
-  if (!row) return { open: sized(Infinity), free: 0, bar: 23, room: 0, gap: 0 };
-  const box = row.getBoundingClientRect();
-  // the start and end bars sit outside every pane: the empty room is what's
-  // left before the end bar, and the room the panes share leaves both out
-  const edgeBars = [...row.querySelectorAll<HTMLElement>("[data-pane-edge]")];
-  const end = Math.max(...[...row.children].filter((el) => !edgeBars.includes(el as HTMLElement)).map((el) => el.getBoundingClientRect().right));
-  const endBarWidth = edgeBars.reduce((total, el) => total + el.getBoundingClientRect().width + gapOf(row), 0);
-  const collapsed = shown.find((p) => p.collapsed);
-  const barEl = collapsed ? paneElement(collapsed.id) : paneElement(shown[0].id)?.firstElementChild;
-  const gap = gapOf(row);
-  const room = row.clientWidth - endBarWidth - gap * Math.max(shown.length - 1, 0);
-  return {
-    open: sized(room),
-    free: box.right - endBarWidth - end,
-    bar: barEl?.getBoundingClientRect().width ?? 23,
-    room,
-    gap,
-  };
-}
-
 const gapOf = (row: Element) => parseFloat(getComputedStyle(row).columnGap) || 0;
 
-/** The row as the rules see it (see cascade): every pane, the open ones at their widths on the page; `lead` the room before the first. */
+// how wide a scrollbar is here (0 where they overlay the content); once, it doesn't change
+let scrollbar: number | undefined;
+const scrollbarWidth = () => {
+  if (scrollbar === undefined) {
+    const probe = Object.assign(document.createElement("div"), { style: "position:absolute;visibility:hidden;overflow:scroll;width:100px" });
+    document.body.append(probe);
+    scrollbar = probe.offsetWidth - probe.clientWidth;
+    probe.remove();
+  }
+  return scrollbar;
+};
+
+/** The narrowest an open pane may be: its bar, a scrollbar and as much content again, so it never looks collapsed. */
+export const leastWidth = (bar: number) => bar + 2 * scrollbarWidth();
+
+/**
+ * The row as the rules see it (see cascade): every pane, the open ones at
+ * their widths on the page; `lead` the room before the first. The only
+ * place the sizing reads the page: everything it decides is from these
+ * numbers, by the pure rules in cascade.
+ */
 export function measureLayout(panes: PaneView[], lead: number): Layout {
-  const r = measureRow(panes);
-  const measured = new Map(r.open.map((p) => [p.id, p]));
+  const shown = panes.filter((p) => !p.hidden);
+  const row = shown.map((p) => paneElement(p.id)?.parentElement).find(Boolean);
+  let free = 0, bar = 23, gap = 0, room = Infinity;
+  if (row) {
+    // the start and end bars sit outside every pane: the empty room is what's
+    // left before the end bar, and the room the panes share leaves both out
+    const edgeBars = [...row.querySelectorAll<HTMLElement>("[data-pane-edge]")];
+    gap = gapOf(row);
+    const end = Math.max(...[...row.children].filter((el) => !edgeBars.includes(el as HTMLElement)).map((el) => el.getBoundingClientRect().right));
+    const edges = edgeBars.reduce((total, el) => total + el.getBoundingClientRect().width + gap, 0);
+    const collapsed = shown.find((p) => p.collapsed);
+    const barEl = collapsed ? paneElement(collapsed.id) : paneElement(shown[0].id)?.firstElementChild;
+    free = row.getBoundingClientRect().right - edges - end;
+    bar = barEl?.getBoundingClientRect().width ?? bar;
+    room = row.clientWidth - edges - gap * Math.max(shown.length - 1, 0);
+  }
   return {
     slabs: panes.map((p) => ({
       id: p.id,
-      width: measured.get(p.id)?.width ?? p.width,
-      minWidth: p.minWidth,
-      maxWidth: Number.isFinite(p.maxWidth) ? p.maxWidth : r.room / 2,
+      width: (!p.hidden && !p.collapsed && paneElement(p.id)?.getBoundingClientRect().width) || p.width,
+      // a narrowest width set before the least there is now is the least
+      minWidth: Math.max(p.minWidth, leastWidth(bar)),
+      // a pane with no widest width set may take half the row
+      maxWidth: Number.isFinite(p.maxWidth) ? p.maxWidth : room / 2,
       collapsed: p.collapsed,
       hidden: p.hidden,
     })),
     lead,
-    free: r.free,
-    bar: r.bar,
-    gap: r.gap,
+    free,
+    bar,
+    gap,
+    least: leastWidth(bar),
   };
 }

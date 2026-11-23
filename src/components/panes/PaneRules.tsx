@@ -1,5 +1,6 @@
 "use client";
 import { RefObject, useLayoutEffect, useRef, useState } from "react";
+import { leastWidth } from "./measureRow";
 import { maxRuleShare } from "./paneStore";
 import { useDragHandlers } from "./PaneBar";
 
@@ -48,7 +49,7 @@ export function MinRule({
   const [live, setLive] = useState<number | null>(null);
   const at = (e: React.PointerEvent) => {
     const left = paneRef.current?.getBoundingClientRect().left ?? 0;
-    return Math.round(Math.max(e.clientX - left, bar));
+    return Math.round(Math.max(e.clientX - left, leastWidth(bar)));
   };
   const handlers = useDragHandlers(
     (e) => {

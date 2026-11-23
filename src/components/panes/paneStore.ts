@@ -57,7 +57,7 @@ export type PaneSpec = {
  * A pane as the page shows it: its spec with the user's choices applied;
  * `width` is how wide it is (dragged, set by All, or its default),
  * `minWidth` and `maxWidth` the narrowest and widest it may be made
- * (`maxWidth` Infinity when none is set: half the row, see measureRow), `floor` the pane's own minimum,
+ * (`maxWidth` Infinity when none is set: half the row, see measureLayout), `floor` the pane's own minimum,
  * the min until a drag from a resize square pushes it lower.
  */
 export type PaneView = PaneSpec & { hidden: boolean; collapsed: boolean; width: number; maxWidth: number; floor: number };
@@ -120,9 +120,6 @@ export const widthRule = (pane: { minWidth: number; width: number }, place: numb
   return { flex: `0 ${16 ** place} ${width}px`, minWidth: `${pane.minWidth}px`, maxWidth: `${width}px` };
 };
 
-/** An open pane as the sizing rules see it. */
-export type Sized = { id: string; width: number; minWidth: number; maxWidth: number };
-
 /**
  * The max rule (see PaneRules): how much wider the pane may still be made,
  * as the share of the rule's length from the top, of what the row would
@@ -145,7 +142,6 @@ const withPane = (doc: PaneDoc, id: string, change: NonNullable<PaneDoc["panes"]
 
 /** What the bars, the links and the phone's row do to the document. */
 export const paneActions = {
-  setHidden: (doc: PaneDoc, id: string, hidden: boolean) => withPane(doc, id, { hidden }),
   setCollapsed: (doc: PaneDoc, id: string, collapsed: boolean) => withPane(doc, id, { collapsed }),
   /** Expanded and on the page. */
   show: (doc: PaneDoc, id: string) => withPane(doc, id, { hidden: false, collapsed: false }),
