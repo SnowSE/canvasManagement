@@ -5,7 +5,7 @@ import { showErrorToast } from "@/app/MyToaster";
 import { Spinner } from "@/components/Spinner";
 import { useItemSyncStatus } from "../../calendar/day/useItemSyncStatus";
 import { useModuleNamesQuery } from "@/features/local/modules/localCourseModuleHooks";
-import { kinds, settled, updateEach } from "./rules";
+import { kinds, sendEach, settled, updateEach } from "./rules";
 import { keyOf, ModuleItemRef, useModuleSelection } from "./moduleSelection";
 import { useEachKind } from "../../itemKinds";
 import { ReviewDialog } from "./ReviewDialog";
@@ -41,10 +41,11 @@ export function BulkBar() {
   const visibleChecked = visible.filter(selection.isSelected).length;
 
   // one item at a time; the ones that fail stay checked, to try again
-  const run = async (doing: string, refs: ModuleItemRef[], action: (r: ModuleItemRef) => Promise<unknown>) => {
+  const problemOf = (r: ModuleItemRef) => statusOf(r.type, r.item, r.moduleName).problem;
+  const run = async (doing: string, refs: ModuleItemRef[], action: (r: ModuleItemRef) => Promise<unknown>, each = updateEach<ModuleItemRef>) => {
     const show = (done: number) => setProgress(`${doing} ${done + 1} of ${refs.length}…`);
     show(0);
-    const failed = await updateEach(refs, action, (done) => done < refs.length && show(done));
+    const failed = await each(refs, action, (done) => done < refs.length && show(done));
     setProgress(undefined);
     const done = new Set(refs.filter((r) => !failed.includes(r)).map(keyOf));
     selection.set(selected.filter((r) => !done.has(keyOf(r))));
@@ -146,7 +147,8 @@ export function BulkBar() {
         control={review}
         items={reviewing}
         selectedCount={selected.length}
-        onSend={() => run("Adding/updating", selected, addOrUpdate)}
+        // an item with a problem (see ItemSyncStatus.problem) is left out, and stays checked
+        onSend={() => run("Adding/updating", selected, addOrUpdate, (refs, send, onProgress) => sendEach(refs, problemOf, send, onProgress))}
       />
     </div>
   );

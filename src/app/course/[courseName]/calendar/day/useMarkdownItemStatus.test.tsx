@@ -29,6 +29,9 @@ vi.mock("@/features/canvas/hooks/canvasModuleHooks", () => ({
   useCanvasModulesWithItemsQuery: () => ({ data: [{ id: 1, name: "04 - Rust", items: [{ type: "Page", page_url: "rust", title: "Rust" }] }], isFetching: false }),
 }));
 vi.mock("../../context/CalendarQuizQuestionsProvider", () => ({ useCalendarQuizQuestions: () => ({}) }));
+// the modules holding a page of each name, as the module lists have them
+const modules = vi.hoisted(() => ({ ofRust: ["04 - Rust"] }));
+vi.mock("@/features/local/modules/localCourseModuleHooks", () => ({ useModulesOfName: () => (_: string, name: string) => (name === "Rust" ? modules.ofRust : []) }));
 // the course's files in Canvas, as Canvas lists them
 vi.mock("@/features/canvas/services/files/canvasCourseFileService", async (original) => ({
   ...(await original<object>()),
@@ -36,12 +39,13 @@ vi.mock("@/features/canvas/services/files/canvasCourseFileService", async (origi
 }));
 
 /** The differences the module list shows for the page, once they have settled on `expected` (or the wait times out). */
-const settlesOn = async (canvasBody: string, expected: string[]) => {
+const settlesOn = async (canvasBody: string, expected: string[], problem?: string) => {
   canvas.pageBody = canvasBody;
   const client = new QueryClient();
   const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>;
   const { result } = renderHook(() => useMarkdownItemStatusOf("page"), { wrapper });
   await waitFor(() => expect(result.current!(page, "04 - Rust").differences.map((d) => d.key)).toEqual(expected));
+  expect(result.current!(page, "04 - Rust").problem).toBe(problem);
 };
 
 describe("a page that links to a course file, in the module list and on the calendar", () => {
@@ -51,5 +55,13 @@ describe("a page that links to a course file, in the module list and on the cale
   it("reads as differing when Canvas's link points somewhere else", async () => {
     const elsewhere = sentBody.replace("209208898", "1");
     await settlesOn(elsewhere, ["description"]);
+  });
+});
+
+describe("a page whose name another module's page has too", () => {
+  it("is a problem in the module list and on the calendar: Canvas keeps one page per name", async () => {
+    modules.ofRust = ["04 - Rust", "09 - Review"];
+    await settlesOn(sentBody, [], 'Two page files are named "Rust" (in 04 - Rust, 09 - Review). Canvas keeps one page per name, so they would overwrite each other: rename all but one.'.replace("Two", "2"));
+    modules.ofRust = ["04 - Rust"];
   });
 });

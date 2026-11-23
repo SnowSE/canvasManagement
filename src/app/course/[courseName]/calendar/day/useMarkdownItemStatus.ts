@@ -10,6 +10,7 @@ import { IModuleItem } from "@/features/local/modules/IModuleItem";
 import { LocalAssignment } from "@/features/local/assignments/models/localAssignment";
 import { LocalQuiz } from "@/features/local/quizzes/models/localQuiz";
 import { LocalCoursePage } from "@/features/local/pages/localCoursePageModels";
+import { useModulesOfName } from "@/features/local/modules/localCourseModuleHooks";
 import { useCalendarQuizQuestions } from "../../context/CalendarQuizQuestionsProvider";
 import { getSyncStatus, ItemSyncStatus } from "./getAssignmentSyncStatus";
 
@@ -42,6 +43,8 @@ export function useMarkdownItemStatusOf(type: "assignment" | "quiz" | "page") {
   const quizQuestions = useCalendarQuizQuestions();
   const { data: canvasModules, isFetching: modulesRefetching } = useCanvasModulesWithItemsQuery();
   const canvasLinkTargets = { assignments: canvasAssignments, quizzes: canvasQuizzes };
+  // another file of the kind with the item's name: Canvas would keep them as one item
+  const modulesOfName = useModulesOfName();
   if (!canvasAssignments || !canvasQuizzes || !canvasPages || !canvasModules) return undefined;
 
   return (item: IModuleItem, moduleName: string) => {
@@ -52,9 +55,10 @@ export function useMarkdownItemStatusOf(type: "assignment" | "quiz" | "page") {
           ? canvasQuizzes.find((q) => q.title === item.name)
           : canvasPages.find((p) => p.title === item.name);
     const canvasQuestions = type === "quiz" ? quizQuestions[item.name] : undefined;
+    const sharedWith = modulesOfName(type, item.name);
     return remembered(
       `${settings.name}/${type}/${moduleName}/${item.name}`,
-      [item, canvasItem, settings, canvasModules, modulesRefetching, rosterStudents, rosterGroupSets, canvasQuestions, canvasAssignments, canvasQuizzes],
+      [item, canvasItem, settings, canvasModules, modulesRefetching, rosterStudents, rosterGroupSets, canvasQuestions, canvasAssignments, canvasQuizzes, sharedWith.join("\n")],
       () =>
         getSyncStatus({
           item: item as LocalAssignment | LocalQuiz | LocalCoursePage,
@@ -64,6 +68,7 @@ export function useMarkdownItemStatusOf(type: "assignment" | "quiz" | "page") {
           canvasLinkTargets,
           roster,
           canvasQuestions,
+          sharedWith,
           // not compared while the modules are being refetched (an item was just added to one)
           module: canvasItem && !modulesRefetching ? { file: moduleName, canvas: canvasModuleNames(canvasModules, type, canvasItem) } : undefined,
         }),

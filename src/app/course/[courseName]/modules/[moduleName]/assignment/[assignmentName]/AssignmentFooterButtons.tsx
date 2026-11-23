@@ -1,10 +1,11 @@
 import { useSettingsWithCanvasFiles } from "@/features/canvas/hooks/canvasCourseFileHooks";
+import { useModulesOfName } from "@/features/local/modules/localCourseModuleHooks";
 import {
   EditorFooter,
   FooterAction,
 } from "@/app/course/[courseName]/EditorFooter";
 import { useCanvasModuleNames } from "@/features/canvas/hooks/canvasModuleHooks";
-import { getSyncReport } from "@/app/course/[courseName]/calendar/day/getAssignmentSyncStatus";
+import { getSyncReport, sharedNameProblem } from "@/app/course/[courseName]/calendar/day/getAssignmentSyncStatus";
 import { ClassroomIcon, TrashIcon } from "@/components/icons/ActionIcons";
 import { dateOrderProblem } from "@/features/local/utils/timeUtils";
 import { useCourseContext } from "@/app/course/[courseName]/context/courseContext";
@@ -93,6 +94,7 @@ export function AssignmentFooterButtons({
     deleteFromCanvas.isPending ||
     updateAssignment.isPending;
 
+  const modulesOfName = useModulesOfName();
   const differences = useMemo(
     () =>
       assignmentInCanvas
@@ -181,7 +183,7 @@ export function AssignmentFooterButtons({
         assignmentName,
       )}
       busy={anythingIsLoading}
-      problem={dateOrderProblem(draft ?? assignment)}
+      problem={dateOrderProblem(draft ?? assignment) ?? sharedNameProblem("assignment", assignmentName, modulesOfName("assignment", assignmentName))}
       // what the footer compares is what it sends
       onAdd={() => addToCanvas.mutate({ assignment: draft ?? assignment, moduleName })}
       onUpdate={() =>

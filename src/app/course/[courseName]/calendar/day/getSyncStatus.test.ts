@@ -252,6 +252,20 @@ describe("rubricInSync", () => {
   });
 });
 
+describe("two files of one name, which Canvas keeps as one item (teichert#26)", () => {
+  const problemOf = (sharedWith?: string[]) =>
+    getSyncStatus({ item: baseLocalAssignment, canvasItem: baseCanvasAssignment, type: "assignment", settings: baseSettings, sharedWith }).problem;
+  it("is a problem that names every module holding one", () => {
+    expect(problemOf(["04 - Trees", "06 - Heaps"])).toMatch(/04 - Trees.*06 - Heaps/);
+  });
+  it("is a problem before the item is in Canvas too", () => {
+    expect(getSyncStatus({ item: baseLocalAssignment, canvasItem: undefined, type: "assignment", settings: baseSettings, sharedWith: ["04 - Trees", "06 - Heaps"] }).problem).toMatch(/04 - Trees/);
+  });
+  it("is no problem for a name only one file has", () => {
+    expect(problemOf(["04 - Trees"])).toBeUndefined();
+  });
+});
+
 describe("a rubric Update in Canvas must send again (teichert#88)", () => {
   const local = [{ label: "Code Quality", points: 10 }];
   const rating = (description: string, points: number, long_description = "") => ({ id: description, description, points, long_description });

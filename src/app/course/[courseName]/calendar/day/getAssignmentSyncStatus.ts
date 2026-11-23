@@ -81,8 +81,9 @@ export type ItemSyncStatus = {
    */
   unpublished?: boolean;
   /**
-   * Dates Canvas won't save (see dateOrderProblem), in Canvas or not: the
-   * module list counts it as an error, and the item can't be sent.
+   * Dates Canvas won't save (see dateOrderProblem), or a name another
+   * file has too (see sharedNameProblem), in Canvas or not: the module list
+   * counts it as an error, and the item can't be sent.
    */
   problem?: string;
 };
@@ -714,6 +715,16 @@ function checkSchedule(
   return fields;
 }
 
+/**
+ * Why an item can't be sent while another file of its type has its name:
+ * Canvas keeps one item per name, so each update would overwrite the
+ * other's and move it between their modules.
+ */
+export const sharedNameProblem = (type: string, name: string, modules: string[] = []) =>
+  modules.length > 1
+    ? `${modules.length} ${type} files are named "${name}" (in ${modules.join(", ")}). Canvas keeps one ${type} per name, so they would overwrite each other: rename all but one.`
+    : undefined;
+
 /** Dates Canvas won't save (see dateOrderProblem): a difference until fixed. */
 function checkDateOrder(item: {
   unlockAt?: string;
@@ -917,6 +928,7 @@ export function getSyncReport({
   roster,
   canvasQuestions,
   module,
+  sharedWith,
 }: {
   item: LocalQuiz | LocalAssignment | LocalCoursePage;
   canvasItem: CanvasQuiz | CanvasAssignment | CanvasPage | undefined;
@@ -928,8 +940,10 @@ export function getSyncReport({
   canvasQuestions?: CanvasQuizQuestion[];
   /** The file's module and the Canvas modules holding the item; without them the module is not compared. */
   module?: { file: string; canvas: string[] };
+  /** The modules holding a file of this type and name (see sharedNameProblem); more than one is a problem. */
+  sharedWith?: string[];
 }): SyncReport {
-  const problem = dateOrderProblem(item);
+  const problem = dateOrderProblem(item) ?? sharedNameProblem(type, item.name, sharedWith);
   if (!canvasItem)
     return {
       status: "localOnly",

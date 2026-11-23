@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { kindsOf, settled, shown, showsErrors, toggleAll, updateEach } from "./rules";
+import { kindsOf, sendEach, settled, shown, showsErrors, toggleAll, updateEach } from "./rules";
 
 const status = (s: {
   status?: "localOnly" | "incomplete" | "published";
@@ -96,5 +96,20 @@ describe("updateEach", () => {
     );
 
     expect(failed).toEqual(["b"]);
+  });
+});
+
+describe("a bulk add/update (teichert#26)", () => {
+  const problemOf = (item: string) => (item.startsWith("twin") ? "two files share this name" : undefined);
+  const send = async (items: string[]) => {
+    const sent: string[] = [];
+    const notSent = await sendEach(items, problemOf, async (item) => void sent.push(item), () => {});
+    return { sent, notSent };
+  };
+  it("doesn't send an item that has a problem, and says it wasn't sent", async () => {
+    expect(await send(["lab 1", "twin a", "twin b"])).toEqual({ sent: ["lab 1"], notSent: ["twin a", "twin b"] });
+  });
+  it("sends every item without one", async () => {
+    expect(await send(["lab 1", "lab 2"])).toEqual({ sent: ["lab 1", "lab 2"], notSent: [] });
   });
 });
