@@ -43,6 +43,7 @@ import {
   collapseUnchanged,
   diffHtmlText,
   diffNormalizedHtml,
+  diffSides,
 } from "@/services/utils/htmlTextDiff";
 
 const sectionLabels: Record<SyncSection, string> = {
@@ -626,31 +627,20 @@ const FieldsTable: FC<{
   );
 };
 
-// every question shows in full, answers included; "≠ " marks what differs
-const Cell: FC<{ field: SyncField; side: "local" | "canvas" }> = ({
-  field,
-  side,
-}) => (
-  <Value
-    text={field[side]}
-    tone={field.same ? undefined : side === "local" ? "file" : "canvas"}
-  />
-);
-
-const Value: FC<{ text: string; tone?: "file" | "canvas" }> = ({ text, tone }) => (
-  <span
-    className={
-      "font-mono text-xs px-1.5 py-0.5 rounded whitespace-pre-line [overflow-wrap:anywhere] [box-decoration-break:clone] " +
-      (tone === "file"
-        ? "bg-green-900/40 text-green-300"
-        : tone === "canvas"
-          ? "bg-rose-900/40 text-rose-300"
-          : "")
-    }
-  >
-    {text}
-  </span>
-);
+// every question shows in full, answers included, with what differs marked (see diffSides)
+const Cell: FC<{ field: SyncField; side: "local" | "canvas" }> = ({ field, side }) => {
+  const parts = useMemo(() => (field.same ? [{ value: field[side] }] : diffSides(field.local, field.canvas)[side]), [field, side]);
+  const marked = side === "local" ? "bg-green-900/40 text-green-300" : "bg-rose-900/40 text-rose-300";
+  return (
+    <span className="font-mono text-xs whitespace-pre-line [overflow-wrap:anywhere]">
+      {parts.map((part, i) => (
+        <span key={i} className={part.added || part.removed ? "px-0.5 rounded [box-decoration-break:clone] " + marked : ""}>
+          {part.value}
+        </span>
+      ))}
+    </span>
+  );
+};
 
 const Legend: FC<{ canvasLabel: string }> = ({ canvasLabel }) => (
   <div className="flex gap-4 text-xs text-slate-400">

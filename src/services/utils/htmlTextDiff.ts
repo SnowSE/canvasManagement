@@ -74,8 +74,11 @@ export function diffHtmlText(
   localHtml: string,
   canvasHtml: string,
 ): TextDiffLine[] {
-  const oldLines = htmlToTextLines(canvasHtml);
-  const newLines = htmlToTextLines(localHtml);
+  return diffTextLines(htmlToTextLines(canvasHtml), htmlToTextLines(localHtml));
+}
+
+/** Lines of text aligned (see diffHtmlText): `oldLines` is Canvas's side, `newLines` the file's. */
+function diffTextLines(oldLines: string[], newLines: string[]): TextDiffLine[] {
   const changes = diffArrays(oldLines, newLines);
   const result: TextDiffLine[] = [];
 
@@ -191,4 +194,21 @@ export function diffNormalizedHtml(
         removed: change.removed || undefined,
       })),
   );
+}
+
+/**
+ * The two sides of a value that differs (a question, as the compare page
+ * shows it), each as parts: `added` marks what only the file has, `removed`
+ * what only Canvas has. The lines are aligned and a changed line is marked
+ * word by word, so a one-word edit reads as one word.
+ */
+export function diffSides(local: string, canvas: string): { local: DiffPart[]; canvas: DiffPart[] } {
+  const lines = diffTextLines(canvas.split("\n"), local.split("\n"));
+  // a side shows the lines it has: not the other side's own parts
+  const side = (others: "added" | "removed") =>
+    lines
+      .map((line) => line.parts.filter((part) => !part[others]))
+      .filter((parts) => parts.length > 0)
+      .flatMap((parts, i) => (i === 0 ? parts : [{ value: "\n" }, ...parts]));
+  return { local: side("removed"), canvas: side("added") };
 }

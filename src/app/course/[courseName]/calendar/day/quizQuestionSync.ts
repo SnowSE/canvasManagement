@@ -590,14 +590,16 @@ function compareQuestions(
 
 /**
  * The whole question, one side of it: type and points, text, answers and
- * feedback, with "≠ " before the lines of each part that differs.
+ * feedback. The compare page marks the words that differ (see diffSides);
+ * "≠ " goes before the lines of a part that differs without reading
+ * differently (its formatting or markup does), where no word would be marked.
  */
 function wholeQuestion(aspects: Aspect[], side: "local" | "canvas") {
   const part = (name: string) => aspects.find((a) => a.name === name)!;
   const lines = (aspect: Aspect, value = aspect[side]) =>
     value === UNSET
       ? []
-      : value.split("\n").map((line) => (aspect.same ? line : `≠ ${line}`));
+      : value.split("\n").map((line) => (aspect.same || aspect.local !== aspect.canvas ? line : `≠ ${line}`));
   const type = part("type");
   const points = part("points");
   const header = `type: ${type[side]} · points: ${points[side]}`;
@@ -605,9 +607,9 @@ function wholeQuestion(aspects: Aspect[], side: "local" | "canvas") {
   const group = part("group");
   const showGroup = group.local !== UNSET || group.canvas !== UNSET;
   return [
-    ...(position ? [`≠ position: ${position[side]}`] : []),
-    type.same && points.same ? header : `≠ ${header}`,
-    ...(showGroup ? [`${group.same ? "" : "≠ "}group: ${group[side]}`] : []),
+    ...(position ? [`position: ${position[side]}`] : []),
+    header,
+    ...(showGroup ? [`group: ${group[side]}`] : []),
     ...lines(part("text")),
     ...lines(part("answers")),
     ...lines(part("feedback")),

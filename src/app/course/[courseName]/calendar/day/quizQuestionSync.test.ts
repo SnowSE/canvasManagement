@@ -20,6 +20,7 @@ import {
   getQuestionTextForCanvas,
 } from "@/features/canvas/services/canvasQuizService";
 import { markdownToHTMLSafe } from "@/services/htmlMarkdownUtils";
+import { diffSides } from "@/services/utils/htmlTextDiff";
 
 const settings: LocalCourseSettings = {
   name: "test course",
@@ -111,17 +112,23 @@ describe("checkQuizQuestions", () => {
     expect(field.canvas).toBe(field.local);
   });
 
-  it("shows the whole question when one part differs, marking that part", () => {
+  it("shows the whole question on both sides when one part differs", () => {
     const [field] = checkQuizQuestions(
       questionsOf(multipleChoice),
       [{ ...canvasMultipleChoice, correct_comments: "Yes." }],
       settings,
     );
-    expect(field.local).toContain("Staged rollout exists to:");
-    expect(field.local).toContain("✓ Bound the blast radius");
-    expect(field.local).toContain("≠ + Right.");
-    expect(field.canvas).toContain("≠ + Yes.");
-    expect(field.canvas).not.toContain("≠ Staged");
+    expect(field.local.split("\n")).toEqual(["type: multiple choice · points: 1", "Staged rollout exists to:", "✓ Bound the blast radius", "Save bandwidth", "+ Right."]);
+    expect(field.canvas.split("\n").at(-1)).toBe("+ Yes.");
+  });
+
+  it("flags a part that differs without reading differently (its formatting does), where no word would be marked", () => {
+    const [field] = checkQuizQuestions(
+      questionsOf(multipleChoice),
+      [{ ...canvasMultipleChoice, question_text: "<p><strong>Staged</strong> rollout exists to:</p>" }],
+      settings,
+    );
+    expect([field.same, field.local.split("\n")[1]]).toEqual([false, "≠ Staged rollout exists to:"]);
   });
 
   it("reports a different correct answer", () => {
@@ -586,5 +593,30 @@ describe("multiple dropdowns in a student's attempt", () => {
     const changed = { ...question, text: "Run Prim's algorithm.\n" };
     const [field] = checkQuizQuestions([changed], [attempt], settings, { ignoreAnswerOrder: true, isAttempt: true });
     expect(field.message).toContain("text different");
+  });
+});
+
+describe("what the compare page marks in a question that differs (teichert#98)", () => {
+  /** What is marked on each side, as the words a reader sees highlighted. */
+  const marked = (canvas: Partial<CanvasQuizQuestion>) => {
+    const [field] = checkQuizQuestions(questionsOf(multipleChoice), [{ ...canvasMultipleChoice, ...canvas }], settings);
+    const words = (parts: { value: string; added?: boolean; removed?: boolean }[]) =>
+      parts.filter((p) => p.added || p.removed).flatMap((p) => p.value.split(/\s+/)).filter(Boolean);
+    const sides = diffSides(field.local, field.canvas);
+    return { file: words(sides.local), canvas: words(sides.canvas) };
+  };
+  const answer = (text: string, weight: number) => ({ id: 1, text, html: `<p>${text}</p>`, weight });
+
+  it("one word of the text changed: that word, on each side", () => {
+    expect(marked({ question_text: "<p>Gradual rollout exists to:</p>" })).toEqual({ file: ["Staged"], canvas: ["Gradual"] });
+  });
+  it("one answer changed: its changed word, not the other answers", () => {
+    expect(marked({ answers: [answer("Bound the blast radius", 100), answer("Save money", 0)] })).toEqual({ file: ["bandwidth"], canvas: ["money"] });
+  });
+  it("an answer only Canvas has: that answer, on Canvas's side alone", () => {
+    expect(marked({ answers: [...(canvasMultipleChoice.answers ?? []), answer("Extra", 0)] })).toEqual({ file: [], canvas: ["Extra"] });
+  });
+  it("the points changed: the number alone", () => {
+    expect(marked({ points_possible: 2 })).toEqual({ file: ["1"], canvas: ["2"] });
   });
 });
