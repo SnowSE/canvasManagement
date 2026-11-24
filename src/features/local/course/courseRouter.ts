@@ -3,13 +3,12 @@ import { router } from "@/services/serverFunctions/trpcSetup";
 import publicProcedure from "@/services/serverFunctions/publicProcedure";
 import { fileStorageService } from "@/features/local/utils/fileStorageService";
 import { getModuleNamesFromFiles } from "@/features/local/modules/moduleRouter";
-import { CourseItemType, typeToFolder } from "./courseItemTypes";
+import { courseItemTypes, typeToFolder } from "./courseItemTypes";
 import { getCoursePathByName } from "../globalSettings/globalSettingsFileStorageService";
 import path from "path";
 import fs from "fs/promises";
 import { directoryOrFileExists } from "../utils/fileSystemUtils";
 
-const courseItemTypes: CourseItemType[] = ["Assignment", "Quiz", "Page"];
 
 async function getValidatedCourseNames() {
   const settings = await fileStorageService.settings.getAllCoursesSettings();

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect } from "react";
+import { ItemKind, kindOf } from "@/features/local/course/courseItemTypes";
 import { usePagesQueries } from "@/features/local/pages/pageHooks";
 import { IModuleItem } from "@/features/local/modules/IModuleItem";
 import {
@@ -37,6 +38,8 @@ import { useItemSyncStatus } from "../calendar/day/useItemSyncStatus";
 import { useModuleSelection } from "./bulk/moduleSelection";
 import { kindsOf, shown, showsErrors } from "./bulk/rules";
 
+type ModuleItem = { type: ItemKind; item: IModuleItem };
+
 export default function ExpandableModule({
   moduleName,
 }: {
@@ -55,24 +58,11 @@ export default function ExpandableModule({
   const { statusOf, ready } = useItemSyncStatus();
   const selection = useModuleSelection();
 
-  const moduleItems: {
-    type: "assignment" | "quiz" | "page";
-    item: IModuleItem;
-  }[] = (assignments ?? [])
-    .map(
-      (
-        a,
-      ): {
-        type: "assignment" | "quiz" | "page";
-        item: IModuleItem;
-      } => ({
-        type: "assignment",
-        item: a,
-      }),
-    )
-    .concat(quizzes.map((q) => ({ type: "quiz", item: q })))
-    .concat(pages.map((p) => ({ type: "page", item: p })))
-    .sort((a, b) => byOrderingDate(a.item, b.item));
+  const moduleItems = [
+    ...(assignments ?? []).map((item): ModuleItem => ({ type: "assignment", item })),
+    ...quizzes.map((item): ModuleItem => ({ type: "quiz", item })),
+    ...pages.map((item): ModuleItem => ({ type: "page", item })),
+  ].sort((a, b) => byOrderingDate(a.item, b.item));
 
   const canvasModuleItems = canvasModulesWithItems?.find(
     (m) => m.name === moduleName,
@@ -129,7 +119,7 @@ export default function ExpandableModule({
       groups: {
         dateKey: string;
         weekLabel: string;
-        items: { type: "assignment" | "quiz" | "page"; item: IModuleItem }[];
+        items: ModuleItem[];
       }[],
       moduleItem,
     ) => {
@@ -263,11 +253,7 @@ export default function ExpandableModule({
                           to={getModuleItemUrl(
                             courseName,
                             moduleName,
-                            invalid.type === "Assignment"
-                              ? "assignment"
-                              : invalid.type === "Quiz"
-                                ? "quiz"
-                                : "page",
+                            kindOf[invalid.type],
                             invalid.name,
                           )}
                           className="ps-1 text-rose-300 underline decoration-wavy decoration-rose-600 hover:text-rose-100"

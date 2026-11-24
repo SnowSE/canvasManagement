@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { zodCourseItemType } from "@/features/local/course/courseItemTypes";
 import { router } from "@/services/serverFunctions/trpcSetup";
 import publicProcedure from "@/services/serverFunctions/publicProcedure";
 import { getCoursePathByName } from "../globalSettings/globalSettingsFileStorageService";
@@ -9,7 +10,7 @@ import { courseItemFileStorageService } from "../course/courseItemFileStorageSer
 const zodItemRef = z.object({
   courseName: z.string(),
   moduleName: z.string(),
-  type: z.enum(["Assignment", "Quiz", "Page"]),
+  type: zodCourseItemType,
   name: z.string(),
 });
 

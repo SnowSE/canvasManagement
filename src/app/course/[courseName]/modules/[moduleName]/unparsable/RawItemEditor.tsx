@@ -4,7 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { EditLayout } from "@/components/EditLayout";
 import { ShowPaneLink } from "@/components/panes/ShowPaneLink";
 import { MonacoEditor } from "@/components/editor/MonacoEditor";
-import { CourseItemType } from "@/features/local/course/courseItemTypes";
+import { CourseItemType, kindOf } from "@/features/local/course/courseItemTypes";
 import { useSaveRawItemMutation } from "@/features/local/modules/rawItemHooks";
 import { useCourseContext } from "@/app/course/[courseName]/context/courseContext";
 import { getCourseUrl, getModuleItemUrl } from "@/services/urlUtils";
@@ -18,12 +18,6 @@ import {
 import { markdownToHtmlNoImages } from "@/services/htmlMarkdownUtils";
 import { getErrorMessage } from "@/services/utils/queryClient";
 import { Spinner } from "@/components/Spinner";
-
-const iconType = {
-  Assignment: "assignment",
-  Quiz: "quiz",
-  Page: "page",
-} as const;
 
 /** Plain-text editor for a file that doesn't parse; saves as you type. */
 export function RawItemEditor({
@@ -71,7 +65,7 @@ export function RawItemEditor({
             <RightSingleChevron />
           </span>
           <div className="w-5 ms-3 shrink-0 my-auto">
-            <ItemTypeIcon type={iconType[type]} />
+            <ItemTypeIcon type={kindOf[type]} />
           </div>
           <div className="my-auto px-2 truncate min-w-10">{name}</div>
           <div className="my-auto text-rose-300 text-sm font-semibold whitespace-nowrap">
@@ -109,7 +103,7 @@ export function RawItemEditor({
             <ShowPaneLink
               pane="history"
               className="btn btn-thin unstyled btn-outline"
-              to={getModuleItemUrl(courseName, moduleName, iconType[type], name)}
+              to={getModuleItemUrl(courseName, moduleName, kindOf[type], name)}
               title="Go back to a version of this file that worked"
             >
               File history

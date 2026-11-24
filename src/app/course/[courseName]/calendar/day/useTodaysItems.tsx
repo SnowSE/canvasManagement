@@ -4,6 +4,7 @@ import {
   getDateFromStringOrThrow,
   getDateOnlyMarkdownString,
 } from "@/features/local/utils/timeUtils";
+import { ItemKind } from "@/features/local/course/courseItemTypes";
 import { ReactNode } from "react";
 import { useCalendarItemsContext } from "../../context/calendarItemsContext";
 import { IModuleItem } from "@/features/local/modules/IModuleItem";
@@ -13,7 +14,7 @@ import { byOrderingDate } from "@/features/local/modules/moduleItemOrder";
 import { useItemSyncStatus } from "./useItemSyncStatus";
 
 export type TodayItem = {
-  type: "assignment" | "quiz" | "page";
+  type: ItemKind;
   item: IModuleItem;
   moduleName: string;
   status: "localOnly" | "incomplete" | "published";

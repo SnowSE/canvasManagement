@@ -1,12 +1,13 @@
 "use client";
 import MarkdownDisplay from "@/components/MarkdownDisplay";
+import { ItemKind } from "@/features/local/course/courseItemTypes";
 import { getClassroomReplaceText } from "@/features/local/classroom50/classroom50UrlUtils";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import { IModuleItem } from "@/features/local/modules/IModuleItem";
 import { FC } from "react";
 
 export const GetPreviewContent: FC<{
-  type: "assignment" | "page" | "quiz";
+  type: ItemKind;
   item: IModuleItem;
 }> = ({ type, item }) => {
   const { data: settings } = useLocalCourseSettingsQuery();

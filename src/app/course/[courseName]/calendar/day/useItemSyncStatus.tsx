@@ -1,5 +1,6 @@
 "use client";
 import { createContext, ReactNode, useContext } from "react";
+import { ItemKind } from "@/features/local/course/courseItemTypes";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import { useCanvasAssignmentsQuery } from "@/features/canvas/hooks/canvasAssignmentHooks";
 import { useCanvasPagesQuery } from "@/features/canvas/hooks/canvasPageHooks";
@@ -24,7 +25,7 @@ import {
   ItemSyncStatus,
 } from "./getAssignmentSyncStatus";
 
-export type ItemType = "assignment" | "quiz" | "page";
+export type ItemType = ItemKind;
 
 /** Before Canvas has answered: nothing is claimed. */
 const CHECKING: ItemSyncStatus = {

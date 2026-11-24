@@ -1,5 +1,6 @@
 "use client";
 import { FC, ReactNode } from "react";
+import { ItemKind } from "@/features/local/course/courseItemTypes";
 import { getModuleItemUrl } from "@/services/urlUtils";
 import { ShowPaneLink } from "@/components/panes/ShowPaneLink";
 import { useCourseContext } from "../../../context/courseContext";
@@ -13,7 +14,7 @@ const MAX_LISTED = 5;
  * difference, plus a link to the compare page.
  */
 export const SyncDifferencesTooltip: FC<{
-  type: "assignment" | "page" | "quiz";
+  type: ItemKind;
   moduleName: string;
   itemName: string;
   status: "localOnly" | "incomplete" | "published";

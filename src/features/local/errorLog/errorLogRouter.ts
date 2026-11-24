@@ -4,9 +4,9 @@ import { router } from "@/services/serverFunctions/trpcSetup";
 import { errorLog, logError } from "./errorLogStore";
 import { explainError, explainServiceAvailable } from "./errorExplainService";
 import { parseItemText } from "@/features/local/course/courseItemFileStorageService";
-import { CourseItemType } from "@/features/local/course/courseItemTypes";
+import { CourseItemType, courseItemTypes } from "@/features/local/course/courseItemTypes";
 
-const itemTypes: string[] = ["Assignment", "Quiz", "Page"];
+const itemTypes: readonly string[] = courseItemTypes;
 
 export const errorLogRouter = router({
   list: publicProcedure.query(() => ({

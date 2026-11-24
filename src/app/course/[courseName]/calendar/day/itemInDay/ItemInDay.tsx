@@ -1,5 +1,6 @@
 "use client";
 import { IModuleItem } from "@/features/local/modules/IModuleItem";
+import { ItemKind } from "@/features/local/course/courseItemTypes";
 import { getModuleItemUrl } from "@/services/urlUtils";
 import { Link } from "@tanstack/react-router";
 import { FC, ReactNode } from "react";
@@ -23,7 +24,7 @@ import { SyncField } from "../getAssignmentSyncStatus";
 import { SyncDifferencesTooltip } from "./SyncDifferencesTooltip";
 
 export const ItemInDay: FC<{
-  type: "assignment" | "page" | "quiz";
+  type: ItemKind;
   status: "localOnly" | "incomplete" | "published";
   moduleName: string;
   item: IModuleItem;

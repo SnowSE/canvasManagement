@@ -6,6 +6,7 @@ import { localAssignmentMarkdown } from "@/features/local/assignments/models/loc
 import {
   CourseItemReturnType,
   CourseItemType,
+  courseItemTypes,
   typeToFolder,
 } from "@/features/local/course/courseItemTypes";
 import {
@@ -212,9 +213,8 @@ export const courseItemFileStorageService = {
     courseName: string;
     moduleName: string;
   }): Promise<InvalidCourseItem[]> {
-    const types: CourseItemType[] = ["Assignment", "Quiz", "Page"];
     const perType = await Promise.all(
-      types.map(async (type) => {
+      courseItemTypes.map(async (type) => {
         const names = await getItemFileNames({ courseName, moduleName, type });
         const results = await Promise.all(
           names.map(async (name) => {
