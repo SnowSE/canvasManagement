@@ -13,6 +13,7 @@ import {
 } from "react";
 import { flushSync } from "react-dom";
 import { remember, subscribeToStorage } from "../storage";
+import { formatLayout, layoutDoc, linkedIds, LinkedPane } from "./paneLink";
 
 // Each window keeps its own layout (sessionStorage: it survives that
 // window's reloads), seeded from the last layout saved by any window
@@ -23,7 +24,7 @@ const writePaneDoc = (json: string) => {
   sessionStorage.setItem(paneDocKey, json);
   remember(paneDocKey, json);
 };
-import { Effect, fit, growOrShrink, Layout, Limits, openPanes } from "./cascade";
+import { Effect, fit, fitAsked, growOrShrink, Layout, Limits, openPanes, gainsFromAsked, roomOf, rowAsked, windowGain } from "./cascade";
 import { measureLayout } from "./measureRow";
 import { isShown, paneActions, PaneDoc, paneDocKey, PaneSpec, PaneView, freeId, parseDoc, showingPane, viewOf, viewPanes } from "./paneStore";
 import { showWidths } from "./useEdgeDrag";
@@ -62,6 +63,10 @@ type Strip = {
   register: (spec: PaneSpec) => () => void;
   updateSpec: (spec: PaneSpec) => void;
   update: (change: (doc: PaneDoc) => PaneDoc) => void;
+  /** Sets the window width that gains count from (see windowGain). */
+  gainsFrom: (width: number) => void;
+  /** Each view's letter in a layout link (see paneLink), letter first; none: the page has no layout links. */
+  letters?: Record<string, string>;
 };
 
 const StripContext = createContext<Strip>({
@@ -78,6 +83,7 @@ const StripContext = createContext<Strip>({
   register: () => () => {},
   updateSpec: () => {},
   update: () => {},
+  gainsFrom: () => {},
 });
 
 // Tailwind's md breakpoint: below it the panes stack and one shows at a time
@@ -100,6 +106,7 @@ export function PaneStrip({
   onShowPane,
   popsOut,
   onPopOut,
+  letters,
 }: {
   children: ReactNode;
   /** A window that shows one view (a pop-out): what a link to a view does instead, and the layout is never written. */
@@ -107,6 +114,8 @@ export function PaneStrip({
   /** Views a link opens in a window of their own instead of a pane. */
   popsOut?: (view: string) => boolean;
   onPopOut?: (view: string) => void;
+  /** Each view's letter in a layout link (see paneLink), letter first. */
+  letters?: Record<string, string>;
 }) {
   const [specs, setSpecs] = useState<PaneSpec[]>([]);
   const register = useCallback((spec: PaneSpec) => {
@@ -170,15 +179,22 @@ export function PaneStrip({
     window.addEventListener("resize", resized);
     return () => window.removeEventListener("resize", resized);
   }, []);
-  // how wide the window was at the last fit: only room it gains brings back what was displaced
+  // how wide the window was when what is waiting gave way: only room it gains since brings that back
   const windowWidth = useRef(typeof window === "undefined" ? 0 : innerWidth);
+  const gainsFrom = useCallback((width: number) => {
+    windowWidth.current = width;
+  }, []);
   // the row fitted to its room after every change to the layout or the window, not while a drag shows what it would do (see fit)
   useLayoutEffect(() => {
     if (narrow || !hydrated || previewing) return;
+    // a row replaced since this render (a link's layout set as the page loads) is fitted by the render that shows it:
+    // this one's fit would write the old row's widths and states over it
+    if (readPaneDoc() !== json) return;
     const doc = parseDoc(json);
-    const gained = innerWidth - windowWidth.current;
-    windowWidth.current = innerWidth;
+    const { gained, from } = windowGain(windowWidth.current, innerWidth, (doc.displaced ?? []).length > 0);
     const fitted = fit(measureLayout(panes, lead), doc.displaced ?? [], (id) => doc.panes?.[id]?.width !== undefined, gained);
+    // gains count on from where they were until a fit uses them (see windowGain)
+    windowWidth.current = fitted ? innerWidth : from;
     if (fitted) update((d) => paneActions.applyLayout(d, fitted.layout, fitted.records));
   });
   return (
@@ -199,6 +215,8 @@ export function PaneStrip({
         register,
         updateSpec,
         update,
+        gainsFrom,
+        letters,
       }}
     >
       {children}
@@ -217,7 +235,7 @@ let opener: ((id: string) => void) | undefined;
 
 /** The panes on the page and what can be done to them; for the panes themselves and the phone's row. */
 export function usePanes() {
-  const { panes, narrow, showing, lead, added, records, previewing, setPreviewing, views, flashing, flash, update } = useContext(StripContext);
+  const { panes, narrow, showing, lead, added, records, previewing, setPreviewing, views, flashing, flash, update, gainsFrom, letters } = useContext(StripContext);
   const ids = panes.map((p) => p.id);
   // measured when acted on, never while rendering; on a phone the widths
   // are the screen's and aren't kept
@@ -246,6 +264,57 @@ export function usePanes() {
       const l = layout();
       update((d) => openWithRoom(d, l, ids));
     },
+    /** The row a link asks for, in place of this one (see layoutDoc); `catalogue`: every view's own pane. */
+    setRow: (linked: LinkedPane[], catalogue: string[]) => {
+      // what the window has no room for gives way before the row is shown, from the widths asked,
+      // remembered, so it comes back as the window grows (see fitAsked); a phone shows one pane anyway
+      const onPage = layout();
+      const room = onPage && roomOf(onPage);
+      update((d) => {
+        const next = layoutDoc(d, linked, catalogue);
+        if (!room) return next;
+        // each pane's own description: its view's, for a copy too
+        const specs = [...(next.order ?? [])].flatMap((id) => {
+          const view = panes.find((p) => p.id === viewOf(id));
+          return view ? [{ ...view, id, minWidth: view.floor }] : [];
+        });
+        const slabs = viewPanes(specs, next, true).map((p) => ({
+          id: p.id,
+          width: Math.max(p.width, p.minWidth),
+          minWidth: Math.max(p.minWidth, room.least),
+          maxWidth: Number.isFinite(p.maxWidth) ? p.maxWidth : room.total / 2,
+          collapsed: p.collapsed,
+          hidden: p.hidden,
+        }));
+        // the open panes the link gave no width share the room
+        const ids = linkedIds(linked);
+        const row = rowAsked(slabs, room, ids.filter((_, i) => linked[i].width === undefined));
+        const fitted = fitAsked(row);
+        if (fitted) gainsFrom(gainsFromAsked(innerWidth, fitted.layout.free));
+        return paneActions.applyLayout(next, fitted?.layout ?? row, fitted?.records ?? []);
+      });
+    },
+    /**
+     * The row as a link would ask for it (see paneLink), to put after
+     * `?panes=`: the panes on the page, an open one at the width it has
+     * now, each with the limits set for it; measured, so for when it is
+     * asked for, not while rendering. Undefined where the page has no
+     * layout links.
+     */
+    layoutLink: letters && (() => {
+      const widths = new Map(layout()?.slabs.map((s) => [s.id, Math.round(s.width)]));
+      const onPage = panes.filter((p) => !p.hidden);
+      return formatLayout(
+        onPage.map((p) => ({
+          view: viewOf(p.id),
+          collapsed: p.collapsed,
+          ...(!p.collapsed && widths.has(p.id) && { width: widths.get(p.id) }),
+          ...(p.minWidth !== p.floor && { min: p.minWidth }),
+          ...(Number.isFinite(p.maxWidth) && { max: p.maxWidth }),
+        })),
+        letters,
+      );
+    }),
     /** The layout as the catalogue has it: every pane at its default, the menus in their first order; the pinned bars stay. */
     restoreDefaults: () => update((d) => ({ pins: d.pins })),
     /** Another pane of a view, open, at `index` in the row (none: at the end). */

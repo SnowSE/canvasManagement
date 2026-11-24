@@ -139,6 +139,24 @@ function Preview() {
  * pane adds around the box (its bar, w-5; the row's gap, gap-0.5; the box's
  * border, 2px a side), rem sizes at the page's root font size.
  */
+/** Each view's letter in a layout link (`?panes=m.,c.,e600,v500`, see paneLink). */
+export const paneLetters: Record<string, string> = {
+  h: "help",
+  o: "home",
+  c: "calendar",
+  m: "modules",
+  e: "editor",
+  v: "preview",
+  d: "compare",
+  y: "history",
+  i: "import",
+  x: "errors",
+  s: "settings",
+};
+
+/** The row a link to an item opens in a window with no row of its own yet: the item, edited and previewed, Modules and the Calendar a click away. */
+export const itemLinkLayout = "m.,c.,e,v";
+
 export const paneMinWidth = () => {
   const root = typeof document === "undefined" ? undefined : getComputedStyle(document.documentElement);
   const rem = parseFloat(root?.fontSize ?? "") || 16;

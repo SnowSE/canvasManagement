@@ -14,7 +14,7 @@ import { useCourseContext } from "../context/courseContext";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import { getTermName } from "@/features/local/utils/timeUtils";
 import { CurrentItem, defaultLectureDay, useCurrentItem } from "../currentItem";
-import { coursePanes, PaneContext, PaneNote, paneMinWidth } from "./coursePanes";
+import { coursePanes, PaneContext, PaneNote, paneLetters, paneMinWidth } from "./coursePanes";
 import { usePopOutPane } from "./popOut";
 import { FollowNavigation } from "./FollowNavigation";
 import { ItemEditing } from "./ItemEditing";
@@ -168,6 +168,7 @@ export function CourseFrameWithPanes({ children }: { children: ReactNode }) {
       // some views are better off in a window of their own: a link to one opens that
       popsOut={(view) => !!coursePanes.find((p) => p.id === view)?.popOut}
       onPopOut={(view) => openPopOut(pathname, view)}
+      letters={paneLetters}
     >
       <CourseFrame>{children}</CourseFrame>
     </PaneStrip>

@@ -3,6 +3,7 @@ import { CSSProperties, ReactNode, RefObject, useLayoutEffect, useRef, useState 
 import { createPortal } from "react-dom";
 import { previewWidths, usePaneRegistration, usePanes } from "./PaneStrip";
 import { MinRule } from "./PaneRules";
+import { copyTextToClipboard } from "../CopyableCommand";
 import { HideButton, PaneBar, Side, useDragHandlers } from "./PaneBar";
 import { OnView, ViewChoice } from "./ViewIcons";
 import { useRouterState } from "@tanstack/react-router";
@@ -64,7 +65,7 @@ export function Pane({
   children: ReactNode;
 }) {
   usePaneRegistration({ id, label, icon, minWidth, defaultWidth, collapsedByDefault, hiddenByDefault, ssr });
-  const { panes, narrow, showing, flashing, previewing, setCollapsed, close, addPane, switchView, setLimits, grow, move, restoreDefaults } = usePanes();
+  const { panes, narrow, showing, flashing, previewing, setCollapsed, close, addPane, switchView, setLimits, grow, move, restoreDefaults, layoutLink } = usePanes();
   const rowDrag = useRowDrag();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const popOutHref = { pathname, pane: viewOf(id) };
@@ -203,6 +204,7 @@ export function Pane({
           { label: "Close the panes to the left", onClick: () => close(panes.slice(0, place).map((p) => p.id)) },
           { label: "Close the panes to the right", onClick: () => close(panes.slice(place + 1).map((p) => p.id)) },
           { label: "Restore the default layout", onClick: restoreDefaults },
+          ...(layoutLink ? [{ label: "Copy a link to this layout", onClick: () => void copyTextToClipboard(`${location.origin}${location.pathname}?panes=${layoutLink()}`) }] : []),
         ]}
         square={{ left: leftPane?.label, right: rightPane?.label }}
         onMove={onMove}

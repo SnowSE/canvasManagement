@@ -1,9 +1,12 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { useRouter, useRouterState } from "@tanstack/react-router";
 import { showPane, usePanes } from "@/components/panes/PaneStrip";
 import { isShown, viewOf } from "@/components/panes/paneStore";
 import { currentItemFromPath } from "../currentItem";
+import { parseLayout } from "@/components/panes/paneLink";
+import { coursePanes, itemLinkLayout, paneLetters } from "./coursePanes";
+import { paneDocKey } from "@/components/panes/paneStore";
 import { announcePath, followPaths, followPopOuts, tellInstance, tiedTo, usePopOutPane } from "./popOut";
 import { fileMissingEvent } from "@/services/utils/queryClient";
 
@@ -22,8 +25,27 @@ export function FollowNavigation() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const router = useRouter();
   const popOut = usePopOutPane();
-  const { narrow, panes, jumpTo, setCollapsed, show } = usePanes();
+  const { narrow, panes, jumpTo, setCollapsed, show, setRow } = usePanes();
   const onItem = !!currentItemFromPath(pathname);
+  // a layout in the address (?panes=…, see paneLink) is this window's row from then on. The
+  // address then drops it: a reload keeps what the row has become since, and the address
+  // isn't left saying a layout the row no longer has (the view menus copy a link to the one it has)
+  const inAddress = useRouterState({ select: (s) => (s.location.search as { panes?: string }).panes });
+  // a window with no row of its own yet (a link opened in a new tab; a reload has one) opened on an
+  // item gets the row for that: the item open. The course page keeps the row last used anywhere.
+  const fresh = useRef(typeof sessionStorage !== "undefined" && sessionStorage.getItem(paneDocKey) === null);
+  useLayoutEffect(() => {
+    const asked = inAddress ?? (fresh.current && onItem ? itemLinkLayout : undefined);
+    // once the panes are there to be fitted to the window (they register as they mount)
+    if (asked === undefined || (!popOut && !panes.length)) return;
+    fresh.current = false;
+    const linked = popOut ? undefined : parseLayout(asked, paneLetters);
+    if (linked) setRow(linked, coursePanes.map((p) => p.id));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (inAddress !== undefined) router.navigate({ to: ".", search: ((s: any) => ({ ...s, panes: undefined })) as any, replace: true });
+    // the action is fresh each render; the address is what matters
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inAddress, panes.length > 0]);
   useEffect(() => {
     const leave = () => {
       const modules = pathname.indexOf("/modules/");

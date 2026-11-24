@@ -9,9 +9,11 @@ import CalendarQuizQuestionsProvider from "@/app/course/[courseName]/context/Cal
 import { CourseFrameWithPanes as CourseFrame } from "@/app/course/[courseName]/panes/CourseFrame";
 
 export const Route = createFileRoute("/course/$courseName")({
-  // a pane in its own window: ?pane=<id>, kept as that window moves between items (see panes/popOut)
-  validateSearch: (search: Record<string, unknown>): { pane?: string } => ({
+  // a pane in its own window: ?pane=<id>, kept as that window moves between items (see panes/popOut);
+  // the row a link asks for: ?panes=<layout>, taken once and dropped (see panes/FollowNavigation)
+  validateSearch: (search: Record<string, unknown>): { pane?: string; panes?: string } => ({
     pane: typeof search.pane === "string" ? search.pane : undefined,
+    panes: typeof search.panes === "string" ? search.panes : undefined,
   }),
   search: { middlewares: [retainSearchParams(["pane"])] },
   component: CourseLayout,
