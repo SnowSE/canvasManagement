@@ -30,7 +30,7 @@ same commit or PR. See [CLAUDE.md](CLAUDE.md#keep-the-docs-current).
 
 <https://nowucca.com/2020/07/04/working-around-canvas-limitations.html>
 
-## Getting Started and Usage (v3)
+## Getting Started and Usage
 
 ### Quick setup
 
@@ -225,8 +225,8 @@ or do the same by hand: put a shortcut to
 in your Startup folder (`shell:startup`) on Windows, or run it from a systemd
 service ordered after `docker.service` on Linux. Docker Desktop itself has to
 start at sign-in too (Settings > General). `restart: unless-stopped` in the
-compose file brings the container back whenever Docker starts, without
-pulling a newer image.
+compose file (the one `get-started.ps1` writes has it) brings the container
+back whenever Docker starts, without pulling a newer image.
 
 
 ## Images
@@ -297,7 +297,8 @@ editor's footer menu has a File history page. The image has `git` installed.
 ## Error list and AI explanations
 
 Errors raised while the app runs are kept in memory and counted by a pill at
-the bottom of the screen, which opens `/errors`. The *Explain with AI* button
+the bottom of the screen, which opens the error list (the Errors pane in a
+course, `/errors` elsewhere). The *Explain with AI* button
 sends the error (and, for a file that doesn't parse, that file and a working
 one from the same folder) to any OpenAI-compatible chat completions endpoint.
 Configure it in `.env`; [`.env.example`](.env.example) has samples for
@@ -329,18 +330,11 @@ Environment variables:
 
 - `DISABLE_UPDATE_CHECK=true` turns the check off (e.g. offline use).
 - `UPDATE_CHECK_TAG` is the tag to compare against, defaults to the major
-  version the image was built as (`4`). Set it if you pin something else in
+  version the image was built as (`5`). Set it if you pin something else in
   your compose file.
 - `UPDATE_CHECK_IMAGE` defaults to `snowcollege/canvas_management`.
 
 Local `pnpm dev` runs have no `GIT_SHA` and skip the check.
-
-# ideas
-
-multi-section support for due dates/times
-
-maybe track a list of Canvas files no assignment references any more and offer to delete them
-
 
 ## Features
 - websocket server to watch file system for changes, notify frontend it should invalidate cache
@@ -348,7 +342,7 @@ maybe track a list of Canvas files no assignment references any more and offer t
 - holiday schedule
 - lectures, 1 per day
 - image upload on publish for assignments, quizzes and pages
-- calendar weeks do not dupliacate, some of the first or last days of the calendar show up on the next month
+- calendar weeks do not duplicate, some of the first or last days of the calendar show up on the next month
 - calendar and module list scroll position, and expanded modules, remembered per course
 - days without class can be hidden on the calendar (narrowed to a strip)
 - git from the course page: commit, pull and push, commit on publish, file history and restore
