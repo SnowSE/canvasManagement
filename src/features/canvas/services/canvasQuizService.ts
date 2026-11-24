@@ -370,7 +370,7 @@ const createQuizQuestions = async (
 };
 
 /** The quiz-level fields (everything but questions) as the Canvas API wants them. */
-const quizSettingsForCanvas = (
+export const quizSettingsForCanvas = (
   localQuiz: LocalQuiz,
   settings: LocalCourseSettings,
   canvasAssignmentGroupId?: number,
@@ -562,6 +562,12 @@ export const canvasQuizService = {
    * changes (unpublish + publish, which also sends students "assignment
    * created" notifications) or its web form is saved.
    */
+  /** Only these fields of the quiz, as quizSettingsForCanvas has them: a row sent on its own (see sendToCanvas). */
+  async sendFields(canvasCourseId: number, canvasQuizId: number, fields: Record<string, unknown>) {
+    const { data } = await axiosClient.put<CanvasQuiz>(`${canvasApi}/courses/${canvasCourseId}/quizzes/${canvasQuizId}`, { quiz: fields });
+    return asListed(data);
+  },
+
   async update(
     canvasCourseId: number,
     canvasQuizId: number,

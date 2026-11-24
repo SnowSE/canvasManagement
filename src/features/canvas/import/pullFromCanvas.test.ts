@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
-import { pullFromCanvas } from "./pullFromCanvas";
+import { pullFromCanvas, sendToCanvas } from "./pullFromCanvas";
 import { descriptionRenderer, getSyncReport } from "@/app/course/[courseName]/calendar/day/getAssignmentSyncStatus";
 import { LocalAssignment } from "@/features/local/assignments/models/localAssignment";
 import { LocalQuiz } from "@/features/local/quizzes/models/localQuiz";
@@ -65,5 +65,37 @@ describe("pulling from Canvas: the file takes Canvas's value where they differ",
     const report = getSyncReport({ item: quiz, canvasItem: canvas, type: "quiz", settings });
     const pulled = pullFromCanvas("quiz", quiz, canvas, report.differences, settings).item;
     expect(pulled).toMatchObject({ password: "open sesame", timeLimit: 30, shuffleAnswers: false, allowedAttempts: -1 });
+  });
+});
+
+describe("sending to Canvas a row at a time: Canvas takes the file's value for the rows asked for", () => {
+  // everything Update Canvas would send for the item, of which a row's send keeps its own field
+  const whole = { name: "Lab 1", description: "<p>hello world</p>", due_at: "2023-08-22T05:59:00.000Z", lock_at: null, unlock_at: null, points_possible: 10, assignment_group_id: 7 };
+  const row = (key: string, label = key) => ({ key, label, section: "dates", local: "", canvas: "", same: false, message: "" }) as never;
+  it("sends only the row's own field", () => {
+    expect(sendToCanvas("assignment", whole, [row("dueAt")]).body).toEqual({ due_at: "2023-08-22T05:59:00.000Z" });
+  });
+  it("clears in Canvas a date the file doesn't have", () => {
+    expect(sendToCanvas("assignment", whole, [row("lockAt")]).body).toEqual({ lock_at: null });
+  });
+  it("sends several rows together", () => {
+    expect(sendToCanvas("assignment", whole, [row("dueAt"), row("assignmentGroup")]).body).toEqual({ due_at: "2023-08-22T05:59:00.000Z", assignment_group_id: 7 });
+  });
+  it("sends the description as the file renders it (a page's content is its body)", () => {
+    expect([sendToCanvas("assignment", whole, [row("description")]).body, sendToCanvas("page", { body: "<p>page</p>" }, [row("description")]).body]).toEqual([{ description: "<p>hello world</p>" }, { body: "<p>page</p>" }]);
+  });
+  it("leaves a row that can't go alone (a rubric row), and says so", () => {
+    const send = sendToCanvas("assignment", whole, [row("rubric:0", "Rubric 1"), row("dueAt", "Due")]);
+    expect([send.sent.map((f) => f.label), send.left.map((f) => f.label)]).toEqual([["Due"], ["Rubric 1"]]);
+  });
+  it("leaves a row the file has nothing to send for (a group Canvas doesn't know yet)", () => {
+    expect(sendToCanvas("assignment", { ...whole, assignment_group_id: undefined }, [row("assignmentGroup")]).sent).toEqual([]);
+  });
+  it("can send every kind of row that can be pulled, and the other way round", () => {
+    const quizBody = { due_at: "x", lock_at: null, unlock_at: null, assignment_group_id: 7, description: "", access_code: "p", shuffle_answers: true, show_correct_answers: true, one_question_at_a_time: false, allowed_attempts: 1, time_limit: null };
+    const keys = ["dueAt", "lockAt", "unlockAt", "assignmentGroup", "password", "shuffleAnswers", "showCorrectAnswers", "oneQuestionAtATime", "allowedAttempts", "timeLimit"];
+    const canvas = quizInCanvas({ access_code: "p", time_limit: 30 });
+    expect(sendToCanvas("quiz", quizBody, keys.map((k) => row(k))).left).toEqual([]);
+    expect(pullFromCanvas("quiz", quiz, canvas, keys.map((k) => row(k)), settings).left).toEqual([]);
   });
 });

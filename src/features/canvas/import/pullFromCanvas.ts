@@ -68,3 +68,30 @@ export function pullFromCanvas<T extends LocalAssignment | LocalQuiz | LocalCour
     left: taken.filter((t) => !t.change).map((t) => t.field),
   };
 }
+
+/** The Canvas field each row sends (what Update Canvas calls it); the description's is the item's text there. */
+const fieldOf: Record<string, string> = {
+  dueAt: "due_at", lockAt: "lock_at", unlockAt: "unlock_at", assignmentGroup: "assignment_group_id",
+  password: "access_code", shuffleAnswers: "shuffle_answers", showCorrectAnswers: "show_correct_answers",
+  oneQuestionAtATime: "one_question_at_a_time", allowedAttempts: "allowed_attempts", timeLimit: "time_limit",
+};
+
+/**
+ * Send to Canvas, the mirror of pullFromCanvas: Canvas takes the file's
+ * value in the rows asked for and nothing else there changes. `whole` is
+ * everything Update Canvas sends for the item, as it sends it; a row's send
+ * is its own field of that. A row with no field of its own (a rubric row, a
+ * quiz's questions), or none to send (a group Canvas doesn't know yet), is
+ * left and listed.
+ */
+export function sendToCanvas(type: "assignment" | "quiz" | "page", whole: Record<string, unknown>, differences: SyncField[]) {
+  const taken = differences.map((field) => {
+    const name = field.key === "description" ? (type === "page" ? "body" : "description") : fieldOf[field.key];
+    return { field, name: name !== undefined && whole[name] !== undefined ? name : undefined };
+  });
+  return {
+    body: Object.fromEntries(taken.filter((t) => t.name).map((t) => [t.name!, whole[t.name!]])),
+    sent: taken.filter((t) => t.name).map((t) => t.field),
+    left: taken.filter((t) => !t.name).map((t) => t.field),
+  };
+}
