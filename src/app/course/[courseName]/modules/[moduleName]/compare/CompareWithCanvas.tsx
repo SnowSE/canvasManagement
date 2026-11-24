@@ -130,7 +130,7 @@ export function CompareAssignmentWithCanvas({
   const pull = useMemo(
     () =>
       canvasAssignment &&
-      pullFromCanvas("assignment", assignment, canvasAssignment, report.differences, settings, descriptionRenderer("assignment", assignment, settings, { assignments: canvasAssignments, quizzes: canvasQuizzes })),
+      pulling((fields) => pullFromCanvas("assignment", assignment, canvasAssignment, fields, settings, descriptionRenderer("assignment", assignment, settings, { assignments: canvasAssignments, quizzes: canvasQuizzes })), report.differences),
     [assignment, canvasAssignment, canvasAssignments, canvasQuizzes, report, settings],
   );
 
@@ -162,7 +162,7 @@ export function CompareAssignmentWithCanvas({
         })
       }
       updating={update.isPending || save.isPending}
-      pull={pull && { ...pull, onPull: () => save.mutate({ assignment: pull.item, moduleName, assignmentName, previousModuleName: moduleName, previousAssignmentName: assignmentName, courseName }) }}
+      pull={pull && { ...pull, onPull: (fields) => save.mutate({ assignment: pull.itemWith(fields), moduleName, assignmentName, previousModuleName: moduleName, previousAssignmentName: assignmentName, courseName }) }}
       updateNote="Update Canvas pushes the file's dates, group settings, rubric and description, and moves the assignment to the file's module. Submissions and grades are untouched."
     />
   );
@@ -232,7 +232,7 @@ export function CompareQuizWithCanvas({
   );
 
   const pull = useMemo(
-    () => canvasQuiz && pullFromCanvas("quiz", quiz, canvasQuiz, report.differences, settings, descriptionRenderer("quiz", quiz, settings, { assignments: canvasAssignments, quizzes: canvasQuizzes })),
+    () => canvasQuiz && pulling((fields) => pullFromCanvas("quiz", quiz, canvasQuiz, fields, settings, descriptionRenderer("quiz", quiz, settings, { assignments: canvasAssignments, quizzes: canvasQuizzes })), report.differences),
     [quiz, canvasQuiz, canvasAssignments, canvasQuizzes, report, settings],
   );
 
@@ -267,7 +267,7 @@ export function CompareQuizWithCanvas({
         update.mutate({ quiz, canvasQuizId: canvasQuiz.id, moduleName })
       }
       updating={update.isPending || save.isPending}
-      pull={pull && { ...pull, onPull: () => save.mutate({ quiz: pull.item, moduleName, quizName, previousModuleName: moduleName, previousQuizName: quizName, courseName }) }}
+      pull={pull && { ...pull, onPull: (fields) => save.mutate({ quiz: pull.itemWith(fields), moduleName, quizName, previousModuleName: moduleName, previousQuizName: quizName, courseName }) }}
       updateNote="Update Canvas pushes the file's settings, moves the quiz to the file's module and, if any question differs, replaces the questions in Canvas with the file's. When it replaces them on a published quiz, students keep getting the old questions until you click Save it now on the quiz page in Canvas (the API can't do that). If students have started, it warns first: they keep the questions they got and are not regraded. It refuses to change the point total they were scored out of."
     >
       {versions?.map((v, i) => (
@@ -338,7 +338,7 @@ export function ComparePageWithCanvas({
   );
 
   const pull = useMemo(
-    () => canvasPage && pullFromCanvas("page", page, canvasPage, report.differences, settings, descriptionRenderer("page", page, settings, { assignments: canvasAssignments, quizzes: canvasQuizzes })),
+    () => canvasPage && pulling((fields) => pullFromCanvas("page", page, canvasPage, fields, settings, descriptionRenderer("page", page, settings, { assignments: canvasAssignments, quizzes: canvasQuizzes })), report.differences),
     [page, canvasPage, canvasAssignments, canvasQuizzes, report, settings],
   );
 
@@ -365,7 +365,7 @@ export function ComparePageWithCanvas({
         update.mutate({ page, canvasPage, moduleName })
       }
       updating={update.isPending || save.isPending}
-      pull={pull && { ...pull, onPull: () => save.mutate({ page: pull.item, moduleName, pageName, previousModuleName: moduleName, previousPageName: pageName, courseName }) }}
+      pull={pull && { ...pull, onPull: (fields) => save.mutate({ page: pull.itemWith(fields), moduleName, pageName, previousModuleName: moduleName, previousPageName: pageName, courseName }) }}
       updateNote="Update in Canvas replaces the page's content with the file's and moves the page to the file's module."
     />
   );
@@ -425,7 +425,7 @@ const CompareLayout: FC<{
   updating: boolean;
   updateNote: string;
   /** Pull from Canvas (see pullFromCanvas): what it would set in the file, what it leaves, and doing it. */
-  pull?: { pulled: SyncField[]; left: SyncField[]; onPull: () => void };
+  pull?: { pulled: SyncField[]; left: SyncField[]; onPull: (fields: SyncField[]) => void };
   /** Extra sections after the settings and questions, such as what students got. */
   children?: ReactNode;
 }> = ({
@@ -449,6 +449,13 @@ const CompareLayout: FC<{
   const { courseName } = useCourseContext();
   const editUrl = getModuleItemUrl(courseName, moduleName, type, itemName);
   const inCanvas = report.status !== "localOnly";
+  // the rows a pull is being confirmed for: all that can be pulled, or one row's own
+  const confirm = useModal();
+  const [asking, setAsking] = useState<SyncField[]>([]);
+  const ask = (fields: SyncField[]) => {
+    setAsking(fields);
+    confirm.openModal();
+  };
   const differenceCount = report.differences.length;
 
   return (
@@ -485,7 +492,7 @@ const CompareLayout: FC<{
 
         {inCanvas && (
           <>
-            <FieldsTable fields={report.fields} />
+            <FieldsTable fields={report.fields} pullable={pull?.pulled} onPull={(field) => ask([field])} />
             {children}
             {report.description && (
               <DescriptionDiff
@@ -518,7 +525,17 @@ const CompareLayout: FC<{
               Open in Canvas ↗
             </a>
           )}
-          {pull && <PullFromCanvas {...pull} busy={updating} />}
+          {pull && (
+            <button
+              className="unstyled btn-outline"
+              disabled={updating || pull.pulled.length === 0}
+              title={pull.pulled.length === 0 ? "Nothing that differs can be pulled into the file" : "Make the file match Canvas where they differ (a row's own arrow pulls that row alone)"}
+              onClick={() => ask(pull.pulled)}
+            >
+              Pull from Canvas…
+            </button>
+          )}
+          {pull && <PullConfirmation control={confirm} asking={asking} left={asking.length === pull.pulled.length ? pull.left : []} onPull={() => pull.onPull(asking)} />}
           <button
             disabled={!inCanvas || updating || differenceCount === 0}
             title={
@@ -536,64 +553,55 @@ const CompareLayout: FC<{
   );
 };
 
+/** Pulling all that differs, and pulling only some of its rows (see pullFromCanvas). */
+const pulling = <T,>(pullRows: (fields: SyncField[]) => { item: T; pulled: SyncField[]; left: SyncField[] }, differences: SyncField[]) => ({
+  ...pullRows(differences),
+  itemWith: (fields: SyncField[]) => pullRows(fields).item,
+});
+
 /**
  * Pull from Canvas: the other way from Update Canvas. The file takes
- * Canvas's value in the rows that differ (the ones that can be taken: see
- * pullFromCanvas), after a confirmation that lists them, since what the
- * file had there is lost.
+ * Canvas's value in the rows asked for (all that can be taken, or one
+ * row's own: see pullFromCanvas), after this confirmation lists them,
+ * since what the file had there is lost.
  */
-const PullFromCanvas: FC<{ pulled: SyncField[]; left: SyncField[]; onPull: () => void; busy: boolean }> = ({ pulled, left, onPull, busy }) => {
-  const confirm = useModal();
-  return (
-    <>
-      <button
-        className="unstyled btn-outline"
-        disabled={busy || pulled.length === 0}
-        title={pulled.length === 0 ? "Nothing that differs can be pulled into the file" : "Make the file match Canvas where they differ"}
-        onClick={() => confirm.openModal()}
-      >
-        Pull from Canvas…
-      </button>
-      <Modal modalControl={confirm} modalWidth="w-150">
-        {({ closeModal }) => (
-          <div className="flex flex-col gap-3 text-sm">
-            <div className="font-semibold text-rose-300">The file&apos;s own values for these are lost: Canvas&apos;s replace them.</div>
-            <ul className="list-disc ps-5">
-              {pulled.map((f) => (
-                <li key={f.key}>
-                  {f.key === "description" ? (
-                    <>{f.label}: the blocks that differ (a paragraph, a list…) become Canvas&apos;s own HTML; the rest stays as written</>
-                  ) : (
-                    <>
-                      {f.label}: <span className="text-green-300">{f.local}</span> becomes <span className="text-rose-300">{f.canvas}</span>
-                    </>
-                  )}
-                </li>
-              ))}
-            </ul>
-            {left.length > 0 && (
-              <div className="text-slate-400">Not pulled, staying as the file has them: {left.map((f) => f.label).join(", ")}.</div>
-            )}
-            <div className="flex gap-2 justify-end">
-              <button className="unstyled btn-outline" onClick={closeModal}>
-                Cancel
-              </button>
-              <button
-                className="btn"
-                onClick={() => {
-                  closeModal();
-                  onPull();
-                }}
-              >
-                Replace the file&apos;s {pulled.length === 1 ? "value" : `${pulled.length} values`} with Canvas&apos;s
-              </button>
-            </div>
-          </div>
-        )}
-      </Modal>
-    </>
-  );
-};
+const PullConfirmation: FC<{ control: ReturnType<typeof useModal>; asking: SyncField[]; left: SyncField[]; onPull: () => void }> = ({ control, asking, left, onPull }) => (
+  <Modal modalControl={control} modalWidth="w-150">
+    {({ closeModal }) => (
+      <div className="flex flex-col gap-3 text-sm">
+        <div className="font-semibold text-rose-300">The file&apos;s own {asking.length === 1 ? "value for this is" : "values for these are"} lost: Canvas&apos;s {asking.length === 1 ? "replaces it" : "replace them"}.</div>
+        <ul className="list-disc ps-5">
+          {asking.map((f) => (
+            <li key={f.key}>
+              {f.key === "description" ? (
+                <>{f.label}: the blocks that differ (a paragraph, a list…) become Canvas&apos;s own HTML; the rest stays as written</>
+              ) : (
+                <>
+                  {f.label}: <span className="text-green-300">{f.local}</span> becomes <span className="text-rose-300">{f.canvas}</span>
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+        {left.length > 0 && <div className="text-slate-400">Not pulled, staying as the file has them: {left.map((f) => f.label).join(", ")}.</div>}
+        <div className="flex gap-2 justify-end">
+          <button className="unstyled btn-outline" onClick={closeModal}>
+            Cancel
+          </button>
+          <button
+            className="btn"
+            onClick={() => {
+              closeModal();
+              onPull();
+            }}
+          >
+            Replace the file&apos;s {asking.length === 1 ? "value" : `${asking.length} values`} with Canvas&apos;s
+          </button>
+        </div>
+      </div>
+    )}
+  </Modal>
+);
 
 const StatusPill: FC<{ report: SyncReport; canvasLoading: boolean }> = ({
   report,
@@ -644,7 +652,10 @@ const FieldsTable: FC<{
   title?: ReactNode;
   /** What the right-hand column is, e.g. what students got. */
   canvasLabel?: string;
-}> = ({ fields, title, canvasLabel = "Canvas now" }) => {
+  /** The rows Pull from Canvas can take, each with an arrow that pulls it alone. */
+  pullable?: SyncField[];
+  onPull?: (field: SyncField) => void;
+}> = ({ fields, title, canvasLabel = "Canvas now", pullable = [], onPull }) => {
   const rows = fields.filter((f) => f.section !== "description");
   return (
     <section className="pb-6">
@@ -701,7 +712,15 @@ const FieldsTable: FC<{
                     <Cell field={f} side="local" />
                   </td>
                   <td className="text-center text-slate-600 align-top w-8">
-                    {f.same ? "" : "→"}
+                    {f.same ? (
+                      ""
+                    ) : pullable.some((p) => p.key === f.key) ? (
+                      <button className="unstyled px-1 rounded hover:bg-slate-700 hover:text-slate-200" title={`Pull from Canvas: the file's ${f.label.toLowerCase()} becomes Canvas's…`} aria-label={`Pull ${f.label} from Canvas`} onClick={() => onPull?.(f)}>
+                        ←
+                      </button>
+                    ) : (
+                      "→"
+                    )}
                   </td>
                   <td className="align-top">
                     <Cell field={f} side="canvas" />

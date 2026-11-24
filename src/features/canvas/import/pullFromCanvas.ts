@@ -56,7 +56,8 @@ export function pullFromCanvas<T extends LocalAssignment | LocalQuiz | LocalCour
   render?: (markdown: string) => string,
 ): { item: T; pulled: SyncField[]; left: SyncField[] } {
   const description = () => {
-    const canvasHtml = ("body" in canvasItem ? canvasItem.body : canvasItem.description) ?? "";
+    const { body, description: canvasDescription } = canvasItem as { body?: string; description?: string };
+    const canvasHtml = (type === "page" ? body : canvasDescription) ?? "";
     const text = render && pullDescription((item as unknown as Record<string, string>)[textOf[type]] ?? "", canvasHtml, render);
     return text === undefined ? undefined : { [textOf[type]]: text };
   };
