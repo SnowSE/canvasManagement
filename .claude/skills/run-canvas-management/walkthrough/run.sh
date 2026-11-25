@@ -6,6 +6,8 @@
 # and appends the timings and Canvas request counts to benchmarks.tsv beside it. Exits non-zero if a
 # check failed. Takes a few minutes; it is not part of the unit tests.
 set -u
+T0=$(date +%s)
+phase() { echo "TIME $1 $(( $(date +%s) - T0 )) s since start"; }
 HERE=.claude/skills/run-canvas-management/walkthrough
 cd "$(dirname "$0")/../../../.."
 # free ports of this machine, for the app and for the fake Canvas (inside the container it is on $INSIDE)
@@ -19,7 +21,14 @@ trap 'docker rm -f $NAME >/dev/null 2>&1; rm -rf "$WORK"' EXIT
 
 cp -r $HERE/course/. "$WORK/storage"
 mkdir -p "$WORK/home"
-./node_modules/.bin/vite build >"$WORK/build.log" 2>&1 && ./node_modules/.bin/vite build --config vite.websocket.config.ts >>"$WORK/build.log" 2>&1 || { tail -20 "$WORK/build.log"; exit 1; }
+# the build is skipped when .output was built from exactly this checkout (same commit, nothing uncommitted)
+STAMP=.output/.walkthrough-built-from
+BUILT_FROM="$(git rev-parse HEAD^{tree})$(git status --porcelain -- src package.json pnpm-lock.yaml vite.config.ts vite.websocket.config.ts | md5sum | cut -c1-8)"
+if [ "$(cat $STAMP 2>/dev/null)" != "$BUILT_FROM" ]; then
+  ./node_modules/.bin/vite build >"$WORK/build.log" 2>&1 && ./node_modules/.bin/vite build --config vite.websocket.config.ts >>"$WORK/build.log" 2>&1 || { tail -20 "$WORK/build.log"; exit 1; }
+  echo "$BUILT_FROM" > $STAMP
+fi
+phase build
 OUTPUT_KB=$(du -sk .output | cut -f1)
 
 docker rm -f $NAME >/dev/null 2>&1
@@ -30,11 +39,16 @@ docker run -d --name $NAME -e TZ=America/Denver -e NODE_ENV=production -e SETTIN
   -v "$PWD/$HERE/fakeCanvas.mjs":/fake/fakeCanvas.mjs:ro \
   node sh -c "node /fake/fakeCanvas.mjs $INSIDE 0.0.0.0 & node --import ./.output/websocket/websocket-standalone.js .output/server/index.mjs" >/dev/null
 for i in $(seq 1 60); do curl -sf -o /dev/null --max-time 3 http://localhost:$PORT/ && break; sleep 1; done
+phase "server up"
 
-docker run --rm --network host -v "$PWD/$HERE":/skill:ro -v "$WORK/storage":/course \
-  -e BASE=http://localhost:$PORT -e FAKE=http://localhost:$FAKE_PORT -e COURSE_DIR=/course/Walkthrough -e PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
+# playwright is installed once, into a cache kept between runs
+PW_CACHE=node_modules/.cache/walkthrough-playwright
+mkdir -p $PW_CACHE
+docker run --rm --network host -v "$PWD/$HERE":/skill:ro -v "$PWD/$PW_CACHE":/tmp/pw -u "$(id -u):$(id -g)" -e HOME=/tmp/pw/home -e npm_config_cache=/tmp/pw/npm -v "$WORK/storage":/course \
+  -e BASE=http://localhost:$PORT -e FAKE=http://localhost:$FAKE_PORT -e COURSE_DIR=/course/Walkthrough -e PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 -e SLOW=${SLOW:-} \
   mcr.microsoft.com/playwright:v1.56.0-noble \
-  sh -c 'mkdir -p /tmp/pw && cp /skill/walkthrough.mjs /tmp/pw/ && cd /tmp/pw && npm i playwright@1.56.0 --silent --no-audit --no-fund >/dev/null 2>&1 && node walkthrough.mjs' | tee "$WORK/result.txt"
+  sh -c 'cp /skill/walkthrough.mjs /tmp/pw/ && cd /tmp/pw && { [ -d node_modules/playwright ] || npm i playwright@1.56.0 --silent --no-audit --no-fund >/dev/null 2>&1; } && node walkthrough.mjs' | tee "$WORK/result.txt"
+phase walkthrough
 STATUS=$(grep -c '^FAIL' "$WORK/result.txt")
 
 LOG=$HERE/benchmarks.tsv

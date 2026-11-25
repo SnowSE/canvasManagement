@@ -10,10 +10,34 @@ import fs from "fs/promises";
 const { BASE: base, FAKE: fake } = process.env;
 if (!base || !fake) throw new Error("BASE and FAKE (the app's and the fake Canvas's addresses) are set by run.sh");
 const canvas = async (what) => (await fetch(`${fake}/${what}`)).json();
-// the Canvas requests since the last call: on a real course each is a round trip
-const canvasRequests = async () => (await canvas("__requests")).length;
+// The Canvas requests since the last call, once they have stopped coming (none for half a second):
+// on a real course each is a round trip. Also how the walkthrough waits for the app to settle.
+const canvasRequests = async () => {
+  const t = Date.now();
+  let total = 0;
+  for (let quiet = 0; quiet < 2; ) {
+    await new Promise((done) => setTimeout(done, 250));
+    const came = (await canvas("__requests")).length;
+    total += came;
+    quiet = came ? 0 : quiet + 1;
+  }
+  if (process.env.SLOW && Date.now() - t > 1500) console.log(`SLOW canvas settle: ${Date.now() - t} ms, ${total} requests`);
+  return total;
+};
+// the menu a right-click opened, once it shows
+const menuItems = (page) => page.evaluate(() => [...document.querySelectorAll("div.fixed.inset-0 button, div.fixed.inset-0 a")].map((b) => b.innerText.trim()));
+// the module list with every module open, once the items show
+const expandModules = async (page) => {
+  await waitFor(page, async () => (await page.getByText("Expand all").count()) > 0);
+  await page.getByText("Expand all").first().click().catch(() => {});
+  await waitFor(page, async () => (await page.locator(".draggingModule a[role='button']").count()) >= 4);
+};
 const course = process.env.COURSE_DIR ?? "/course/Walkthrough"; // the served copy, to read what the app wrote
 const results = [];
+// how long each part took, printed as TIME lines: where the walkthrough's own time goes
+const started = Date.now();
+let lap = started;
+const time = (part) => { console.log(`TIME ${part} ${((Date.now() - lap) / 1000).toFixed(1)} s`); lap = Date.now(); };
 const bench = {};
 const check = (name, ok, detail = "") => results.push({ name, ok: !!ok, detail });
 
@@ -28,10 +52,15 @@ const newPage = async (width = 1500) => {
 };
 const waitFor = async (page, test, timeout = 15000) => {
   const start = Date.now();
+  const where = new Error().stack.split("\n")[2]?.match(/:(\d+):\d+\)?$/)?.[1];
   while (Date.now() - start < timeout) {
-    if (await test().catch(() => false)) return Date.now() - start;
+    if (await test().catch(() => false)) {
+      if (process.env.SLOW && Date.now() - start > 1500) console.log(`SLOW wait at line ${where}: ${Date.now() - start} ms`);
+      return Date.now() - start;
+    }
     await page.waitForTimeout(100);
   }
+  if (process.env.SLOW) console.log(`SLOW wait at line ${where}: timed out after ${timeout} ms`);
   return undefined;
 };
 const M = "02%20-%20Basics";
@@ -50,30 +79,29 @@ const shape = { kind: "file", name: "shape.svg" };
   await page.goto(`${base}/course/Walkthrough`, { waitUntil: "load" });
   const ready = await waitFor(page, async () => (await page.locator(".draggingModule").count()) > 0 || (await page.getByText("Expand all").count()) > 0);
   bench.course_ready_ms = ready === undefined ? undefined : Date.now() - t0;
-  // what the page asks Canvas for once it has settled
-  await page.waitForTimeout(3000);
+  // what the page asks Canvas for, until it has settled
   bench.course_page_canvas_requests = await canvasRequests();
   check("the course page opens", ready !== undefined);
   const show = page.locator('[aria-label="Show Modules"]').last();
   if (await show.count()) await show.click();
-  await page.getByText("Expand all").first().click().catch(() => {});
-  await page.waitForTimeout(1500);
+  await expandModules(page);
   for (const it of items) {
     const row = page.locator(".draggingModule a[role='button']", { hasText: it.name }).first();
     const icon = await row.locator("svg[aria-label]").first().getAttribute("aria-label").catch(() => "none");
     check(`the module list shows ${it.name} as ${it.icon.toLowerCase()}`, icon === it.icon, icon);
     await row.click({ button: "right" }).catch(() => {});
-    await page.waitForTimeout(800);
-    const menu = await page.evaluate(() => [...document.querySelectorAll("div.fixed.inset-0 button, div.fixed.inset-0 a")].map((b) => b.innerText.trim()));
+    await waitFor(page, async () => (await menuItems(page)).length > 0, 3000);
+    const menu = await menuItems(page);
     const missing = it.menu.filter((m) => !menu.some((t) => t.startsWith(m)));
     check(`${it.name}'s right-click menu has ${it.menu.join(", ")}`, missing.length === 0, missing.length ? `missing ${missing.join(", ")}; has ${menu.join(", ")}` : "");
     await page.keyboard.press("Escape");
     await page.mouse.click(1450, 40);
-    await page.waitForTimeout(300);
+    await waitFor(page, async () => (await menuItems(page)).length === 0, 3000);
   }
   await ctx.close();
 }
 
+time("module list and menus");
 {
   const { ctx, page } = await newPage();
   const opened = [];
@@ -84,7 +112,6 @@ const shape = { kind: "file", name: "shape.svg" };
     await page.goto(`${base}/course/Walkthrough/modules/${M}/${it.kind}/${encodeURIComponent(it.name)}?panes=e,v`, { waitUntil: "load" });
     const took = await waitFor(page, async () => (await page.locator(".view-lines").first().innerText()).includes(it.text));
     if (took !== undefined) opened.push(Date.now() - t0);
-    await page.waitForTimeout(1500);
     openRequests.push(await canvasRequests());
     const body = await page.locator("body").innerText();
     check(`${it.name} opens in the editor`, took !== undefined);
@@ -108,7 +135,7 @@ const shape = { kind: "file", name: "shape.svg" };
 
   // typing is saved to the file
   await page.goto(`${base}/course/Walkthrough/modules/${M}/page/Day%202?panes=e,v`, { waitUntil: "load" });
-  await waitFor(page, async () => (await page.locator(".view-lines").first().innerText()).includes("Day 2"));
+  await waitFor(page, async () => (await page.locator(".view-lines").first().innerText()).includes("DateForOrdering"));
   await page.locator(".monaco-editor textarea, .monaco-editor .native-edit-context").first().focus();
   await page.keyboard.press("Control+End");
   const t0 = Date.now();
@@ -119,13 +146,12 @@ const shape = { kind: "file", name: "shape.svg" };
   await ctx.close();
 }
 
+time("items open, preview, save");
 {
   // Make a page for it: a page in the file's module that links to the file
   const { ctx, page } = await newPage();
   await page.goto(`${base}/course/Walkthrough?panes=m`, { waitUntil: "load" });
-  await waitFor(page, async () => (await page.getByText("Expand all").count()) > 0);
-  await page.getByText("Expand all").first().click().catch(() => {});
-  await page.waitForTimeout(1500);
+  await expandModules(page);
   await page.locator(".draggingModule a[role='button']", { hasText: "shape.svg" }).first().click({ button: "right" }).catch(() => {});
   await page.getByText("Make a page for it").click().catch(() => {});
   const made = await waitFor(page, async () => (await fs.readFile(`${course}/02 - Basics/pages/shape.md`, "utf-8")).includes("](../files/shape.svg)"));
@@ -135,6 +161,7 @@ const shape = { kind: "file", name: "shape.svg" };
   await ctx.close();
 }
 
+time("make a page for it");
 {
   // Into Canvas: each kind added and published from its footer, then in sync.
   // The files first: the page links to one and shows the other, and a page using a file Canvas lacks is refused.
@@ -157,10 +184,8 @@ const shape = { kind: "file", name: "shape.svg" };
   for (const it of [items[3], shape, items[0], items[1], items[2]]) {
     await page.goto(`${base}/course/Walkthrough/modules/${M}/${it.kind}/${encodeURIComponent(it.name)}?panes=e,d`, { waitUntil: "load" });
     await waitFor(page, async () => /Add to Canvas/.test(await page.locator("body").innerText()));
-    await page.waitForTimeout(1500);
     await canvasRequests();
     await clickFooter("Add to Canvas");
-    await page.waitForTimeout(1500);
     const said = await page.locator('[role="status"]').allInnerTexts().catch(() => []);
     toasts.push(...said.map((t) => "toast: " + t.slice(0, 200)));
     const added = await waitFor(page, async () => /Publish in Canvas/.test(await page.locator("body").innerText()), 20000);
@@ -180,9 +205,8 @@ const shape = { kind: "file", name: "shape.svg" };
 
   // the module list says the same as each footer: in sync
   await page.goto(`${base}/course/Walkthrough?panes=m`, { waitUntil: "load" });
-  await waitFor(page, async () => (await page.getByText("Expand all").count()) > 0);
-  await page.getByText("Expand all").first().click().catch(() => {});
-  await page.waitForTimeout(3000);
+  await expandModules(page);
+  await canvasRequests();
   const bar = (await page.locator("body").innerText()).match(/\d+ (Not In Canvas|Needs Sync|Unpublished)/g) ?? [];
   check("the module list then shows nothing needing sync or publishing for them", !bar.some((b) => /Needs Sync|Unpublished/.test(b)), bar.join(", "));
   const unknownCalls = await canvas("__unknown");
@@ -190,6 +214,7 @@ const shape = { kind: "file", name: "shape.svg" };
   await ctx.close();
 }
 
+time("into Canvas");
 {
   // Compare with Canvas, one question at a time: an edit in the file is sent alone with its →, and ← pulls Canvas's back
   const { ctx, page } = await newPage();
@@ -207,7 +232,8 @@ const shape = { kind: "file", name: "shape.svg" };
   };
   const openCompare = async () => {
     await page.goto(`${base}/course/Walkthrough/modules/${M}/quiz/Quiz%201?panes=d`, { waitUntil: "load" });
-    await waitFor(page, async () => /Settings and questions/.test(await page.locator("body").innerText()));
+    // the heading is shown in capitals, and innerText reports it so
+    await waitFor(page, async () => /settings and questions/i.test(await page.locator("body").innerText()));
   };
 
   await fs.writeFile(quizFile, original.replace("What is 2 + 4?", "What is 3 + 3?"));
@@ -230,16 +256,19 @@ const shape = { kind: "file", name: "shape.svg" };
   await ctx.close();
 }
 
+time("quiz questions one at a time");
 {
   // a small window still fits the item's editor and preview beside the modules
   const { ctx, page } = await newPage(800);
   await page.goto(`${base}/course/Walkthrough/modules/${M}/page/Day%202?panes=m,e,v`, { waitUntil: "load" });
-  await page.waitForTimeout(5000);
+  const openPanes = () => page.evaluate(() => document.querySelectorAll("[aria-label^='Collapse ']").length);
+  await waitFor(page, async () => (await openPanes()) >= 3, 8000);
   const open = await page.evaluate(() => [...new Set([...document.querySelectorAll("[aria-label^='Collapse ']")].map((b) => b.getAttribute("aria-label").replace("Collapse ", "")))]);
   check("an 800 px window fits Modules, Editor and Preview", ["Modules", "Editor", "Preview"].every((p) => open.includes(p)), open.join(", "));
   await ctx.close();
 }
 
+time("small window");
 check("no errors on the page", errors.length === 0, errors.slice(0, 3).join(" | "));
 await browser.close();
 for (const r of results) console.log(`${r.ok ? "PASS" : "FAIL"}  ${r.name}${r.detail && !r.ok ? `  (${r.detail})` : ""}`);
