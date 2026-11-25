@@ -101,6 +101,11 @@ const shape = { kind: "file", name: "shape.svg" };
   const color = await frame.locator("h1").evaluate((h) => getComputedStyle(h).color).catch(() => "");
   check("a file's preview uses the stylesheet beside it", color === "rgb(0, 128, 128)", color);
 
+  // a code block whose fence names a known language is coloured
+  await page.goto(`${base}/course/Walkthrough/modules/${M}/page/Day%202?panes=e,v`, { waitUntil: "load" });
+  const coloured = await waitFor(page, async () => (await page.locator(".markdownPreview pre span[style*='color']").count()) > 0);
+  check("a code block in a known language is coloured in the preview", coloured !== undefined);
+
   // typing is saved to the file
   await page.goto(`${base}/course/Walkthrough/modules/${M}/page/Day%202?panes=e,v`, { waitUntil: "load" });
   await waitFor(page, async () => (await page.locator(".view-lines").first().innerText()).includes("Day 2"));

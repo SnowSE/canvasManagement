@@ -196,6 +196,31 @@ Try the [K koans](../files/kkoans.html), or start at [level 2](../files/kkoans.h
   );
 }
 
+export function CodeBlocksHelp() {
+  return (
+    <HelpSection title="Code blocks (syntax highlighting)">
+      <P>
+        A fenced block whose first line names a language the app knows is
+        coloured by that language, as a code editor colours it, in the preview
+        and on the Canvas page (as inline colours, the one styling Canvas
+        keeps; the block itself looks as it did). To leave a block plain, name
+        no language.
+      </P>
+      <Example>{`
+\`\`\`python
+def area(r):  # a circle
+    return 3.14159 * r ** 2
+\`\`\`
+`}</Example>
+      <P>
+        Languages: C#, Java, Go, Rust, Python, Elixir, OCaml, F#, Scheme (Racket
+        too), Clojure, Smalltalk, Prolog, nemo, Forth and k. Any other language,
+        or a fence with none, is left as plain text.
+      </P>
+    </HelpSection>
+  );
+}
+
 export function EncodedBlocksHelp() {
   return (
     <HelpSection title="Encoded blocks (content in a url)">

@@ -1,6 +1,7 @@
 "use client";
 import { courseFileFor, rewriteFileHrefs } from "./courseFileLinks";
 import { marked } from "marked";
+import { highlight, Palette } from "./syntaxHighlight";
 import DOMPurify from "isomorphic-dompurify";
 import markedKatex from "marked-katex-extension";
 import pako from "pako";
@@ -113,6 +114,17 @@ function parseCodeInfoLine(infoLine: string) {
 // Filled while marked renders, read by fillEncodedSlots() immediately after.
 // markdownToHtmlNoImages() clears it first and nothing in between is async.
 const encodedBlocks = new Map<string, string>();
+// The palette for the render under way, set by markdownToHtmlNoImages().
+let palette: Palette = "light";
+// The highlighted blocks of the render under way, held out of sanitizing and
+// spliced in after it: they are escaped text in our own colour spans, and
+// DOMPurify walking their hundreds of spans tripled the render of a
+// code-heavy item, which the footer renders on every keystroke.
+const highlighted: string[] = [];
+// (written as the sanitizer's serializer would have: quotes plain, nbsp named)
+const heldOut = (html: string) =>
+  `\uE000${highlighted.push(html.replaceAll("&quot;", '"').replaceAll("&#x27;", "'").replaceAll("\u00a0", "&nbsp;")) - 1}\uE000`;
+const spliceHeldOut = (html: string) => html.replace(/\uE000(\d+)\uE000/g, (_, i) => highlighted[Number(i)]);
 
 marked.use({
   renderer: {
@@ -121,6 +133,10 @@ marked.use({
 
       if (encodedName) encodedBlocks.set(encodedName, token.text);
       if (hide) return "";
+
+      // a block in a known language is the same block with its code coloured (to leave one plain, name no language)
+      const coloured = highlight(token.text, language, palette);
+      if (coloured !== undefined) return `<pre><code class="language-${language}">${heldOut(coloured)}\n</code></pre>\n`;
 
       // Returning false asks marked to render the block with its own default
       // renderer. That reads only token.lang, so narrowing lang to the bare
@@ -215,10 +231,13 @@ export function markdownToHTMLSafe({
   replaceText = [],
   canvasLinkTargets,
   fileHref = (link) => settings.assets.find((a) => a.sourceUrl === courseFileFor(link, settings.assets.map((sent) => sent.sourceUrl)))?.canvasUrl,
+  preview = false,
 }: {
   markdownString: string;
   settings: LocalCourseSettings;
   convertImages?: boolean;
+  // the app's preview is dark where a Canvas page is light; code colours follow
+  preview?: boolean;
   replaceText?: { source: string; destination: string; strict?: boolean }[];
   // canvas assignments/quizzes, used to resolve relative .md links to them
   canvasLinkTargets?: CanvasLinkTargets;
@@ -227,7 +246,9 @@ export function markdownToHTMLSafe({
 }) {
   const withFiles = (html: string) => rewriteFileHrefs(html, fileHref);
   const html = resolveRelativeMdHrefsForCanvas(
-    markdownToHtmlNoImages(markdownString),
+    markdownToHtmlNoImages(markdownString, {
+      palette: preview ? "dark" : "light",
+    }),
     settings.canvasId,
     canvasLinkTargets
   );
@@ -255,8 +276,13 @@ export function markdownToHTMLSafe({
   return convertImages ? convertImagesToCanvasImages(filed, settings) : filed;
 }
 
-export function markdownToHtmlNoImages(markdownString: string) {
+export function markdownToHtmlNoImages(
+  markdownString: string,
+  { palette: wanted = "light" }: { palette?: Palette } = {}
+) {
   encodedBlocks.clear();
+  highlighted.length = 0;
+  palette = wanted;
 
   const parsedHtml = marked.parse(markdownString, {
     async: false,
@@ -278,5 +304,5 @@ export function markdownToHtmlNoImages(markdownString: string) {
     />[^<>]*<\/math>/g,
     "></math>"
   );
-  return clean;
+  return spliceHeldOut(clean);
 }

@@ -80,6 +80,7 @@ function DangerousInnerMarkdown({
         const path = courseFileFor(link, courseFiles ?? []);
         return previewBase && path && localFileUrl(previewBase, settings.name, path);
       },
+      preview: true,
     }),
     settings.name,
     pages

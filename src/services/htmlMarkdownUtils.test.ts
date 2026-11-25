@@ -2,6 +2,39 @@ import { describe, it, expect } from 'vitest';
 import { markdownToHtmlNoImages, markdownToHTMLSafe } from './htmlMarkdownUtils';
 import { LocalCourseSettings } from '@/features/local/course/localCourseSettings';
 
+describe('markdownToHtmlNoImages with syntax highlighting', () => {
+  // the sanitizer writes quotes back as quotes; <, > and & stay escaped
+  const fence = (info: string) => `\`\`\`${info}\nx = "a" # c <\n\`\`\``;
+  const colouredHtml = `<pre><code class="language-python">x = <span style="color:#0a3069">"a"</span> <span style="color:#6e7781"># c &lt;</span>\n</code></pre>\n`;
+
+  it('colours a block whose fence names a known language, with inline spans on a plain pre, all of it surviving sanitizing', () => {
+    expect(markdownToHtmlNoImages(fence('python'))).toBe(colouredHtml);
+  });
+
+  it('colours it with the other attributes beside the language, and inside a list item', () => {
+    expect(markdownToHtmlNoImages(fence('python encoded-name=x'))).toBe(colouredHtml);
+    expect(markdownToHtmlNoImages('- item\n\n  ```python\n  x = 1\n  ```\n')).toContain('<span style="color:#0550ae">1</span>');
+  });
+
+  it('leaves an unknown language and a bare fence uncoloured, as marked renders them: to leave a block plain, name no language', () => {
+    expect(markdownToHtmlNoImages(fence('sql'))).toBe(`<pre><code class="language-sql">x = "a" # c &lt;\n</code></pre>\n`);
+    expect(markdownToHtmlNoImages(fence(''))).toBe(`<pre><code>x = "a" # c &lt;\n</code></pre>\n`);
+  });
+
+  it('keeps every highlighted block in its place, escaped, when there are several', () => {
+    const two = markdownToHtmlNoImages(`${fence('python')}\n\ntext & more\n\n${fence('python')}`);
+    expect(two).toBe(`${colouredHtml}<p>text &amp; more</p>\n${colouredHtml}`);
+  });
+
+  it('colours the preview with the dark palette', () => {
+    expect(markdownToHtmlNoImages(fence('python'), { palette: 'dark' })).toContain('<span style="color:#9ecbff">"a"</span>');
+  });
+
+  it('colours a known language whatever the course settings say: there is no setting', () => {
+    expect(markdownToHTMLSafe({ markdownString: fence('python'), settings: { canvasId: 1, assets: [] } as unknown as LocalCourseSettings })).toContain('<span style="color:#0a3069">"a"</span>');
+  });
+});
+
 describe('markdownToHtmlNoImages', () => {
   it('moves caption into table when caption immediately precedes table', () => {
     const markdown = `<caption>My Table</caption>
