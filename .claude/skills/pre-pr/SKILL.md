@@ -10,17 +10,17 @@ description: The checks in canvasManagement and when to run them - the fast chec
   the first that fails and fix it first. Not on every small change: they take
   minutes.
 
-## 1. Fast checks (under a minute)
+## 1. Fast checks (about 17 s once the caches are warm)
 
 ```bash
-scripts/check.sh        # tsc, eslint, vitest, each timed
+scripts/check.sh        # tsc, eslint and vitest side by side, each timed; tsc and eslint cache in node_modules/.cache
 ```
 
 Say the test count and the suite's time in the PR. If the suite got slower,
 say why. Nothing slow (a browser, a server, the network) belongs in vitest:
 those live in the walkthrough below.
 
-## 2. The walkthrough, as a new user (a few minutes; once the feature looks done)
+## 2. The walkthrough, as a new user (about a minute; once the feature looks done)
 
 ```bash
 .claude/skills/run-canvas-management/walkthrough/run.sh   # builds, serves a fresh copy of the walkthrough course and a fake Canvas on free ports

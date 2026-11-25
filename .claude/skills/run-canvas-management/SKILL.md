@@ -107,7 +107,12 @@ which is miserable to get right.
 ```
 
 For when a feature looks done (see the `pre-pr` skill), not every iteration:
-about 90 s. It builds this checkout and serves it with a fresh copy of the
+about 65 s, or 45 s when nothing changed since its last build (it skips the
+build then, and keeps Playwright installed in `node_modules/.cache`). It
+prints a `TIME` line per phase and per part of the walkthrough; with
+`SLOW=1` it also names every wait that took over 1.5 s or timed out, which is
+how to find where the time goes (a wait that times out is usually a check
+looking for the wrong text, not a slow app). It builds this checkout and serves it with a fresh copy of the
 invented course in `walkthrough/course/`, beside a **fake Canvas**
 (`walkthrough/fakeCanvas.mjs`) that holds that course in memory, both on free
 ports of 127.0.0.1. Then `walkthrough.mjs` runs in the Playwright container:
