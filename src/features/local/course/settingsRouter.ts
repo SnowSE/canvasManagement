@@ -1,3 +1,4 @@
+import fs from "fs/promises";
 import publicProcedure from "../../../services/serverFunctions/publicProcedure";
 import { z } from "zod";
 import { router } from "../../../services/serverFunctions/trpcSetup";
@@ -24,6 +25,8 @@ import {
 import { updateOrCreateAssignmentFile } from "../assignments/assignmentRouter";
 import { updateQuizFile } from "../quizzes/quizRouter";
 import { updatePageFile } from "../pages/pageRouter";
+import { courseFileOnDisk, courseFileStorage } from "../files/courseFileStorage";
+import { courseFilePath } from "@/services/courseFileLinks";
 import { getLectures, updateLecture } from "../lectures/lectureRouter";
 import {
   createModuleFile,
@@ -137,7 +140,7 @@ async function migrateCourseContent(
   await Promise.all(
     oldModules.map(async (moduleName) => {
       await createModuleFile(newCourseName, moduleName);
-      const [oldAssignments, oldQuizzes, oldPages, oldLecturesByWeek] =
+      const [oldAssignments, oldQuizzes, oldPages, oldFiles, oldLecturesByWeek] =
         await Promise.all([
           await courseItemFileStorageService.getItems({
             courseName: oldCourseName,
@@ -154,6 +157,7 @@ async function migrateCourseContent(
             moduleName,
             type: "Page",
           }),
+          courseFileStorage.inModule({ courseName: oldCourseName, moduleName }),
           await getLectures(oldCourseName),
         ]);
 
@@ -198,6 +202,12 @@ async function migrateCourseContent(
           page: newPage,
         });
       });
+      // every file as it is, byte for byte
+      const updateFilesPromises = oldFiles.map(async ({ name }) => {
+        const place = courseFilePath(moduleName, name);
+        await courseFileStorage.create({ courseName: newCourseName, moduleName, name }).catch(() => undefined);
+        await fs.copyFile(await courseFileOnDisk(oldCourseName, place), await courseFileOnDisk(newCourseName, place));
+      });
       const updateLecturePromises = oldLecturesByWeek.flatMap(
         async (oldLectureByWeek) =>
           oldLectureByWeek.lectures.map(async (oldLecture) => {
@@ -214,6 +224,7 @@ async function migrateCourseContent(
         ...updateAssignmentPromises,
         ...updateQuizzesPromises,
         ...updatePagesPromises,
+        ...updateFilesPromises,
         ...updateLecturePromises,
       ]);
     }),

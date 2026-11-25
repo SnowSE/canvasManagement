@@ -163,6 +163,14 @@ const useFileInvalidation = () => {
         return;
       }
 
+      // a file of a module's files folder
+      if (itemType === "files") {
+        queryClient.invalidateQueries({ queryKey: trpc.file.getAll.queryKey({ courseName, moduleName: moduleOrLectures }) });
+        queryClient.invalidateQueries({ queryKey: trpc.file.get.pathKey() });
+        queryClient.invalidateQueries({ queryKey: trpc.file.paths.queryKey(courseName) });
+        return;
+      }
+
       if (["assignments", "quizzes", "pages"].includes(itemType)) {
         // a file that starts or stops parsing moves in or out of these
         queryClient.invalidateQueries({
@@ -248,6 +256,7 @@ const useFileInvalidation = () => {
       queryClient,
       trpc.assignment.getAllAssignments,
       trpc.assignment.getAssignment,
+      trpc.file,
       trpc.lectures.getLectures,
       trpc.quiz.getBanks,
       trpc.quiz.listBankFiles,

@@ -5,12 +5,14 @@ import type { ItemKindDef } from "./itemKind";
 import { assignmentKind } from "./modules/[moduleName]/assignment/assignmentKind";
 import { quizKind } from "./modules/[moduleName]/quiz/quizKind";
 import { pageKind } from "./modules/[moduleName]/page/pageKind";
+import { fileKind } from "./modules/[moduleName]/file/fileKind";
 
 /** Every kind of item, by its name (which is also its word in the app's urls). */
 export const itemKinds: Record<ItemKind, ItemKindDef> = {
   assignment: assignmentKind,
   quiz: quizKind,
   page: pageKind,
+  file: fileKind,
 };
 
 /**

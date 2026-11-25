@@ -5,6 +5,8 @@ const nonHrefAttributeRegex =
 const courseIdInImageUrlRegex =
   /(<img[^>]*src=")([^"]*)(\/courses\/\d+)([^"]*")/g;
 const queryParametersInImageUrlRegex = /(<img[^>]*src="[^"]*)\?[^"]*"/g;
+// the key Canvas adds to a link to a course file for whoever reads the page
+const queryParametersInFileLinkRegex = /(href="[^"?#]*\/files\/\d+\/download)\?[^"#]*/g;
 const escapedQuoteRegex = /\\"/g;
 const whitespaceRegex = /\s/g;
 const hrTagRegex = /<hr\s*\/?>/g;
@@ -40,7 +42,8 @@ export const removeHtmlDetails = (html: string) => {
   // Normalize image URLs by removing /courses/courseID pattern and query parameters
   processed = processed
     .replace(courseIdInImageUrlRegex, "$1$2$4")
-    .replace(queryParametersInImageUrlRegex, '$1"');
+    .replace(queryParametersInImageUrlRegex, '$1"')
+    .replace(queryParametersInFileLinkRegex, "$1");
 
   return processed
     .replaceAll(escapedQuoteRegex, '"')

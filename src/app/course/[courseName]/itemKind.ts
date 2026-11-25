@@ -18,6 +18,8 @@ export interface ItemKindDef {
   Icon: FC;
   /** The type of the markdown file it is parsed from, which is what has a raw text to fix and a history. */
   markdown?: CourseItemType;
+  /** For a kind whose items have no day and are in no Canvas module: the module list shows them after its dated items, under this title. */
+  undated?: { title: string; hint: string };
   /** A module's items of the kind. */
   useModuleItems(moduleName: string): IModuleItem[];
   /** How one stands against Canvas; nothing until Canvas has answered. */

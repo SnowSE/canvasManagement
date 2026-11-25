@@ -23,12 +23,14 @@ import {
   useCanvasModulesQuery,
   useCanvasModulesWithItemsQuery,
 } from "@/features/canvas/hooks/canvasModuleHooks";
-import { byOrderingDate, canvasOrderDiffers } from "@/features/local/modules/moduleItemOrder";
+import { canvasOrderDiffers } from "@/features/local/modules/moduleItemOrder";
 import { Spinner } from "@/components/Spinner";
-import { ItemTypeIcon, useModuleItems } from "../itemKinds";
+import { itemKinds, ItemTypeIcon, useModuleItems } from "../itemKinds";
+import { NewEmptyFile } from "./[moduleName]/file/NewEmptyFile";
 import { useInvalidItemsQuery } from "@/features/local/modules/rawItemHooks";
 import { ItemInDay } from "../calendar/day/itemInDay/ItemInDay";
 import { useItemSyncStatus } from "../calendar/day/useItemSyncStatus";
+import { arrangeItems } from "../itemKindRules";
 import { useModuleSelection } from "./bulk/moduleSelection";
 import { kindsOf, shown, showsErrors } from "./bulk/rules";
 
@@ -49,7 +51,9 @@ export default function ExpandableModule({
   const { statusOf, ready } = useItemSyncStatus();
   const selection = useModuleSelection();
 
-  const moduleItems: ModuleItem[] = useModuleItems(moduleName).sort((a, b) => byOrderingDate(a.item, b.item));
+  const everyItem: ModuleItem[] = useModuleItems(moduleName);
+  // the items with a day, in order: what Canvas's module holds
+  const moduleItems = arrangeItems(everyItem, itemKinds).dated;
 
   const canvasModuleItems = canvasModulesWithItems?.find(
     (m) => m.name === moduleName,
@@ -73,7 +77,7 @@ export default function ExpandableModule({
   // only the items whose name has it; one with nothing to show is hidden
   const query = selection.search.trim().toLowerCase();
   const has = (name: string) => name.toLowerCase().includes(query);
-  const searched = !query || has(moduleName) ? moduleItems : moduleItems.filter((i) => has(i.item.name));
+  const searched = !query || has(moduleName) ? everyItem : everyItem.filter((i) => has(i.item.name));
   // what the bar's filters let through (everything with none on); a module
   // with nothing to show is hidden
   const kinds = ({ type, item }: ModuleItem) => kindsOf(statusOf(type, item, moduleName));
@@ -82,14 +86,14 @@ export default function ExpandableModule({
   // nothing is counted until Canvas has answered, so no count changes later
   const statusKinds = ready
     ? [
-        ...moduleItems.flatMap(kinds),
+        ...everyItem.flatMap(kinds),
         ...(invalidItems ?? []).map(() => "withErrors" as const),
       ]
     : [];
   // files that can't be read, plus ones with dates Canvas won't save
   const errorCount = ready
     ? (invalidItems?.length ?? 0) +
-      moduleItems.filter(({ type, item }) => statusOf(type, item, moduleName).problem).length
+      everyItem.filter(({ type, item }) => statusOf(type, item, moduleName).problem).length
     : 0;
   const { report } = selection;
   const reported = shownRefs.map((r) => r.type + r.item.name).join("\n") + statusKinds.join(",");
@@ -100,7 +104,8 @@ export default function ExpandableModule({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [report, moduleName, reported, ready]);
 
-  const groupedItems = shownItems.reduce(
+  const shownArranged = arrangeItems(shownItems, itemKinds);
+  const groupedItems = shownArranged.dated.reduce(
     (
       groups: {
         dateKey: string;
@@ -255,6 +260,7 @@ export default function ExpandableModule({
                   </div>
                 )}
               </Modal>
+              <NewEmptyFile moduleName={moduleName} />
               <div className="flex flex-col">
                 {shownInvalid.length > 0 && (
                   <div>
@@ -295,6 +301,14 @@ export default function ExpandableModule({
                     >
                       {weekLabel}
                     </Link>
+                    {items.map(itemRow)}
+                  </div>
+                ))}
+                {shownArranged.listed.map(({ type, title, hint, items }) => (
+                  <div key={type}>
+                    <div className="text-slate-500 text-sm mt-1 ps-1" title={hint}>
+                      {title}
+                    </div>
                     {items.map(itemRow)}
                   </div>
                 ))}

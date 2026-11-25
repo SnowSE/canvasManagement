@@ -1,4 +1,5 @@
 import type { IModuleItem } from "@/features/local/modules/IModuleItem";
+import { byOrderingDate } from "@/features/local/modules/moduleItemOrder";
 import type { ItemSyncStatus } from "./calendar/day/getAssignmentSyncStatus";
 import type { ItemKindDef } from "./itemKind";
 
@@ -11,6 +12,20 @@ export const CHECKING: ItemSyncStatus = {
   message: "Checking Canvas…",
   differences: [],
 };
+
+/**
+ * A module's items for its list: those of kinds with a day (`dated`), in
+ * date order, which is what Canvas's module holds; and, apart, those of
+ * each kind with no day (`listed`), under the kind's title.
+ */
+export const arrangeItems = <K extends string, I extends { type: K; item: IModuleItem }>(items: I[], kinds: Record<K, Pick<ItemKindDef, "undated">>) => ({
+  dated: items.filter((i) => !kinds[i.type].undated).sort((a, b) => byOrderingDate(a.item, b.item)),
+  listed: (Object.keys(kinds) as K[]).flatMap((type) => {
+    const { undated } = kinds[type];
+    const ofKind = items.filter((i) => i.type === type);
+    return undated && ofKind.length > 0 ? [{ type, ...undated, items: ofKind }] : [];
+  }),
+});
 
 /**
  * How items stand against Canvas, from what each kind's own comparison is

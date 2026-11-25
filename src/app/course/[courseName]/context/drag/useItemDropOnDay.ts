@@ -15,6 +15,7 @@ import { Dispatch, SetStateAction, useCallback, DragEvent } from "react";
 import { DraggableItem } from "./draggingContext";
 import { movedToDay } from "./shiftDays";
 import { useSaveMovedItem } from "./useSaveMovedItem";
+import { itemKinds } from "../../itemKinds";
 import { useCourseContext } from "../courseContext";
 
 export function useItemDropOnDay({
@@ -46,7 +47,8 @@ export function useItemDropOnDay({
       if (type === "lecture") updateLecture(getDateWithDefaultDueTime());
       else if (!sourceModuleName) console.error("error dropping item on day, sourceModuleName is undefined");
       else if (itemBeingDragged.scheduleDate) moveScheduleBatch(sourceModuleName, itemBeingDragged.scheduleDate);
-      else saveMoved(type, movedToDay(itemBeingDragged.item, day), sourceModuleName, sourceModuleName);
+      // an item of a kind with no day isn't given one by a drop
+      else if (!itemKinds[type].undated) saveMoved(type, movedToDay(itemBeingDragged.item, day), sourceModuleName, sourceModuleName);
       setIsDragging(false);
 
       function getDateWithDefaultDueTime() {

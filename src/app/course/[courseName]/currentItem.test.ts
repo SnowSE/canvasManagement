@@ -42,3 +42,9 @@ describe("currentItemFromPath", () => {
     expect(currentItemFromPath("/course/c")).toBeUndefined();
   });
 });
+
+describe("the item a course url is about", () => {
+  it("is a module's file, by its whole name", () => {
+    expect(currentItemFromPath("/course/Survey/modules/7%20-%20Arrays/file/k-koans.html")).toEqual({ kind: "item", moduleName: "7 - Arrays", type: "file", name: "k-koans.html" });
+  });
+});

@@ -1,3 +1,4 @@
+import { useSettingsWithCanvasFiles } from "@/features/canvas/hooks/canvasCourseFileHooks";
 import {
   EditorFooter,
   FooterAction,
@@ -21,7 +22,6 @@ import {
   useAssignmentQuery,
   useDeleteAssignmentMutation,
 } from "@/features/local/assignments/assignmentHooks";
-import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import { getCourseUrl, getModuleItemUrl } from "@/services/urlUtils";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
@@ -49,7 +49,8 @@ export function AssignmentFooterButtons({
   const navigate = useNavigate();
   const router = useRouter();
   const { courseName } = useCourseContext();
-  const { data: settings } = useLocalCourseSettingsQuery();
+  // with each course file's address in Canvas, as the item's links to files are sent
+  const settings = useSettingsWithCanvasFiles();
   const { data: canvasAssignments, isFetching: canvasIsFetching } =
     useCanvasAssignmentsQuery();
   const queryClient = useQueryClient();

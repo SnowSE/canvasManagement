@@ -1,4 +1,5 @@
 "use client";
+import { useSettingsWithCanvasFiles } from "@/features/canvas/hooks/canvasCourseFileHooks";
 import { pullFromCanvas, sendToCanvas } from "@/features/canvas/import/pullFromCanvas";
 import { useMutation } from "@tanstack/react-query";
 import { assignmentSettingsForCanvas, canvasAssignmentService } from "@/features/canvas/services/canvasAssignmentService";
@@ -9,7 +10,6 @@ import { Link } from "@tanstack/react-router";
 import DOMPurify from "isomorphic-dompurify";
 import { Spinner } from "@/components/Spinner";
 import { useCourseContext } from "@/app/course/[courseName]/context/courseContext";
-import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import { useAssignmentQuery, useUpdateAssignmentMutation } from "@/features/local/assignments/assignmentHooks";
 import { useQuizQuery, useUpdateQuizMutation } from "@/features/local/quizzes/quizHooks";
 import { usePageQuery, useUpdatePageMutation } from "@/features/local/pages/pageHooks";
@@ -76,7 +76,8 @@ export function CompareAssignmentWithCanvas({
   moduleName: string;
   assignmentName: string;
 }) {
-  const { data: settings } = useLocalCourseSettingsQuery();
+  // with each course file's address in Canvas, as the item's links to files are sent
+  const settings = useSettingsWithCanvasFiles();
   const { data: assignment } = useAssignmentQuery(moduleName, assignmentName);
   const {
     data: canvasAssignments,
@@ -194,7 +195,8 @@ export function CompareQuizWithCanvas({
   moduleName: string;
   quizName: string;
 }) {
-  const { data: settings } = useLocalCourseSettingsQuery();
+  // with each course file's address in Canvas, as the item's links to files are sent
+  const settings = useSettingsWithCanvasFiles();
   const { data: quiz } = useQuizQuery(moduleName, quizName);
   const {
     data: canvasQuizzes,
@@ -325,7 +327,8 @@ export function ComparePageWithCanvas({
   moduleName: string;
   pageName: string;
 }) {
-  const { data: settings } = useLocalCourseSettingsQuery();
+  // with each course file's address in Canvas, as the item's links to files are sent
+  const settings = useSettingsWithCanvasFiles();
   const { data: page } = usePageQuery(moduleName, pageName);
   const {
     data: canvasPages,

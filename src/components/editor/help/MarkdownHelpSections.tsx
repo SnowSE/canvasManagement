@@ -137,6 +137,7 @@ flowchart TD
 
 export function ImagesHelp() {
   return (
+  <>
     <HelpSection title="Images">
       <P>
         Images on the web can be linked directly. A file in your faculty files
@@ -156,6 +157,42 @@ export function ImagesHelp() {
         with the same note.
       </P>
     </HelpSection>
+    <HelpSection title="Files (HTML demos, SVG drawings, stylesheets, PDFs)">
+      <P>
+        Any file in a module&apos;s <C>files</C> folder is one of the
+        course&apos;s files: the Modules pane lists it in that module, and
+        it opens in the editor (a text file to edit; any file to preview
+        and send to Canvas). Link to
+        it, or show it as an image, by its path through the <C>files</C>{" "}
+        folder. The preview uses the file on disk.
+      </P>
+      <Example>{`
+Try the [K koans](../files/kkoans.html), or start at [level 2](../files/kkoans.html#level-2).
+
+![the parse tree](../files/parse-tree.svg)
+`}</Example>
+      <P>
+        Canvas gets the file only when you add it there yourself:{" "}
+        <strong>Add to Canvas</strong> in the file&apos;s own footer, then{" "}
+        <strong>Publish</strong>, as for a page. An item that links to the
+        file points at the copy Canvas has, which opens with its scripts
+        running (a Canvas page would strip them). Adding or updating an
+        item that links to a file Canvas doesn&apos;t have stops with a
+        note naming the file, so no dead link is sent; until the file is
+        published, students who follow the link are refused.
+      </P>
+      <P>
+        <C>../files/name</C> is the file of that name in a module&apos;s{" "}
+        <C>files</C> folder; another module&apos;s file is written with its
+        module, <C>../../01%20-%20Intro/files/name</C> (a space in a
+        markdown link is written <C>%20</C>), which is needed when two
+        modules each have a file of the name. A file kept anywhere else
+        (beside the pages, in a starter project) is not one of the
+        course&apos;s files, and a link that doesn&apos;t go through a{" "}
+        <C>files</C> folder is left as written.
+      </P>
+    </HelpSection>
+  </>
   );
 }
 

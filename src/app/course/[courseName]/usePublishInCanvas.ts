@@ -6,7 +6,7 @@ import { useLocalCourseSettingsQuery } from "@/features/local/course/localCourse
 import { ItemKind } from "@/features/local/course/courseItemTypes";
 import { baseCanvasUrl } from "@/features/canvas/services/canvasServiceUtils";
 import { canvasCourseModuleKeys, useCanvasModulesQuery, useRefreshCanvasModules } from "@/features/canvas/hooks/canvasModuleHooks";
-import { useEachKind } from "./itemKinds";
+import { itemKinds, useEachKind } from "./itemKinds";
 
 /**
  * Publishes an item that is already in Canvas. Only the item: if its module
@@ -21,7 +21,8 @@ export const usePublishInCanvasMutation = () => {
   const refreshModules = useRefreshCanvasModules();
   const publishKind = useEachKind((kind) => kind.usePublish());
   const refreshKind = useEachKind((kind) => kind.useRefresh());
-  const canvasModuleOf = (moduleName: string) => canvasModules?.find((m) => m.name === moduleName);
+  // a kind with no day is in no Canvas module
+  const canvasModuleOf = (type: ItemKind, moduleName: string) => (itemKinds[type].undated ? undefined : canvasModules?.find((m) => m.name === moduleName));
 
   return useMutation({
     mutationFn: async ({
@@ -36,14 +37,14 @@ export const usePublishInCanvasMutation = () => {
     }) => {
       await publishKind[type](canvasItemId);
       // the item's module shows it as published too
-      const canvasModule = canvasModuleOf(moduleName);
+      const canvasModule = canvasModuleOf(type, moduleName);
       await Promise.all([
         refreshKind[type](canvasItemId),
-        canvasModule ? refreshModules([canvasModule.id]) : queryClient.invalidateQueries({ queryKey: canvasCourseModuleKeys.modules(settings.canvasId) }),
+        itemKinds[type].undated ? undefined : canvasModule ? refreshModules([canvasModule.id]) : queryClient.invalidateQueries({ queryKey: canvasCourseModuleKeys.modules(settings.canvasId) }),
       ]);
     },
-    onSuccess: (_, { name, moduleName }) => {
-      const canvasModule = canvasModuleOf(moduleName);
+    onSuccess: (_, { type, name, moduleName }) => {
+      const canvasModule = canvasModuleOf(type, moduleName);
       if (canvasModule && canvasModule.published === false) {
         showActionNeededToast(
           `Published "${name}", but its module "${moduleName}" is unpublished in Canvas, so students can't see it yet.`,

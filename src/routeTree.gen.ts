@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ErrorsRouteImport } from './routes/errors'
 import { Route as ApiCoursesRouteImport } from './routes/api/courses'
+import { Route as CourseFileSplatRouteImport } from './routes/course-file.$'
 import { Route as CourseCourseNameRouteImport } from './routes/course/$courseName'
 import { Route as ImagesSplatRouteImport } from './routes/images.$'
 import { Route as ApiCanvasNewQuizSplatRouteImport } from './routes/api.canvas-new-quiz.$'
@@ -23,6 +24,7 @@ import { Route as CourseCourseNameSettingsRouteImport } from './routes/course/$c
 import { Route as CourseCourseNameLectureLectureDayIndexRouteImport } from './routes/course/$courseName/lecture/$lectureDay/index'
 import { Route as CourseCourseNameLectureLectureDayPreviewRouteImport } from './routes/course/$courseName/lecture/$lectureDay/preview'
 import { Route as CourseCourseNameModulesModuleNameAssignmentAssignmentNameRouteImport } from './routes/course/$courseName/modules/$moduleName/assignment.$assignmentName'
+import { Route as CourseCourseNameModulesModuleNameFileFileNameRouteImport } from './routes/course/$courseName/modules/$moduleName/file.$fileName'
 import { Route as CourseCourseNameModulesModuleNamePagePageNameRouteImport } from './routes/course/$courseName/modules/$moduleName/page.$pageName'
 import { Route as CourseCourseNameModulesModuleNameQuizQuizNameRouteImport } from './routes/course/$courseName/modules/$moduleName/quiz.$quizName'
 import { Route as CourseCourseNameModulesModuleNameAssignmentAssignmentNameCompareRouteImport } from './routes/course/$courseName/modules/$moduleName/assignment.$assignmentName_.compare'
@@ -45,6 +47,11 @@ const ErrorsRoute = ErrorsRouteImport.update({
 const ApiCoursesRoute = ApiCoursesRouteImport.update({
   id: '/api/courses',
   path: '/api/courses',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CourseFileSplatRoute = CourseFileSplatRouteImport.update({
+  id: '/course-file/$',
+  path: '/course-file/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CourseCourseNameRoute = CourseCourseNameRouteImport.update({
@@ -106,6 +113,12 @@ const CourseCourseNameModulesModuleNameAssignmentAssignmentNameRoute =
     path: '/modules/$moduleName/assignment/$assignmentName',
     getParentRoute: () => CourseCourseNameRoute,
   } as any)
+const CourseCourseNameModulesModuleNameFileFileNameRoute =
+  CourseCourseNameModulesModuleNameFileFileNameRouteImport.update({
+    id: '/modules/$moduleName/file/$fileName',
+    path: '/modules/$moduleName/file/$fileName',
+    getParentRoute: () => CourseCourseNameRoute,
+  } as any)
 const CourseCourseNameModulesModuleNamePagePageNameRoute =
   CourseCourseNameModulesModuleNamePagePageNameRouteImport.update({
     id: '/modules/$moduleName/page/$pageName',
@@ -163,6 +176,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/errors': typeof ErrorsRoute
   '/api/courses': typeof ApiCoursesRoute
+  '/course-file/$': typeof CourseFileSplatRoute
   '/course/$courseName': typeof CourseCourseNameRouteWithChildren
   '/images/$': typeof ImagesSplatRoute
   '/api/canvas-new-quiz/$': typeof ApiCanvasNewQuizSplatRoute
@@ -174,6 +188,7 @@ export interface FileRoutesByFullPath {
   '/course/$courseName/lecture/$lectureDay/preview': typeof CourseCourseNameLectureLectureDayPreviewRoute
   '/course/$courseName/lecture/$lectureDay/': typeof CourseCourseNameLectureLectureDayIndexRoute
   '/course/$courseName/modules/$moduleName/assignment/$assignmentName': typeof CourseCourseNameModulesModuleNameAssignmentAssignmentNameRoute
+  '/course/$courseName/modules/$moduleName/file/$fileName': typeof CourseCourseNameModulesModuleNameFileFileNameRoute
   '/course/$courseName/modules/$moduleName/page/$pageName': typeof CourseCourseNameModulesModuleNamePagePageNameRoute
   '/course/$courseName/modules/$moduleName/quiz/$quizName': typeof CourseCourseNameModulesModuleNameQuizQuizNameRoute
   '/course/$courseName/modules/$moduleName/assignment/$assignmentName/compare': typeof CourseCourseNameModulesModuleNameAssignmentAssignmentNameCompareRoute
@@ -187,6 +202,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/errors': typeof ErrorsRoute
   '/api/courses': typeof ApiCoursesRoute
+  '/course-file/$': typeof CourseFileSplatRoute
   '/images/$': typeof ImagesSplatRoute
   '/api/canvas-new-quiz/$': typeof ApiCanvasNewQuizSplatRoute
   '/api/canvas/$': typeof ApiCanvasSplatRoute
@@ -197,6 +213,7 @@ export interface FileRoutesByTo {
   '/course/$courseName/lecture/$lectureDay/preview': typeof CourseCourseNameLectureLectureDayPreviewRoute
   '/course/$courseName/lecture/$lectureDay': typeof CourseCourseNameLectureLectureDayIndexRoute
   '/course/$courseName/modules/$moduleName/assignment/$assignmentName': typeof CourseCourseNameModulesModuleNameAssignmentAssignmentNameRoute
+  '/course/$courseName/modules/$moduleName/file/$fileName': typeof CourseCourseNameModulesModuleNameFileFileNameRoute
   '/course/$courseName/modules/$moduleName/page/$pageName': typeof CourseCourseNameModulesModuleNamePagePageNameRoute
   '/course/$courseName/modules/$moduleName/quiz/$quizName': typeof CourseCourseNameModulesModuleNameQuizQuizNameRoute
   '/course/$courseName/modules/$moduleName/assignment/$assignmentName/compare': typeof CourseCourseNameModulesModuleNameAssignmentAssignmentNameCompareRoute
@@ -211,6 +228,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/errors': typeof ErrorsRoute
   '/api/courses': typeof ApiCoursesRoute
+  '/course-file/$': typeof CourseFileSplatRoute
   '/course/$courseName': typeof CourseCourseNameRouteWithChildren
   '/images/$': typeof ImagesSplatRoute
   '/api/canvas-new-quiz/$': typeof ApiCanvasNewQuizSplatRoute
@@ -222,6 +240,7 @@ export interface FileRoutesById {
   '/course/$courseName/lecture/$lectureDay/preview': typeof CourseCourseNameLectureLectureDayPreviewRoute
   '/course/$courseName/lecture/$lectureDay/': typeof CourseCourseNameLectureLectureDayIndexRoute
   '/course/$courseName/modules/$moduleName/assignment/$assignmentName': typeof CourseCourseNameModulesModuleNameAssignmentAssignmentNameRoute
+  '/course/$courseName/modules/$moduleName/file/$fileName': typeof CourseCourseNameModulesModuleNameFileFileNameRoute
   '/course/$courseName/modules/$moduleName/page/$pageName': typeof CourseCourseNameModulesModuleNamePagePageNameRoute
   '/course/$courseName/modules/$moduleName/quiz/$quizName': typeof CourseCourseNameModulesModuleNameQuizQuizNameRoute
   '/course/$courseName/modules/$moduleName/assignment/$assignmentName_/compare': typeof CourseCourseNameModulesModuleNameAssignmentAssignmentNameCompareRoute
@@ -237,6 +256,7 @@ export interface FileRouteTypes {
     | '/'
     | '/errors'
     | '/api/courses'
+    | '/course-file/$'
     | '/course/$courseName'
     | '/images/$'
     | '/api/canvas-new-quiz/$'
@@ -248,6 +268,7 @@ export interface FileRouteTypes {
     | '/course/$courseName/lecture/$lectureDay/preview'
     | '/course/$courseName/lecture/$lectureDay/'
     | '/course/$courseName/modules/$moduleName/assignment/$assignmentName'
+    | '/course/$courseName/modules/$moduleName/file/$fileName'
     | '/course/$courseName/modules/$moduleName/page/$pageName'
     | '/course/$courseName/modules/$moduleName/quiz/$quizName'
     | '/course/$courseName/modules/$moduleName/assignment/$assignmentName/compare'
@@ -261,6 +282,7 @@ export interface FileRouteTypes {
     | '/'
     | '/errors'
     | '/api/courses'
+    | '/course-file/$'
     | '/images/$'
     | '/api/canvas-new-quiz/$'
     | '/api/canvas/$'
@@ -271,6 +293,7 @@ export interface FileRouteTypes {
     | '/course/$courseName/lecture/$lectureDay/preview'
     | '/course/$courseName/lecture/$lectureDay'
     | '/course/$courseName/modules/$moduleName/assignment/$assignmentName'
+    | '/course/$courseName/modules/$moduleName/file/$fileName'
     | '/course/$courseName/modules/$moduleName/page/$pageName'
     | '/course/$courseName/modules/$moduleName/quiz/$quizName'
     | '/course/$courseName/modules/$moduleName/assignment/$assignmentName/compare'
@@ -284,6 +307,7 @@ export interface FileRouteTypes {
     | '/'
     | '/errors'
     | '/api/courses'
+    | '/course-file/$'
     | '/course/$courseName'
     | '/images/$'
     | '/api/canvas-new-quiz/$'
@@ -295,6 +319,7 @@ export interface FileRouteTypes {
     | '/course/$courseName/lecture/$lectureDay/preview'
     | '/course/$courseName/lecture/$lectureDay/'
     | '/course/$courseName/modules/$moduleName/assignment/$assignmentName'
+    | '/course/$courseName/modules/$moduleName/file/$fileName'
     | '/course/$courseName/modules/$moduleName/page/$pageName'
     | '/course/$courseName/modules/$moduleName/quiz/$quizName'
     | '/course/$courseName/modules/$moduleName/assignment/$assignmentName_/compare'
@@ -309,6 +334,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ErrorsRoute: typeof ErrorsRoute
   ApiCoursesRoute: typeof ApiCoursesRoute
+  CourseFileSplatRoute: typeof CourseFileSplatRoute
   CourseCourseNameRoute: typeof CourseCourseNameRouteWithChildren
   ImagesSplatRoute: typeof ImagesSplatRoute
   ApiCanvasNewQuizSplatRoute: typeof ApiCanvasNewQuizSplatRoute
@@ -337,6 +363,13 @@ declare module '@tanstack/react-router' {
       path: '/api/courses'
       fullPath: '/api/courses'
       preLoaderRoute: typeof ApiCoursesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/course-file/$': {
+      id: '/course-file/$'
+      path: '/course-file/$'
+      fullPath: '/course-file/$'
+      preLoaderRoute: typeof CourseFileSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/course/$courseName': {
@@ -416,6 +449,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CourseCourseNameModulesModuleNameAssignmentAssignmentNameRouteImport
       parentRoute: typeof CourseCourseNameRoute
     }
+    '/course/$courseName/modules/$moduleName/file/$fileName': {
+      id: '/course/$courseName/modules/$moduleName/file/$fileName'
+      path: '/modules/$moduleName/file/$fileName'
+      fullPath: '/course/$courseName/modules/$moduleName/file/$fileName'
+      preLoaderRoute: typeof CourseCourseNameModulesModuleNameFileFileNameRouteImport
+      parentRoute: typeof CourseCourseNameRoute
+    }
     '/course/$courseName/modules/$moduleName/page/$pageName': {
       id: '/course/$courseName/modules/$moduleName/page/$pageName'
       path: '/modules/$moduleName/page/$pageName'
@@ -482,6 +522,7 @@ interface CourseCourseNameRouteChildren {
   CourseCourseNameLectureLectureDayPreviewRoute: typeof CourseCourseNameLectureLectureDayPreviewRoute
   CourseCourseNameLectureLectureDayIndexRoute: typeof CourseCourseNameLectureLectureDayIndexRoute
   CourseCourseNameModulesModuleNameAssignmentAssignmentNameRoute: typeof CourseCourseNameModulesModuleNameAssignmentAssignmentNameRoute
+  CourseCourseNameModulesModuleNameFileFileNameRoute: typeof CourseCourseNameModulesModuleNameFileFileNameRoute
   CourseCourseNameModulesModuleNamePagePageNameRoute: typeof CourseCourseNameModulesModuleNamePagePageNameRoute
   CourseCourseNameModulesModuleNameQuizQuizNameRoute: typeof CourseCourseNameModulesModuleNameQuizQuizNameRoute
   CourseCourseNameModulesModuleNameAssignmentAssignmentNameCompareRoute: typeof CourseCourseNameModulesModuleNameAssignmentAssignmentNameCompareRoute
@@ -502,6 +543,8 @@ const CourseCourseNameRouteChildren: CourseCourseNameRouteChildren = {
     CourseCourseNameLectureLectureDayIndexRoute,
   CourseCourseNameModulesModuleNameAssignmentAssignmentNameRoute:
     CourseCourseNameModulesModuleNameAssignmentAssignmentNameRoute,
+  CourseCourseNameModulesModuleNameFileFileNameRoute:
+    CourseCourseNameModulesModuleNameFileFileNameRoute,
   CourseCourseNameModulesModuleNamePagePageNameRoute:
     CourseCourseNameModulesModuleNamePagePageNameRoute,
   CourseCourseNameModulesModuleNameQuizQuizNameRoute:
@@ -527,6 +570,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ErrorsRoute: ErrorsRoute,
   ApiCoursesRoute: ApiCoursesRoute,
+  CourseFileSplatRoute: CourseFileSplatRoute,
   CourseCourseNameRoute: CourseCourseNameRouteWithChildren,
   ImagesSplatRoute: ImagesSplatRoute,
   ApiCanvasNewQuizSplatRoute: ApiCanvasNewQuizSplatRoute,

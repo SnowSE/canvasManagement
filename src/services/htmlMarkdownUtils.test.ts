@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { markdownToHtmlNoImages } from './htmlMarkdownUtils';
+import { markdownToHtmlNoImages, markdownToHTMLSafe } from './htmlMarkdownUtils';
+import { LocalCourseSettings } from '@/features/local/course/localCourseSettings';
 
 describe('markdownToHtmlNoImages', () => {
   it('moves caption into table when caption immediately precedes table', () => {
@@ -117,4 +118,17 @@ This is latex: ($$x_2$$)
     expect(doc).not.toContain("x_2");
   });
 
+});
+
+describe('a link to a file beside the markdown, rendered for Canvas', () => {
+  const settings = { canvasId: 42, assets: [{ sourceUrl: 'Week 1/files/kkoans.html', canvasUrl: 'https://canvas/courses/42/files/7/download' }] } as LocalCourseSettings;
+  it('points at the file\'s uploaded copy, keeping the place in it', () => {
+    expect(markdownToHTMLSafe({ markdownString: '[koans](../files/kkoans.html#level-2)', settings })).toContain('href="https://canvas/courses/42/files/7/download#level-2"');
+  });
+  it('stays as written for a file not uploaded yet', () => {
+    expect(markdownToHTMLSafe({ markdownString: '[demo](demo.html)', settings })).toContain('href="demo.html"');
+  });
+  it('points where a preview says instead: at the local file', () => {
+    expect(markdownToHTMLSafe({ markdownString: '[koans](../files/kkoans.html)', settings, fileHref: (link) => `/local/${link}` })).toContain('href="/local/files/kkoans.html"');
+  });
 });

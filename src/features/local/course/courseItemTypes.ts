@@ -13,7 +13,8 @@ export const kindOf = {
   Quiz: "quiz",
   Page: "page",
 } as const;
-export type ItemKind = (typeof kindOf)[CourseItemType];
+/** Those, and a file of a module's files folder (see localCourseFileModels), which is listed and sent to Canvas but has no settings to parse. */
+export type ItemKind = (typeof kindOf)[CourseItemType] | "file";
 export type CourseItemReturnType<T extends CourseItemType> =
   T extends "Assignment"
     ? LocalAssignment

@@ -73,7 +73,7 @@ export const ensureImagesUploaded = async (
       image.localPath,
       settings.canvasId,
     );
-    const canvasUrl: string = await uploadToCanvasPart2({
+    const { url: canvasUrl } = await uploadToCanvasPart2({
       pathToUpload: image.localPath,
       upload_url,
       upload_params,

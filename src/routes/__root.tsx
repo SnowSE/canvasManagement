@@ -89,6 +89,9 @@ const prefetchCourseData = async (courseName: string | undefined) => {
         ...moduleNames.map((moduleName) =>
           trpcHelper.page.getAllPages.prefetch({ courseName, moduleName }),
         ),
+        ...moduleNames.map((moduleName) =>
+          trpcHelper.file.getAll.prefetch({ courseName, moduleName }),
+        ),
       ]);
     }),
   );
