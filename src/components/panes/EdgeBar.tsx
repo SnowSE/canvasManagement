@@ -1,4 +1,5 @@
 "use client";
+import { viewClick } from "./viewClick";
 import { useRouterState } from "@tanstack/react-router";
 import { usePanes } from "./PaneStrip";
 import { copyTextToClipboard } from "../CopyableCommand";
@@ -73,7 +74,12 @@ export function EdgeBar({ end, views }: { end: "start" | "end"; views: ViewChoic
         hint={`show its pane (its first open one, else its first, expanded), or a new one at the ${end} of the row when there is none. Ctrl: a new one at the ${end}. Shift: in a new window following this one`}
         hrefOf={(view) => popOutUrl(pathname, view)}
         onPopOut={(view) => openPopOut(pathname, view)}
-        onView={(view, e) => (e.shiftKey && !e.ctrlKey && !e.metaKey ? openPopOut(pathname, view, true) : e.ctrlKey || e.metaKey ? add(view) : showView(view, end))}
+        onView={(view, e) => {
+          const click = viewClick(e);
+          if (click === "window") openPopOut(pathname, view, true);
+          else if (click === "pane" || click === "paneAtEnd") add(view);
+          else if (click === "default") showView(view, end);
+        }}
         menuSide={inner}
         drag={{ onDrag: (e, x) => dragEdge(at, e.clientX - x), onDragEnd: endDrag }}
         extras={[

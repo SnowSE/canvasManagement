@@ -1,4 +1,5 @@
 "use client";
+import { viewClick } from "@/components/panes/viewClick";
 import { ReactNode, useMemo } from "react";
 import { useMatches, useRouter, useRouterState } from "@tanstack/react-router";
 import { ViewIcons } from "@/components/panes/ViewIcons";
@@ -79,12 +80,14 @@ export function CourseFrame({ children }: { children: ReactNode }) {
               hint="show it in this window. Ctrl or Shift: in another window following the same page"
               hrefOf={(view) => popOutUrl(pathname, view)}
               onPopOut={(view) => openPopOut(pathname, view)}
-              onView={(view, e) =>
-                e.ctrlKey || e.metaKey || e.shiftKey
-                  ? openPopOut(pathname, view, e.shiftKey)
-                  : // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    router.navigate({ to: pathname as any, search: { pane: view } as any })
-              }
+              onView={(view, e) => {
+                // a window of one view has no row of panes: Ctrl opens another such window too
+                const click = viewClick(e);
+                if (click === "default")
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  router.navigate({ to: pathname as any, search: { pane: view } as any });
+                else if (click !== "browser") openPopOut(pathname, view, click === "window");
+              }}
               menuSide="below"
             />
             <BreadCrumbs term={settings?.startDate ? getTermName(settings.startDate) : undefined} popOut />

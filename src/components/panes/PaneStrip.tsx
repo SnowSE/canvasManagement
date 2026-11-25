@@ -153,8 +153,8 @@ export function PaneStrip({
   // pane of the view at the end of the row. A layout effect: set before any
   // child's effect runs (a page url that shows a pane does so as it mounts)
   useLayoutEffect(() => {
-    opener = onShowPane ?? ((view) => {
-      if (popsOut?.(view) && onPopOut) return onPopOut(view);
+    opener = onShowPane ?? ((view, here) => {
+      if (!here && popsOut?.(view) && onPopOut) return onPopOut(view);
       // before the panes have registered (a page url that shows a pane, as the page loads), the document says what is on the page
       if (!panes.length) {
         const doc = parseDoc(readPaneDoc());
@@ -228,10 +228,11 @@ export function PaneStrip({
 /** The widths a drag is showing (see usePanes().preview), for a pane that renders meanwhile. */
 export let previewWidths: Map<string, number> | undefined;
 
-export const showPane = (id: string) => opener?.(id);
+/** Shows a view as a link does: by default where the view goes (some open in a window of their own); `here`, in a pane of this window whatever the view (Ctrl on a link: see viewClick). */
+export const showPane = (id: string, here = false) => opener?.(id, here);
 
 // the strip on the page, if any, opens a pane with room made (see openWithRoom)
-let opener: ((id: string) => void) | undefined;
+let opener: ((id: string, here: boolean) => void) | undefined;
 
 /** The panes on the page and what can be done to them; for the panes themselves and the phone's row. */
 export function usePanes() {

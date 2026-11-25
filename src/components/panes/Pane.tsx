@@ -1,4 +1,5 @@
 "use client";
+import { viewClick } from "./viewClick";
 import { CSSProperties, ReactNode, RefObject, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { previewWidths, usePaneRegistration, usePanes } from "./PaneStrip";
@@ -78,9 +79,10 @@ export function Pane({
   const toggle = () => setCollapsed(id, !remembered);
   /** A view icon on this pane's bar: the pane shows that view; Ctrl: a new pane of it after this one; Ctrl+Shift: at the end; Shift: a new window following this one. */
   const onView: OnView = (view, e) => {
-    if (e.shiftKey && !e.ctrlKey && !e.metaKey) return openPopOut(pathname, view, true);
-    if (e.ctrlKey || e.metaKey) return addPane(view, e.shiftKey ? undefined : place + 1);
-    switchView(id, view);
+    const click = viewClick(e);
+    if (click === "window") return openPopOut(pathname, view, true);
+    if (click === "pane" || click === "paneAtEnd") return addPane(view, click === "pane" ? place + 1 : undefined);
+    if (click === "default") switchView(id, view);
   };
   const hide = () => close([id]);
   // a drag of the pane (its name, its menu icon or its title): the pane leaves the row for
