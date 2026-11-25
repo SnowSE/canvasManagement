@@ -8,8 +8,13 @@ const courseIdInImageUrlRegex =
 const queryParametersInImageUrlRegex = /(<img[^>]*src="[^"]*)\?[^"]*"/g;
 // the key Canvas adds to a link to a course file for whoever reads the page
 const queryParametersInFileLinkRegex = /(href="[^"?#]*\/files\/\d+\/download)\?[^"#]*/g;
+// a span only changes how text looks (the colours of highlighted code, say), never what it says
+const spanTagRegex = /<\/?span\b[^>]*>/g;
 const escapedQuoteRegex = /\\"/g;
-const whitespaceRegex = /\s/g;
+// whitespace counts as one separator wherever it shows, but none beside a block
+// tag (a paragraph, a list, a code block), where it only lays the HTML out
+const whitespaceRunRegex = /(\s|&nbsp;)+/g;
+const besideBlockTagRegex = / ?(<\/?(?:p|div|pre|ul|ol|li|h[1-6]|table|thead|tbody|tr|td|th|blockquote|br|hr|figure|figcaption|caption|section)\b[^>]*>) ?/g;
 const hrTagRegex = /<hr\s*\/?>/g;
 const brTagRegex = /<br\s*\/?>/g;
 const htmlGreaterThanRegex = /&gt;/g;
@@ -32,10 +37,11 @@ function replaceUnicodeEscapes(input: string) {
 export const removeHtmlDetails = (html: string) => {
   const withoutUnicode = replaceUnicodeEscapes(html);
 
-  // First remove scripts and links
+  // First remove scripts, links and spans
   let processed = withoutUnicode
     .replaceAll(scriptTagRegex, "")
-    .replaceAll(linkTagRegex, "");
+    .replaceAll(linkTagRegex, "")
+    .replaceAll(spanTagRegex, "");
 
   // Remove every attribute but href and src (data-* attributes included)
   processed = processed.replaceAll(nonHrefAttributeRegex, "");
@@ -48,7 +54,9 @@ export const removeHtmlDetails = (html: string) => {
 
   return processed
     .replaceAll(escapedQuoteRegex, '"')
-    .replaceAll(whitespaceRegex, "")
+    .replaceAll(whitespaceRunRegex, " ")
+    .replaceAll(besideBlockTagRegex, "$1")
+    .trim()
     .replaceAll(hrTagRegex, "<hr>")
     .replaceAll(brTagRegex, "<br>")
     .replaceAll(htmlGreaterThanRegex, "")

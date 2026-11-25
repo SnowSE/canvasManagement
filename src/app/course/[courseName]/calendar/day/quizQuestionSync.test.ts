@@ -690,3 +690,38 @@ describe("one question at a time, either way (Compare with Canvas)", () => {
     expect(questionRow({ key: "dueAt" } as never)).toBeUndefined();
   });
 });
+
+describe("a question with a code block, which the app now colours (teichert, Nov 2026)", () => {
+  // as Canvas holds a question sent before code was coloured: the same code, plain
+  const codeQuestion = `Points: 1
+What does this print?
+\`\`\`python
+class Point:
+    pass
+\`\`\`
+*a) Point
+b) object`;
+  const plainInCanvas = canvasQuestion({
+    question_text: themed('<p>What does this print?</p>\n<pre><code class="language-python">class Point:\n    pass\n</code></pre>'),
+    answers: [
+      { id: 1, text: "Point", html: "", weight: 100 },
+      { id: 2, text: "object", html: "", weight: 0 },
+    ],
+  });
+  it("is the same as Canvas's plain copy of the same code: the colours are only how it looks", () => {
+    expect(checkQuizQuestions(questionsOf(codeQuestion), [plainInCanvas], settings)[0].same).toBe(true);
+  });
+  it("shows its words as Canvas's are, with no spaces where the colours begin and end", () => {
+    const [field] = checkQuizQuestions(questionsOf(codeQuestion.replace("class Point:", "class Points:")), [plainInCanvas], settings);
+    const text = (side: string) => side.split("\n").find((l) => l.startsWith("What does"))!;
+    expect(text(field.canvas)).toBe("What does this print? class Point: pass");
+    expect(text(field.local)).toBe("What does this print? class Points: pass");
+  });
+  it("still differs where the code itself does", () => {
+    expect(checkQuizQuestions(questionsOf(codeQuestion.replace("pass", "x = 1")), [plainInCanvas], settings)[0].same).toBe(false);
+  });
+  it("is in sync once pulled from Canvas", () => {
+    const pulled = pullQuestions(questionsOf(codeQuestion.replace("pass", "x = 1")), [plainInCanvas], [{ local: 0, canvas: 0 }]);
+    expect(checkQuizQuestions(pulled, [plainInCanvas], settings)[0].same).toBe(true);
+  });
+});
