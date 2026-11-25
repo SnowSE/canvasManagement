@@ -103,3 +103,14 @@ describe("normalized html diff", () => {
     expect(lines.some((l) => l.removed)).toBe(false);
   });
 });
+
+describe("the HTML diff of a page against Canvas, beside the sync check", () => {
+  const plain = '<p>Run it:</p><pre><code class="language-python">x = "a"\n</code></pre>';
+  const coloured = '<p>Run it:</p><pre><code class="language-python">x = <span style="color:#0a3069">"a"</span>\n</code></pre>';
+  it("shows no difference where the sync check sees none: coloured code against Canvas's plain copy", () => {
+    expect(normalizeHtmlForDiff(coloured)).toBe(normalizeHtmlForDiff(plain));
+  });
+  it("shows a swapped image, which the sync check counts", () => {
+    expect(normalizeHtmlForDiff('<img src="a.png">')).not.toBe(normalizeHtmlForDiff('<img src="b.png">'));
+  });
+});

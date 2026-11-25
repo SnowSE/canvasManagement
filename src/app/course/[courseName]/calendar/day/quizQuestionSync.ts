@@ -1,3 +1,4 @@
+import { withoutNoise } from "@/services/utils/htmlNoise";
 import { CanvasQuizQuestion } from "@/features/canvas/models/quizzes/canvasQuizQuestionModel";
 import {
   getAnswersForCanvas,
@@ -18,10 +19,8 @@ const UNSET = "—";
 
 /** Visible text of some HTML: no tags, theme scripts or entities, single spaces. */
 export const plainText = (html: string | null | undefined) =>
-  (html ?? "")
-    .replace(/<script[\s\S]*?<\/script>/g, "")
-    // a span sits inside a word as often as around one (highlighted code: "fn", "label", "("), so it adds no space
-    .replace(/<\/?span\b[^>]*>/g, "")
+  // what Canvas adds without changing what it says goes first (a span sits inside a word as often as around one, so it adds no space)
+  withoutNoise(html ?? "")
     .replace(/<[^>]+>/g, " ")
     .replaceAll("&nbsp;", " ")
     .replaceAll("&lt;", "<")

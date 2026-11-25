@@ -8,7 +8,7 @@ description: The checks in canvasManagement and when to run them - the fast chec
 1. A fast test that fails for the reason the change is for (a bug found in a
    browser run becomes such a test first, copying the real order of events).
 2. The fix, until `scripts/check.sh` is green.
-3. Onto the dev branch, and tell the owner what to try. He tries it there.
+3. Onto the dev branch, and tell the owner what to try; carry on without waiting for him.
 4. Only then, for the PR: the security review, the PR, the walkthrough and its
    timings (steps 2 to 5 below).
 
