@@ -13,7 +13,7 @@ import {
   useQuizQuery,
   useUpdateQuizMutation,
 } from "@/features/local/quizzes/quizHooks";
-import { useAuthoritativeUpdates } from "../../../../utils/useAuthoritativeUpdates";
+import { editorItemKey, useAuthoritativeUpdates } from "../../../../utils/useAuthoritativeUpdates";
 import EditQuizHeader from "./EditQuizHeader";
 import { UpdateQuizName } from "./UpdateQuizName";
 import { useGlobalSettingsQuery } from "@/features/local/globalSettings/globalSettingsHooks";
@@ -43,7 +43,7 @@ export default function EditQuiz({
 
   const { clientIsAuthoritative, text, textUpdate, textSaved, monacoKey } =
     useAuthoritativeUpdates({
-      itemKey: `quiz:${moduleName}/${quizName}`,
+      itemKey: editorItemKey("quiz", moduleName, quizName),
       startingText: quizMarkdownUtils.toMarkdown(quiz, feedbackDelimiters),
     });
 
@@ -122,7 +122,7 @@ export default function EditQuiz({
       if (!leaving) setError(e.toString());
     }
   };
-  useDelayedSave(`quiz:${moduleName}/${quizName}`, 1000, save, [
+  useDelayedSave(editorItemKey("quiz", moduleName, quizName), 1000, save, [
     bankFiles,
     bankPaths,
     clientIsAuthoritative,
@@ -140,7 +140,7 @@ export default function EditQuiz({
 
   return (
     <EditLayout
-      itemKey={`quiz:${moduleName}/${quizName}`}
+      itemKey={editorItemKey("quiz", moduleName, quizName)}
       Header={<EditQuizHeader quizName={quizName} />}
       HeaderActions={
         <UpdateQuizName quizName={quizName} moduleName={moduleName} />

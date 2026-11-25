@@ -21,7 +21,22 @@ import { useState, useMemo, useCallback } from "react";
  * that lands while this window has unsaved typing and the focus is not
  * taken; the typing stays and is saved over it. (An idle window, or one the
  * user has left, takes the change, so two windows can't take turns.)
+ *
+ * And one case content can't tell: the app itself rewriting the item from
+ * elsewhere (Compare with Canvas pulling Canvas's version) often restores a
+ * text this editor knew, the one it first loaded, which would otherwise read
+ * as a late echo and be saved over. Such a write says so first
+ * (takeNextFromServer), and the editor takes the next text from the server.
  */
+// the items the app has just rewritten outside their editor (see takeNextFromServer)
+const rewritten = new Set<string>();
+
+/** The key an editor opens an item under, and the app names the item by when it rewrites it (see takeNextFromServer). */
+export const editorItemKey = (kind: "assignment" | "quiz" | "page", moduleName: string, name: string) => `${kind}:${moduleName}/${name}`;
+
+/** Before the app rewrites an item outside its editor: the editor open on it takes the server's next text, whatever it is. */
+export const takeNextFromServer = (itemKey: string) => void rewritten.add(itemKey);
+
 export function useAuthoritativeUpdates({
   itemKey,
   startingText,
@@ -61,7 +76,9 @@ export function useAuthoritativeUpdates({
   // Only keystrokes make the client authoritative. Merely opening or
   // re-rendering an item must never be enough to trigger a save.
   const typingHere = text !== synced && typeof document !== "undefined" && document.hasFocus();
-  const clientIsAuthoritative = clientHasEdited && (known.includes(startingText) || typingHere);
+  // a rewrite the app announced: the server's text wins until the editor has taken it
+  const toTake = rewritten.has(itemKey);
+  const clientIsAuthoritative = !toTake && clientHasEdited && (known.includes(startingText) || typingHere);
 
   // a few, not one: late reads of earlier saves can still land
   const remember = (serverText: string) =>
@@ -72,11 +89,12 @@ export function useAuthoritativeUpdates({
     setText(t);
     setClientHasEdited(!fromServer);
     if (fromServer) {
+      rewritten.delete(itemKey);
       setKnown([t]);
       setSynced(t);
       setUpdateMonacoKey((k) => k + 1);
     }
-  }, []);
+  }, [itemKey]);
 
   /** The text just sent to the server (normalized): its echo is not a change, and the typing so far is saved. */
   const textSaved = useCallback(

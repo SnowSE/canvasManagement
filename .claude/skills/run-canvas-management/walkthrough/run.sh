@@ -23,7 +23,9 @@ cp -r $HERE/course/. "$WORK/storage"
 mkdir -p "$WORK/home"
 # the build is skipped when .output was built from exactly this checkout (same commit, nothing uncommitted)
 STAMP=.output/.walkthrough-built-from
-BUILT_FROM="$(git rev-parse HEAD^{tree})$(git status --porcelain -- src package.json pnpm-lock.yaml vite.config.ts vite.websocket.config.ts | md5sum | cut -c1-8)"
+# what the build is made from: the commit, and the content of every uncommitted change to its sources (not just which files changed)
+SOURCES="src package.json pnpm-lock.yaml vite.config.ts vite.websocket.config.ts"
+BUILT_FROM="$(git rev-parse HEAD^{tree})-$({ git diff HEAD -- $SOURCES; git ls-files --others --exclude-standard -- $SOURCES | xargs -r cat; } | md5sum | cut -c1-12)"
 if [ "$(cat $STAMP 2>/dev/null)" != "$BUILT_FROM" ]; then
   ./node_modules/.bin/vite build >"$WORK/build.log" 2>&1 && ./node_modules/.bin/vite build --config vite.websocket.config.ts >>"$WORK/build.log" 2>&1 || { tail -20 "$WORK/build.log"; exit 1; }
   echo "$BUILT_FROM" > $STAMP

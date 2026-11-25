@@ -246,6 +246,7 @@ time("into Canvas");
   check("→ sends that question alone to Canvas", sent !== undefined, await canvasQuestion1());
   const insync = await waitFor(page, async () => !(await differingRows()).some((r) => /Question/.test(r)), 20000);
   check("…after which Compare with Canvas shows the questions in sync", insync !== undefined, (await differingRows()).join(" | "));
+  check("a question in sync keeps its arrows, to send or take its exact text anyway", (await page.getByRole("button", { name: "Pull Question 1 · multiple choice from Canvas" }).count()) === 1 && (await page.getByRole("button", { name: "Send Question 1 · multiple choice to Canvas" }).count()) === 1);
 
   await fs.writeFile(quizFile, (await fs.readFile(quizFile, "utf-8")).replace("What is 3 + 3?", "What is 1 + 5?"));
   await openCompare();
@@ -253,6 +254,19 @@ time("into Canvas");
   await move("Pull Question 1 · multiple choice from Canvas").catch((e) => check("…the question's ← pulls it", false, e.message.slice(0, 120)));
   const pulled = await waitFor(page, async () => (await fs.readFile(quizFile, "utf-8")).includes("What is 3 + 3?"), 20000);
   check("← pulls Canvas's version of that question into the file, the rest left as they were", pulled !== undefined && (await fs.readFile(quizFile, "utf-8")).includes("Describe one thing you learned this week."), (await fs.readFile(quizFile, "utf-8")).split("---")[1]?.slice(0, 120));
+
+  // a pull with the editor open beside Compare, after an edit typed there: the pulled text stays
+  await page.goto(`${base}/course/Walkthrough/modules/${M}/quiz/Quiz%201?panes=e,d`, { waitUntil: "load" });
+  await waitFor(page, async () => (await page.locator(".view-lines").first().innerText()).includes("3 + 3"));
+  await page.getByText("What is 3 + 3?").first().click();
+  await page.keyboard.press("End");
+  await page.keyboard.type(" (typed)");
+  await waitFor(page, async () => (await fs.readFile(quizFile, "utf-8")).includes("(typed)"));
+  await waitFor(page, async () => (await differingRows()).some((r) => /Question 1/.test(r)));
+  await move("Pull Question 1 · multiple choice from Canvas").catch((e) => check("…the question's ← pulls it with the editor open", false, e.message.slice(0, 120)));
+  await waitFor(page, async () => !(await fs.readFile(quizFile, "utf-8")).includes("(typed)"));
+  await page.waitForTimeout(2500); // past the editor's save delay: a write back would have landed by now
+  check("a pull sticks with the editor open beside Compare, though the editor had typing", !(await fs.readFile(quizFile, "utf-8")).includes("(typed)"), (await fs.readFile(quizFile, "utf-8")).match(/What is [^\n]*/)?.[0]);
   await ctx.close();
 }
 

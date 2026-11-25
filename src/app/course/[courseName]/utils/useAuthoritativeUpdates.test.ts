@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { act, renderHook } from "@testing-library/react";
-import { useAuthoritativeUpdates } from "./useAuthoritativeUpdates";
+import { takeNextFromServer, useAuthoritativeUpdates } from "./useAuthoritativeUpdates";
 
 /**
  * The editor keeps the text the user is editing in this hook. When navigation
@@ -91,6 +91,36 @@ describe("useAuthoritativeUpdates", () => {
     rerender({ itemKey: "page:lab-02", startingText: "lab 2" });
     expect(result.current.clientIsAuthoritative).toBe(true);
     expect(result.current.text).toBe("lab 2 edited more");
+  });
+
+  it("takes the server's text when the app itself rewrote the item elsewhere (a pull from Canvas), even if it is a text this editor knew", () => {
+    const { result, rerender } = renderForItem("quiz:Week 1/Quiz 1", "What is 2 + 4?");
+    act(() => result.current.textUpdate("What is 2 + 4? (typed)"));
+    act(() => result.current.textSaved("What is 2 + 4? (typed)"));
+
+    // Compare pulls Canvas's version, which is the text the editor first loaded; the editor
+    // renders again with its own saved text before the server's new text arrives
+    takeNextFromServer("quiz:Week 1/Quiz 1");
+    rerender({ itemKey: "quiz:Week 1/Quiz 1", startingText: "What is 2 + 4? (typed)" });
+    rerender({ itemKey: "quiz:Week 1/Quiz 1", startingText: "What is 2 + 4?" });
+    expect(result.current.clientIsAuthoritative).toBe(false);
+
+    // the editor takes it; after that, its own earlier texts are history again
+    act(() => result.current.textUpdate("What is 2 + 4?", true));
+    expect(result.current.text).toBe("What is 2 + 4?");
+    act(() => result.current.textUpdate("What is 2 + 4? edited"));
+    act(() => result.current.textSaved("What is 2 + 4? edited"));
+    rerender({ itemKey: "quiz:Week 1/Quiz 1", startingText: "What is 2 + 4?" });
+    expect(result.current.clientIsAuthoritative).toBe(true);
+  });
+
+  it("is not told to take the next server text for another item's rewrite", () => {
+    const { result, rerender } = renderForItem("quiz:Week 1/Quiz 1", "a");
+    act(() => result.current.textUpdate("a typed"));
+    act(() => result.current.textSaved("a typed"));
+    takeNextFromServer("quiz:Week 1/Quiz 2");
+    rerender({ itemKey: "quiz:Week 1/Quiz 1", startingText: "a" });
+    expect(result.current.clientIsAuthoritative).toBe(true);
   });
 
   it("lets the server win when the text changed outside this editor", () => {

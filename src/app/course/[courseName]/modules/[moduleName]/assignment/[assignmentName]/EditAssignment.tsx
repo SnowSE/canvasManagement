@@ -12,7 +12,7 @@ import ClientOnly from "@/components/ClientOnly";
 import { SuspenseAndErrorHandling } from "@/components/SuspenseAndErrorHandling";
 import { AssignmentFooterButtons } from "./AssignmentFooterButtons";
 import { parsedOrNothing, useSettledText } from "@/app/course/[courseName]/utils/draft";
-import { useAuthoritativeUpdates } from "@/app/course/[courseName]/utils/useAuthoritativeUpdates";
+import { editorItemKey, useAuthoritativeUpdates } from "@/app/course/[courseName]/utils/useAuthoritativeUpdates";
 import EditAssignmentHeader from "./EditAssignmentHeader";
 import { UpdateAssignmentName } from "./UpdateAssignmentName";
 import { EditLayout } from "@/components/EditLayout";
@@ -37,7 +37,7 @@ export default function EditAssignment({
 
   const { clientIsAuthoritative, text, textUpdate, textSaved, monacoKey } =
     useAuthoritativeUpdates({
-      itemKey: `assignment:${moduleName}/${assignmentName}`,
+      itemKey: editorItemKey("assignment", moduleName, assignmentName),
       startingText: localAssignmentMarkdown.toMarkdown(assignment),
     });
 
@@ -84,7 +84,7 @@ export default function EditAssignment({
       if (!leaving) setError(e.toString());
     }
   };
-  useDelayedSave(`assignment:${moduleName}/${assignmentName}`, 500, save, [
+  useDelayedSave(editorItemKey("assignment", moduleName, assignmentName), 500, save, [
     assignment,
     assignmentName,
     clientIsAuthoritative,
@@ -99,7 +99,7 @@ export default function EditAssignment({
 
   return (
     <EditLayout
-      itemKey={`assignment:${moduleName}/${assignmentName}`}
+      itemKey={editorItemKey("assignment", moduleName, assignmentName)}
       Header={<EditAssignmentHeader assignmentName={assignmentName} />}
       HeaderActions={
         <UpdateAssignmentName
