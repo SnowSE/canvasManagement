@@ -633,3 +633,38 @@ export function pointTotalChangeError(
   if (fileTotal === studentsTotal) return undefined;
   return `Students who started were scored out of ${studentsTotal} points, and the file's questions total ${fileTotal}. Changing the total needs a regrade in Canvas, so the quiz was not updated.`;
 }
+
+/** The questions a compare row pairs, by their place in the file (`local`) and in Canvas (`canvas`); none for a row that is no question's. */
+export function questionRow(field: SyncField): { local?: number; canvas?: number } | undefined {
+  const match = /^question:(-|\d+):(-|\d+)$/.exec(field.key);
+  if (!match) return undefined;
+  const index = (s: string) => (s === "-" ? undefined : Number(s));
+  return { ...(index(match[1]) !== undefined && { local: index(match[1]) }), ...(index(match[2]) !== undefined && { canvas: index(match[2]) }) };
+}
+
+/** Whether a quiz's questions can be sent or pulled one at a time: not where either side has question groups, which only go whole. */
+export const questionsMoveAlone = (questions: LocalQuizQuestion[], canvasQuestions: CanvasQuizQuestion[]) =>
+  !questions.some((q) => q.group) && !canvasQuestions.some((q) => q.quiz_group_id);
+
+/**
+ * What sending one question to Canvas does, the rest left as they are: the
+ * Canvas question it replaces or deletes (`remove`, its place in Canvas),
+ * the file question it adds (`add`, its place in the file), and Canvas's
+ * questions in their order afterwards (`order`: each by its place in Canvas
+ * now, "new" for the one added). A question Canvas lacks goes after the
+ * Canvas question paired with the file question before it.
+ */
+export function sendingOneQuestion(plan: QuestionPlanRow[], row: { local?: number; canvas?: number }) {
+  const order: (number | "new")[] = [...new Set(plan.flatMap((r) => (r.canvas === undefined ? [] : [r.canvas])))].sort((a, b) => a - b);
+  if (row.canvas !== undefined) {
+    const at = order.indexOf(row.canvas);
+    if (row.local === undefined) order.splice(at, 1);
+    else order[at] = "new";
+  } else if (row.local !== undefined) {
+    const before = plan
+      .filter((r) => r.local !== undefined && r.local < row.local! && r.canvas !== undefined)
+      .sort((a, b) => b.local! - a.local!)[0];
+    order.splice(before ? order.indexOf(before.canvas!) + 1 : 0, 0, "new");
+  }
+  return { ...(row.canvas !== undefined && { remove: row.canvas }), ...(row.local !== undefined && { add: row.local }), order };
+}

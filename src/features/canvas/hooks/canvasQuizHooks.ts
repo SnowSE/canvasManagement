@@ -21,7 +21,11 @@ import {
   pointTotalChangeError,
   describeQuestionPlan,
   planQuestionUpdates,
+  sendingOneQuestion,
 } from "@/app/course/[courseName]/calendar/day/quizQuestionSync";
+import { convertQuestion } from "../import/canvasImport";
+import { CanvasQuiz } from "../models/quizzes/canvasQuizModel";
+import { CanvasQuizQuestion } from "../models/quizzes/canvasQuizQuestionModel";
 
 export const canvasQuizKeys = {
   quizzes: (canvasCourseId: number) =>
@@ -251,6 +255,52 @@ export const useUpdateQuizInCanvasMutation = () => {
       console.error("Failed to update quiz in Canvas:", error);
       showErrorToast(error.message);
     },
+  });
+};
+
+/**
+ * Sends one question of the file to Canvas, as a row of Compare with Canvas
+ * does (see sendingOneQuestion), with Update in Canvas's safeguards: it
+ * refuses to change the point total students who started were scored out
+ * of, asks first if students have started, and says when Canvas still needs
+ * "Save it now" on a published quiz.
+ */
+export const useSendQuestionToCanvasMutation = () => {
+  const { data: settings } = useLocalCourseSettingsQuery();
+  const queryClient = useQueryClient();
+  const prepareImages = usePrepareImagesForCanvas();
+  const commitAfterPublish = useCommitAfterPublish();
+  return useMutation({
+    mutationFn: async ({ quiz, canvasQuiz, row, canvasQuestions }: { quiz: LocalQuiz; canvasQuiz: CanvasQuiz; row: { local?: number; canvas?: number }; canvasQuestions: CanvasQuizQuestion[] }) => {
+      const sending = sendingOneQuestion(planQuestionUpdates(quiz.questions, canvasQuestions, settings), row);
+      const question = sending.add === undefined ? undefined : quiz.questions[sending.add];
+      const what =
+        sending.add === undefined ? `Canvas question ${sending.remove! + 1} removed` : `question ${sending.add + 1} ${sending.remove === undefined ? "added" : "replaced"}`;
+      const publishSettings = await prepareImages(question ? [question.text, ...question.answers.map((a) => a.text)] : []);
+      const versions = await canvasQuizService.getVersionsTaken(settings.canvasId, canvasQuiz.id);
+      if (versions.length > 0) {
+        const studentsGot = await canvasQuizService.getAttemptQuestions(versions[0].attemptId);
+        const after = sending.order.map((i) => (i === "new" ? question! : convertQuestion(canvasQuestions[i])));
+        const pointsError = pointTotalChangeError(after, studentsGot);
+        if (pointsError) throw new Error(pointsError);
+        if (!window.confirm(submissionWarning(versions.reduce((sum, v) => sum + v.attempts, 0), what))) return false;
+      }
+      await canvasQuizService.sendQuestion(settings.canvasId, canvasQuiz.id, quiz, publishSettings, sending, canvasQuestions);
+      await queryClient.invalidateQueries({ queryKey: canvasQuizKeys.questions(settings.canvasId, canvasQuiz.id) });
+      const sent = `Sent to Canvas: ${what} in "${quiz.name}".`;
+      if (canvasQuiz.published)
+        showActionNeededToast(
+          `${sent} Students still get the old questions until you click "Save it now" on the quiz page.`,
+          `${baseCanvasUrl}/courses/${settings.canvasId}/quizzes/${canvasQuiz.id}`,
+          "Open the quiz in Canvas",
+        );
+      else toast.success(sent);
+      return true;
+    },
+    onSuccess: (sent, { quiz }) => {
+      if (sent) commitAfterPublish(`quiz "${quiz.name}"`);
+    },
+    onError: (error) => showErrorToast(error.message),
   });
 };
 

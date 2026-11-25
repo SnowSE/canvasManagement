@@ -665,6 +665,30 @@ export const canvasQuizService = {
 
     return { plan, needsSaveInCanvas: canvasQuiz.published === true, quiz: asListed(canvasQuiz) };
   },
+  /**
+   * Sends one question of the file, the rest of the quiz left as it is (see
+   * sendingOneQuestion): the Canvas question it replaces or deletes goes,
+   * the file's is added, and Canvas's questions are put in `order`.
+   * `canvasQuestions` are Canvas's questions as that plan read them.
+   */
+  async sendQuestion(
+    canvasCourseId: number,
+    canvasQuizId: number,
+    localQuiz: LocalQuiz,
+    settings: LocalCourseSettings,
+    { remove, add, order }: { remove?: number; add?: number; order: (number | "new")[] },
+    canvasQuestions: CanvasQuizQuestion[],
+  ) {
+    const url = `${canvasApi}/courses/${canvasCourseId}/quizzes/${canvasQuizId}`;
+    if (remove !== undefined) await rateLimitAwareDelete(`${url}/questions/${canvasQuestions[remove].id}`);
+    if (add === undefined) return;
+    const { question } = await createQuestionOnly(canvasCourseId, canvasQuizId, localQuiz.questions[add], add, settings);
+    await hackFixQuestionOrdering(
+      canvasCourseId,
+      canvasQuizId,
+      order.map((i, position) => ({ question: i === "new" ? question : canvasQuestions[i], position })),
+    );
+  },
   /** Attempts students have started or finished (Canvas also lists "settings_only" rows for students with extra time). */
   async listAttempts(canvasCourseId: number, canvasQuizId: number) {
     const pages = await paginatedRequest<
