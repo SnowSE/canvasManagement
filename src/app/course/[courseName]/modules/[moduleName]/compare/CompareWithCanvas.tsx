@@ -754,9 +754,15 @@ const FieldsTable: FC<{
   sendable?: SyncField[];
   onMove?: (to: "canvas" | "file", field: SyncField) => void;
 }> = ({ fields, title, canvasLabel = "Canvas now", pullable = [], sendable = [], onMove }) => {
-  const arrow = (f: SyncField, to: "canvas" | "file") => (
+  // a thin translucent slab over the cell's inner edge, toward the other side (it takes no room): the file's right edge sends, Canvas's left edge pulls
+  const slab = (f: SyncField, to: "canvas" | "file") => (
     <button
-      className="unstyled p-0.5 rounded text-slate-400 hover:bg-slate-700 hover:text-slate-100"
+      className={
+        // !p-0: the global button padding would squeeze the arrow out of a slab this thin
+        "unstyled !p-0 absolute inset-y-0 w-4 flex items-center justify-center rounded-sm text-slate-100 hover:bg-blue-700/80 hover:text-white " +
+        (to === "canvas" ? "right-0 " : "left-0 ") +
+        (f.same ? "opacity-0 group-hover:opacity-100 focus:opacity-100 bg-slate-500/25" : "bg-slate-500/35")
+      }
       title={to === "canvas" ? `Send to Canvas: Canvas's ${f.label.toLowerCase()} becomes the file's…` : `Pull into the file: the file's ${f.label.toLowerCase()} becomes Canvas's…`}
       aria-label={to === "canvas" ? `Send ${f.label} to Canvas` : `Pull ${f.label} from Canvas`}
       onClick={() => onMove?.(to, f)}
@@ -787,7 +793,6 @@ const FieldsTable: FC<{
             <col />
             <col className="w-8" />
             <col />
-            <col className="w-20" />
             <col className="w-8" />
           </colgroup>
           <thead>
@@ -796,7 +801,6 @@ const FieldsTable: FC<{
               <th className="text-start font-medium">File</th>
               <th></th>
               <th className="text-start font-medium">{canvasLabel}</th>
-              <th></th>
               <th></th>
             </tr>
           </thead>
@@ -820,20 +824,17 @@ const FieldsTable: FC<{
                       </span>
                     )}
                   </td>
-                  <td className="align-top">
+                  <td className="align-top relative">
                     <Cell field={f} side="local" />
+                    {has(sendable, f) && slab(f, "canvas")}
                   </td>
                   <td className="text-center text-slate-600 align-top whitespace-nowrap">
                     {/* a difference that can't move alone goes with the whole item: Update in Canvas, in the editor's footer */}
                     {!f.same && !has(pullable, f) && !has(sendable, f) && <span title="This row goes with the whole item: Update in Canvas, in the editor's footer">≠</span>}
                   </td>
-                  <td className="align-top">
+                  <td className="align-top relative">
+                    {has(pullable, f) && slab(f, "file")}
                     <Cell field={f} side="canvas" />
-                  </td>
-                  <td className={"text-end align-top whitespace-nowrap " + (f.same ? "opacity-30 group-hover:opacity-100 focus-within:opacity-100" : "")}>
-                    {/* each way it can move on its own, in sync or not: a green row's value can still be sent or taken exactly */}
-                    {has(pullable, f) && arrow(f, "file")}
-                    {has(sendable, f) && arrow(f, "canvas")}
                   </td>
                   <td className="text-end align-top">
                     <Dot className={f.same ? "bg-green-600" : "bg-rose-500"} />
