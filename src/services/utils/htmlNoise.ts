@@ -1,11 +1,13 @@
 // What a Canvas copy of an item adds or changes without changing what it says,
-// in one place (the sync check, htmlIsCloseEnough, starts from it).
+// in one place: the sync check (htmlIsCloseEnough), the HTML diff beside it
+// (htmlTextDiff) and the words a quiz question's row shows (quizQuestionSync)
+// all start from this, so they can't disagree about what is noise.
 
 // the theme's scripts and stylesheet links Canvas wraps around stored HTML
-const scriptTagRegex = /<script.*?<\/script>/g;
-const linkTagRegex = /<link\s+rel="[^"]*"\s+href="[^"]*"[^>]*>/g;
+const scriptTagRegex = /<script[\s\S]*?<\/script>/gi;
+const linkTagRegex = /<link\s+rel="[^"]*"\s+href="[^"]*"[^>]*>/gi;
 // a span only changes how text looks (the colours of highlighted code, say), never what it says
-const spanTagRegex = /<\/?span\b[^>]*>/g;
+const spanTagRegex = /<\/?span\b[^>]*>/gi;
 // every attribute but where a link goes and what an image shows: Canvas adds and reorders the rest
 const nonHrefAttributeRegex =
   /\s+(?!(?:href|src)\s*=)[\w-]+="[^"]*"|\s+(?!(?:href|src)\s*=)[\w-]+='[^']*'|\s+(?!(?:href|src)\s*=)[\w-]+=[^\s>]+/g;

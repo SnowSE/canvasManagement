@@ -1,3 +1,4 @@
+import { withoutNoise } from "./htmlNoise";
 import { diffArrays, diffLines, diffWordsWithSpace } from "diff";
 
 /**
@@ -148,22 +149,13 @@ export function collapseUnchanged(
   return result;
 }
 
-const scriptTagRegex = /<script[\s\S]*?<\/script>/gi;
-const linkTagRegex = /<link\s+rel="[^"]*"\s+href="[^"]*"[^>]*>/gi;
-// every attribute except href, the same rule the sync check applies
-const nonHrefAttributeRegex =
-  /\s+(?!href\s*=)[\w-]+="[^"]*"|\s+(?!href\s*=)[\w-]+='[^']*'|\s+(?!href\s*=)[\w-]+=[^\s>]+/g;
-
 /**
- * HTML with the noise the sync check ignores stripped out (scripts, link
- * tags, non-href attributes, whitespace between tags), one tag boundary per
- * line so a line diff points at the element that differs.
+ * HTML with the noise the sync check ignores stripped out (see withoutNoise,
+ * and whitespace between tags), one tag boundary per line so a line diff
+ * points at the element that differs.
  */
 export function normalizeHtmlForDiff(html: string): string {
-  return html
-    .replace(scriptTagRegex, "")
-    .replace(linkTagRegex, "")
-    .replace(nonHrefAttributeRegex, "")
+  return withoutNoise(html)
     .replace(/\\"/g, '"')
     .replace(/>\s+</g, "><")
     .replace(/\s+/g, " ")
