@@ -4,6 +4,13 @@ Edits Canvas LMS course content stored as markdown on disk. To run, screenshot
 or test the app, use the `run-canvas-management` skill
 (`.claude/skills/run-canvas-management/SKILL.md`).
 
+## Before every push or PR
+
+Follow the `pre-pr` skill (`.claude/skills/pre-pr/SKILL.md`): `scripts/check.sh`,
+then, once a feature looks done, the walkthrough in the `run-canvas-management`
+skill (a browser pass against a fake Canvas, with recorded timings), a
+security review, and the docs below.
+
 ## Keep the docs current
 
 Every change that a user can see (a new feature, new syntax, a changed button,
