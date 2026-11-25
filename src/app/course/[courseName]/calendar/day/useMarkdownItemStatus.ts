@@ -1,5 +1,5 @@
 "use client";
-import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
+import { useSettingsWithCanvasFiles } from "@/features/canvas/hooks/canvasCourseFileHooks";
 import { useCanvasAssignmentsQuery } from "@/features/canvas/hooks/canvasAssignmentHooks";
 import { useCanvasPagesQuery } from "@/features/canvas/hooks/canvasPageHooks";
 import { useCanvasQuizzesQuery } from "@/features/canvas/hooks/canvasQuizHooks";
@@ -30,7 +30,8 @@ export function remembered(key: string, deps: unknown[], compare: () => ItemSync
  * name, and compared. Nothing until Canvas has answered.
  */
 export function useMarkdownItemStatusOf(type: "assignment" | "quiz" | "page") {
-  const { data: settings } = useLocalCourseSettingsQuery();
+  // with each course file's address in Canvas, as an item's links to files are sent (and as the Compare pane renders them)
+  const settings = useSettingsWithCanvasFiles();
   const { data: canvasAssignments } = useCanvasAssignmentsQuery();
   const { data: canvasQuizzes } = useCanvasQuizzesQuery();
   const { data: canvasPages } = useCanvasPagesQuery();
