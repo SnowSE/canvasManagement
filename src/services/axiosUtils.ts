@@ -3,6 +3,7 @@ import { isServer } from "@tanstack/react-query";
 import axios, { AxiosInstance, AxiosError } from "axios";
 import { showErrorToast } from "@/app/MyToaster";
 import { createCanvasRequestQueue } from "./canvasRequestQueue";
+import { towardFakeCanvas } from "./fakeCanvas";
 
 const canvasBaseUrl = "https://snow.instructure.com/api/v1/";
 // New Quizzes has its own API beside v1, with its own proxy route
@@ -27,9 +28,11 @@ if (!isServer) {
   // here covers every Canvas request the app makes.
   const canvasQueue = createCanvasRequestQueue();
   const send = axios.getAdapter(axios.defaults.adapter);
+  // the walkthrough's fake Canvas, when set (see towardFakeCanvas)
+  const fake = process.env.CANVAS_FAKE_URL;
   axiosClient.defaults.adapter = (config) =>
     isCanvasUrl(config.url)
-      ? canvasQueue.run(config, send)
+      ? canvasQueue.run({ ...config, url: towardFakeCanvas(config.url!, fake) }, send)
       : send(config);
 
   const token = process.env.CANVAS_TOKEN;

@@ -1,11 +1,15 @@
-// A new user's pass over the app, against the walkthrough course with Canvas
-// stubbed (every Canvas list is empty, so everything reads "not in Canvas").
+// A new user's pass over the app, against the walkthrough course and a fake
+// Canvas holding its course in memory (fakeCanvas.mjs): every item starts
+// not in Canvas, and is added and published there along the way.
 // Each check prints PASS or FAIL; timings print as BENCH lines. Run by
 // scripts/walkthrough/run.sh inside the playwright container.
 import { chromium } from "playwright";
 import fs from "fs/promises";
 
-const base = process.env.BASE ?? "http://localhost:3002";
+// where the app and the fake Canvas are: run.sh says, having picked free ports
+const { BASE: base, FAKE: fake } = process.env;
+if (!base || !fake) throw new Error("BASE and FAKE (the app's and the fake Canvas's addresses) are set by run.sh");
+const canvas = async (what) => (await fetch(`${fake}/${what}`)).json();
 const course = process.env.COURSE_DIR ?? "/course/Walkthrough"; // the served copy, to read what the app wrote
 const results = [];
 const bench = {};
@@ -18,7 +22,6 @@ const newPage = async (width = 1500) => {
   const page = await ctx.newPage();
   // a stale render on the first load is expected noise (see the run skill)
   page.on("pageerror", (e) => !/Hydration failed/.test(String(e)) && errors.push(String(e).slice(0, 200)));
-  await page.route("**/api/canvas/**", (r) => r.fulfill({ json: [] }));
   return { ctx, page };
 };
 const waitFor = async (page, test, timeout = 15000) => {
@@ -36,6 +39,7 @@ const items = [
   { kind: "page", name: "Day 2", icon: "Page", text: "DateForOrdering", menu: ["Add to Canvas", "Duplicate", "Rename"] },
   { kind: "file", name: "demo.html", icon: "File", text: "<!doctype", menu: ["Add to Canvas", "Make a page for it"] },
 ];
+const shape = { kind: "file", name: "shape.svg" };
 
 {
   const { ctx, page } = await newPage();
@@ -111,6 +115,56 @@ const items = [
   const made = await waitFor(page, async () => (await fs.readFile(`${course}/02 - Basics/pages/shape.md`, "utf-8")).includes("](../files/shape.svg)"));
   check("Make a page for it writes a page that links to the file", made !== undefined);
   check("…and opens it", decodeURIComponent(page.url()).includes("/page/shape"), decodeURIComponent(page.url()));
+  await ctx.close();
+}
+
+{
+  // Into Canvas: each kind added and published from its footer, then in sync.
+  // The files first: the page links to one and shows the other, and a page using a file Canvas lacks is refused.
+  const { ctx, page } = await newPage();
+  const toasts = [];
+  const footer = async () => {
+    const lines = (await page.locator("body").innerText()).split("\n").filter((l) => /Canvas|Publish|sync|differ/i.test(l)).slice(-6).join(" | ");
+    // what differs, as the Compare pane lists it, and what the app said in its toasts
+    const compare = await page.evaluate(() => [...document.querySelectorAll("tr")].filter((tr) => tr.querySelector(".bg-rose-500")).map((tr) => tr.innerText.replace(/\s+/g, " ").slice(0, 160)));
+    return [lines, ...compare, ...toasts.splice(0)].join(" || ");
+  };
+  page.on("console", (m) => /error|fail/i.test(m.text()) && toasts.push("console: " + m.text().slice(0, 200)));
+  const clickFooter = async (label) => {
+    const button = page.locator("button", { hasText: label }).last();
+    if (!(await button.count())) return false;
+    await button.click();
+    return true;
+  };
+  for (const it of [items[3], shape, items[0], items[1], items[2]]) {
+    await page.goto(`${base}/course/Walkthrough/modules/${M}/${it.kind}/${encodeURIComponent(it.name)}?panes=e,d`, { waitUntil: "load" });
+    await waitFor(page, async () => /Add to Canvas/.test(await page.locator("body").innerText()));
+    await clickFooter("Add to Canvas");
+    await page.waitForTimeout(1500);
+    const said = await page.locator('[role="status"]').allInnerTexts().catch(() => []);
+    toasts.push(...said.map((t) => "toast: " + t.slice(0, 200)));
+    const added = await waitFor(page, async () => /Publish in Canvas/.test(await page.locator("body").innerText()), 20000);
+    check(`${it.name} is added to Canvas from its footer`, added !== undefined, await footer());
+    page.once("dialog", (d) => d.accept());
+    await clickFooter("Publish in Canvas");
+    const published = await waitFor(page, async () => /In sync · Published/.test(await page.locator("body").innerText()), 20000);
+    check(`${it.name} is published, and its footer then reads in sync and published`, published !== undefined, await footer());
+  }
+  const held = await canvas("__state");
+  check("Canvas has the assignment, the quiz with its 2 questions, the page and the file, each published", held.assignments.some((a) => a.name === "Lab 1" && a.published) && held.quizzes.some((q) => q.title === "Quiz 1" && q.published && (held.questions[q.id] ?? []).length === 2) && held.pages.some((p) => p.title === "Day 2" && p.published) && held.files.some((f) => f.display_name === "demo.html" && !f.locked), JSON.stringify({ assignments: held.assignments.map((a) => [a.name, a.published]), quizzes: held.quizzes.map((q) => [q.title, q.published, (held.questions[q.id] ?? []).length]), pages: held.pages.map((p) => [p.title, p.published]), files: held.files.map((f) => [f.display_name, f.locked]) }));
+  const page2 = held.pages.find((p) => p.title === "Day 2");
+  const fileId = held.files.find((f) => f.display_name === "demo.html")?.id;
+  check("the page's link points at the file's copy in Canvas", page2?.body?.includes(`/files/${fileId}/download`), page2?.body?.slice(0, 200));
+
+  // the module list says the same as each footer: in sync
+  await page.goto(`${base}/course/Walkthrough?panes=m`, { waitUntil: "load" });
+  await waitFor(page, async () => (await page.getByText("Expand all").count()) > 0);
+  await page.getByText("Expand all").first().click().catch(() => {});
+  await page.waitForTimeout(3000);
+  const bar = (await page.locator("body").innerText()).match(/\d+ (Not In Canvas|Needs Sync|Unpublished)/g) ?? [];
+  check("the module list then shows nothing needing sync or publishing for them", !bar.some((b) => /Needs Sync|Unpublished/.test(b)), bar.join(", "));
+  const unknownCalls = await canvas("__unknown");
+  check("the app asked Canvas only for what the fake Canvas knows", unknownCalls.length === 0, [...new Set(unknownCalls)].slice(0, 6).join("; "));
   await ctx.close();
 }
 
