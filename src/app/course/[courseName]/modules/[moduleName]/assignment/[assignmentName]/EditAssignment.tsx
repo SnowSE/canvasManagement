@@ -1,10 +1,11 @@
 "use client";
+import { useDelayedSave } from "@/app/course/[courseName]/utils/useDelayedSave";
 import { MonacoEditor } from "@/components/editor/MonacoEditor";
 import {
   LocalAssignment,
   localAssignmentMarkdown,
 } from "@/features/local/assignments/models/localAssignment";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import AssignmentPreview from "./AssignmentPreview";
 import { useCourseContext } from "@/app/course/[courseName]/context/courseContext";
 import ClientOnly from "@/components/ClientOnly";
@@ -48,56 +49,42 @@ export default function EditAssignment({
     [settledText, assignmentName],
   );
 
-  useEffect(() => {
-    const delay = 500;
-
-    const save = () => {
-      try {
-        if (assignmentIsFetching || updateAssignment.isPending) {
-          console.log("network requests in progress, not updating assignments");
-          return;
-        }
-
-        // make separate way to update name?
-        const updatedAssignment: LocalAssignment =
-          localAssignmentMarkdown.parseMarkdown(text, assignmentName);
-        const updatedMarkdown = localAssignmentMarkdown.toMarkdown(updatedAssignment);
-        if (localAssignmentMarkdown.toMarkdown(assignment) !== updatedMarkdown) {
-          if (clientIsAuthoritative) {
-            console.log("updating assignment, client is authoritative");
-            textSaved(updatedMarkdown);
-            updateAssignment.mutateAsync({
-              assignment: updatedAssignment,
-              moduleName,
-              assignmentName,
-              previousModuleName: moduleName,
-              previousAssignmentName: assignmentName,
-              courseName,
-            });
-          } else {
-            console.log("client not authoritative, updating client with server assignment");
-            textUpdate(localAssignmentMarkdown.toMarkdown(assignment), true);
-          }
-        }
-        setError("");
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } catch (e: any) {
-        setError(e.toString());
+  // the item's text written to its file; on the way out of the item (`leaving`) only that, never the editor's own state, which is the next item's by then
+  const save = (leaving: boolean) => {
+    try {
+      if (!leaving && (assignmentIsFetching || updateAssignment.isPending)) {
+        console.log("network requests in progress, not updating assignments");
+        return;
       }
-    };
-    const handler = setTimeout(save, delay);
-    // a pending save goes out when the window loses focus, before typing goes on elsewhere
-    const flush = () => {
-      clearTimeout(handler);
-      save();
-    };
-    window.addEventListener("blur", flush, { once: true });
 
-    return () => {
-      clearTimeout(handler);
-      window.removeEventListener("blur", flush);
-    };
-  }, [
+      // make separate way to update name?
+      const updatedAssignment: LocalAssignment =
+        localAssignmentMarkdown.parseMarkdown(text, assignmentName);
+      const updatedMarkdown = localAssignmentMarkdown.toMarkdown(updatedAssignment);
+      if (localAssignmentMarkdown.toMarkdown(assignment) !== updatedMarkdown) {
+        if (clientIsAuthoritative) {
+          console.log("updating assignment, client is authoritative");
+          if (!leaving) textSaved(updatedMarkdown);
+          updateAssignment.mutateAsync({
+            assignment: updatedAssignment,
+            moduleName,
+            assignmentName,
+            previousModuleName: moduleName,
+            previousAssignmentName: assignmentName,
+            courseName,
+          });
+        } else if (!leaving) {
+          console.log("client not authoritative, updating client with server assignment");
+          textUpdate(localAssignmentMarkdown.toMarkdown(assignment), true);
+        }
+      }
+      if (!leaving) setError("");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (e: any) {
+      if (!leaving) setError(e.toString());
+    }
+  };
+  useDelayedSave(`assignment:${moduleName}/${assignmentName}`, 500, save, [
     assignment,
     assignmentName,
     clientIsAuthoritative,

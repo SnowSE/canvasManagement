@@ -1,4 +1,5 @@
 "use client";
+import { useDelayedSave } from "@/app/course/[courseName]/utils/useDelayedSave";
 import { MonacoEditor } from "@/components/editor/MonacoEditor";
 import {
   useLecturesSuspenseQuery,
@@ -8,7 +9,7 @@ import {
   lectureToString,
   parseLecture,
 } from "@/features/local/lectures/lectureUtils";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import LecturePreview from "./LecturePreview";
 import EditLectureTitle from "./EditLectureTitle";
 import LectureButtons from "./LectureButtons";
@@ -40,53 +41,39 @@ export default function EditLecture({ lectureDay }: { lectureDay: string }) {
     });
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    const delay = 500;
-
-    const save = () => {
-      try {
-        if (isFetching || updateLecture.isPending) {
-          console.log("network requests in progress, not updating page");
-          return;
-        }
-        const parsed = parseLecture(text);
-        if (!lecture || lectureToString(parsed) !== lectureToString(lecture)) {
-          if (clientIsAuthoritative) {
-            console.log("updating lecture");
-            textSaved(lectureToString(parsed));
-            updateLecture.mutate({ lecture: parsed, settings, courseName });
+  // the item's text written to its file; on the way out of the item (`leaving`) only that, never the editor's own state, which is the next item's by then
+  const save = (leaving: boolean) => {
+    try {
+      if (!leaving && (isFetching || updateLecture.isPending)) {
+        console.log("network requests in progress, not updating page");
+        return;
+      }
+      const parsed = parseLecture(text);
+      if (!lecture || lectureToString(parsed) !== lectureToString(lecture)) {
+        if (clientIsAuthoritative) {
+          console.log("updating lecture");
+          if (!leaving) textSaved(lectureToString(parsed));
+          updateLecture.mutate({ lecture: parsed, settings, courseName });
+        } else if (!leaving) {
+          if (lecture) {
+            console.log(
+              "client not authoritative, updating client with server lecture"
+            );
+            textUpdate(lectureToString(lecture), true);
           } else {
-            if (lecture) {
-              console.log(
-                "client not authoritative, updating client with server lecture"
-              );
-              textUpdate(lectureToString(lecture), true);
-            } else {
-              console.log(
-                "client not authoritative, but no lecture on server, this is a bug"
-              );
-            }
+            console.log(
+              "client not authoritative, but no lecture on server, this is a bug"
+            );
           }
         }
-        setError("");
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } catch (e: any) {
-        setError(e.toString());
       }
-    };
-    const handler = setTimeout(save, delay);
-    // a pending save goes out when the window loses focus, before typing goes on elsewhere
-    const flush = () => {
-      clearTimeout(handler);
-      save();
-    };
-    window.addEventListener("blur", flush, { once: true });
-
-    return () => {
-      clearTimeout(handler);
-      window.removeEventListener("blur", flush);
-    };
-  }, [
+      if (!leaving) setError("");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (e: any) {
+      if (!leaving) setError(e.toString());
+    }
+  };
+  useDelayedSave(`lecture:${lectureDay}`, 500, save, [
     clientIsAuthoritative,
     courseName,
     isFetching,
