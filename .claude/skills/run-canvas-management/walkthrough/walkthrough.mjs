@@ -186,6 +186,46 @@ const shape = { kind: "file", name: "shape.svg" };
 }
 
 {
+  // Compare with Canvas, one question at a time: an edit in the file is sent alone with its →, and ← pulls Canvas's back
+  const { ctx, page } = await newPage();
+  const quizFile = `${course}/02 - Basics/quizzes/Quiz 1.md`;
+  const original = await fs.readFile(quizFile, "utf-8");
+  const canvasQuestion1 = async () => {
+    const held = await canvas("__state");
+    const quiz = held.quizzes.find((q) => q.title === "Quiz 1");
+    return [...(held.questions[quiz.id] ?? [])].sort((a, b) => a.position - b.position)[0]?.question_text ?? "";
+  };
+  const differingRows = () => page.evaluate(() => [...document.querySelectorAll("tr")].filter((tr) => tr.querySelector(".bg-rose-500")).map((tr) => tr.innerText.replace(/\s+/g, " ").slice(0, 60)));
+  const move = async (label) => {
+    await page.getByRole("button", { name: label }).first().click();
+    await page.locator("div.fixed.inset-0 button", { hasText: /^Replace/ }).first().click();
+  };
+  const openCompare = async () => {
+    await page.goto(`${base}/course/Walkthrough/modules/${M}/quiz/Quiz%201?panes=d`, { waitUntil: "load" });
+    await waitFor(page, async () => /Settings and questions/.test(await page.locator("body").innerText()));
+  };
+
+  await fs.writeFile(quizFile, original.replace("What is 2 + 4?", "What is 3 + 3?"));
+  await openCompare();
+  const differs = await waitFor(page, async () => (await differingRows()).some((r) => /Question 1/.test(r)));
+  check("an edited question shows as differing in Compare with Canvas, with arrows beside its dot", differs !== undefined && (await page.getByRole("button", { name: "Send Question 1 · multiple choice to Canvas" }).count()) === 1, (await differingRows()).join(" | "));
+  check("there is no Send all to Canvas: Update in Canvas, in the footer, does that", (await page.getByText("Send all to Canvas").count()) === 0);
+  await move("Send Question 1 · multiple choice to Canvas").catch((e) => check("…the question's → sends it", false, e.message.slice(0, 120)));
+  const sent = await waitFor(page, async () => (await canvasQuestion1()).includes("3 + 3"), 20000);
+  check("→ sends that question alone to Canvas", sent !== undefined, await canvasQuestion1());
+  const insync = await waitFor(page, async () => !(await differingRows()).some((r) => /Question/.test(r)), 20000);
+  check("…after which Compare with Canvas shows the questions in sync", insync !== undefined, (await differingRows()).join(" | "));
+
+  await fs.writeFile(quizFile, (await fs.readFile(quizFile, "utf-8")).replace("What is 3 + 3?", "What is 1 + 5?"));
+  await openCompare();
+  await waitFor(page, async () => (await differingRows()).some((r) => /Question 1/.test(r)));
+  await move("Pull Question 1 · multiple choice from Canvas").catch((e) => check("…the question's ← pulls it", false, e.message.slice(0, 120)));
+  const pulled = await waitFor(page, async () => (await fs.readFile(quizFile, "utf-8")).includes("What is 3 + 3?"), 20000);
+  check("← pulls Canvas's version of that question into the file, the rest left as they were", pulled !== undefined && (await fs.readFile(quizFile, "utf-8")).includes("Describe one thing you learned this week."), (await fs.readFile(quizFile, "utf-8")).split("---")[1]?.slice(0, 120));
+  await ctx.close();
+}
+
+{
   // a small window still fits the item's editor and preview beside the modules
   const { ctx, page } = await newPage(800);
   await page.goto(`${base}/course/Walkthrough/modules/${M}/page/Day%202?panes=m,e,v`, { waitUntil: "load" });

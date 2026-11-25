@@ -6,7 +6,9 @@ import { LocalCourseSettings } from "@/features/local/course/localCourseSettings
 import { LocalQuiz } from "@/features/local/quizzes/models/localQuiz";
 import { LocalCoursePage } from "@/features/local/pages/localCoursePageModels";
 import { CanvasPage } from "@/features/canvas/models/pages/canvasPageModel";
-import { toMarkdownDate } from "./canvasImport";
+import { convertQuestion, toMarkdownDate } from "./canvasImport";
+import { CanvasQuizQuestion } from "@/features/canvas/models/quizzes/canvasQuizQuestionModel";
+import { LocalQuizQuestion } from "@/features/local/quizzes/models/localQuizQuestion";
 import { pullDescription } from "./pullDescription";
 
 /**
@@ -94,4 +96,20 @@ export function sendToCanvas(type: "assignment" | "quiz" | "page", whole: Record
     sent: taken.filter((t) => t.name).map((t) => t.field),
     left: taken.filter((t) => !t.name).map((t) => t.field),
   };
+}
+
+/**
+ * Pulling questions into the file, one compare row each (see questionRow):
+ * a question both have takes Canvas's version, one only Canvas has is added
+ * where Canvas has it, one only the file has is taken out. The other
+ * questions are left exactly as they are.
+ */
+export function pullQuestions(questions: LocalQuizQuestion[], canvasQuestions: CanvasQuizQuestion[], rows: { local?: number; canvas?: number }[]) {
+  const replaced = new Map(rows.filter((r) => r.local !== undefined && r.canvas !== undefined).map((r) => [r.local!, convertQuestion(canvasQuestions[r.canvas!])]));
+  const removed = new Set(rows.filter((r) => r.canvas === undefined).map((r) => r.local!));
+  const kept = questions.map((q, i) => replaced.get(i) ?? q).filter((_, i) => !removed.has(i));
+  return rows
+    .filter((r) => r.local === undefined)
+    .sort((a, b) => a.canvas! - b.canvas!)
+    .reduce((next, r) => [...next.slice(0, r.canvas!), convertQuestion(canvasQuestions[r.canvas!]), ...next.slice(r.canvas!)], kept);
 }

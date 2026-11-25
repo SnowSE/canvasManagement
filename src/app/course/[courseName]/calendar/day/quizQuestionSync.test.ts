@@ -4,7 +4,11 @@ import {
   describeQuestionPlan,
   planQuestionUpdates,
   pointTotalChangeError,
+  questionRow,
+  questionsMoveAlone,
+  sendingOneQuestion,
 } from "./quizQuestionSync";
+import { pullQuestions } from "@/features/canvas/import/pullFromCanvas";
 import { CanvasQuizQuestion } from "@/features/canvas/models/quizzes/canvasQuizQuestionModel";
 import {
   DayOfWeek,
@@ -618,5 +622,71 @@ describe("what the compare page marks in a question that differs (teichert#98)",
   });
   it("the points changed: the number alone", () => {
     expect(marked({ points_possible: 2 })).toEqual({ file: ["1"], canvas: ["2"] });
+  });
+});
+
+describe("one question at a time, either way (Compare with Canvas)", () => {
+  const essays = [
+    "Explain why a heartbeat timeout cannot prove a peer crashed.",
+    "Describe what a vector clock records and why.",
+    "Name the telemetry you would add to a geolocation feature.",
+    "Compute the error budget for a 99.5 percent SLO over thirty days.",
+  ];
+  const fileOf = (texts: string[]) => questionsOf(texts.map((t) => `Points: 1\n${t}\nessay`).join("\n\n---\n\n"));
+  const canvasOf = (texts: string[]) =>
+    texts.map((t, i) => canvasQuestion({ id: 101 + i, question_type: "essay_question", question_text: themed(`<p>${t}</p>`) }));
+  const differing = (file: LocalQuizQuestion[], canvas: CanvasQuizQuestion[]) => checkQuizQuestions(file, canvas, settings).filter((f) => !f.same);
+  const pullOne = (file: LocalQuizQuestion[], canvas: CanvasQuizQuestion[], which: number) =>
+    pullQuestions(file, canvas, [questionRow(differing(file, canvas)[which])!]);
+
+  // the file has an edited 2nd question, lacks Canvas's 3rd, and adds a 5th of its own
+  const file = fileOf([essays[0], `${essays[1]} Give an example.`, essays[3], "What does idempotency buy a retrying client? Explain."]);
+  const canvas = canvasOf(essays);
+
+  describe("pulling a question into the file", () => {
+    it("an edited question takes Canvas's version, and nothing else in the file changes", () => {
+      const pulled = pullOne(file, canvas, 0);
+      expect(checkQuizQuestions(pulled, canvas, settings).map((f) => f.same)).toEqual([true, true, false, true, false]);
+      expect(pulled.filter((_, i) => i !== 1)).toEqual(file.filter((_, i) => i !== 1));
+    });
+    it("a question only Canvas has is added to the file where Canvas has it", () => {
+      const pulled = pullOne(file, canvas, 1);
+      expect(pulled.map((q) => q.text.split(".")[0])).toEqual([essays[0], `${essays[1]} Give an example`, essays[2], essays[3], "What does idempotency buy a retrying client? Explain"].map((t) => t.split(".")[0]));
+      expect(checkQuizQuestions(pulled, canvas, settings).filter((f) => !f.same)).toHaveLength(2);
+    });
+    it("a question only the file has is taken out of it", () => {
+      expect(pullOne(file, canvas, 2)).toEqual(file.slice(0, 3));
+    });
+    it("a multiple choice question comes back with its answers, its right answer and its comment", () => {
+      const [pulled] = pullQuestions(questionsOf(multipleChoice.replace("Bound", "Limit")), [canvasMultipleChoice], [{ local: 0, canvas: 0 }]);
+      expect(checkQuizQuestions([pulled], [canvasMultipleChoice], settings)[0].same).toBe(true);
+    });
+  });
+
+  describe("sending a question to Canvas", () => {
+    const plan = planQuestionUpdates(file, canvas, settings);
+    const sending = (which: number) => sendingOneQuestion(plan, questionRow(differing(file, canvas)[which])!);
+    it("an edited question replaces its Canvas question, in its place; the rest keep theirs", () => {
+      expect(sending(0)).toEqual({ remove: 1, add: 1, order: [0, "new", 2, 3] });
+    });
+    it("a question Canvas lacks is added after the question the file has before it", () => {
+      expect(sending(2)).toEqual({ add: 3, order: [0, 1, 2, 3, "new"] });
+      const firstMissing = planQuestionUpdates(fileOf(["What is a quorum?", essays[0]]), canvasOf([essays[0]]), settings);
+      expect(sendingOneQuestion(firstMissing, { local: 0 })).toEqual({ add: 0, order: ["new", 0] });
+    });
+    it("a question only Canvas has is deleted there", () => {
+      expect(sending(1)).toEqual({ remove: 2, order: [0, 1, 3] });
+    });
+  });
+
+  it("is offered only where the questions can move alone: not in a quiz with question groups", () => {
+    expect(questionsMoveAlone(file, canvas)).toBe(true);
+    expect(questionsMoveAlone(file, canvas.map((q) => ({ ...q, quiz_group_id: 5 })))).toBe(false);
+    expect(questionsMoveAlone([{ ...file[0], group: { name: "Ports", pickCount: 1 } }], canvas)).toBe(false);
+  });
+  it("a question row says which questions it pairs; any other row is no question's", () => {
+    const [edited, canvasOnly, fileOnly] = differing(file, canvas);
+    expect([questionRow(edited), questionRow(canvasOnly), questionRow(fileOnly)]).toEqual([{ local: 1, canvas: 1 }, { canvas: 2 }, { local: 3 }]);
+    expect(questionRow({ key: "dueAt" } as never)).toBeUndefined();
   });
 });

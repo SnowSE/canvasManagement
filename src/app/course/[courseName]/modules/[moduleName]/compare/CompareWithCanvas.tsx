@@ -1,6 +1,6 @@
 "use client";
 import { useSettingsWithCanvasFiles } from "@/features/canvas/hooks/canvasCourseFileHooks";
-import { pullFromCanvas, sendToCanvas } from "@/features/canvas/import/pullFromCanvas";
+import { pullFromCanvas, pullQuestions, sendToCanvas } from "@/features/canvas/import/pullFromCanvas";
 import { useMutation } from "@tanstack/react-query";
 import { assignmentSettingsForCanvas, canvasAssignmentService } from "@/features/canvas/services/canvasAssignmentService";
 import { canvasQuizService, quizSettingsForCanvas } from "@/features/canvas/services/canvasQuizService";
@@ -19,17 +19,16 @@ import {
 } from "@/features/canvas/hooks/canvasPageHooks";
 import {
   useCanvasAssignmentsQuery,
-  useUpdateAssignmentInCanvasMutation,
 } from "@/features/canvas/hooks/canvasAssignmentHooks";
 import {
   useCanvasAttemptQuestionsQuery,
   useCanvasQuizQuestionsQuery,
   useCanvasQuizVersionsTakenQuery,
   useCanvasQuizzesQuery,
-  useUpdateQuizInCanvasMutation,
+  useSendQuestionToCanvasMutation,
 } from "@/features/canvas/hooks/canvasQuizHooks";
 import { useCanvasModuleNames } from "@/features/canvas/hooks/canvasModuleHooks";
-import { checkQuizQuestions } from "@/app/course/[courseName]/calendar/day/quizQuestionSync";
+import { checkQuizQuestions, questionRow, questionsMoveAlone } from "@/app/course/[courseName]/calendar/day/quizQuestionSync";
 import { LocalQuiz } from "@/features/local/quizzes/models/localQuiz";
 import { LocalCourseSettings } from "@/features/local/course/localCourseSettings";
 import {
@@ -88,7 +87,6 @@ export function CompareAssignmentWithCanvas({
   const { data: canvasQuizzes } = useCanvasQuizzesQuery();
   const { data: rosterStudents } = useRosterStudentsQuery();
   const { data: rosterGroupSets } = useRosterGroupSetsQuery();
-  const update = useUpdateAssignmentInCanvasMutation();
   const save = useUpdateAssignmentMutation();
   const { courseName } = useCourseContext();
 
@@ -172,15 +170,7 @@ export function CompareAssignmentWithCanvas({
         refetch();
         refetchModules();
       }}
-      onUpdate={() =>
-        canvasAssignment &&
-        update.mutate({
-          assignment,
-          canvasAssignmentId: canvasAssignment.id,
-          moduleName,
-        })
-      }
-      updating={update.isPending || save.isPending || sendRows.isPending}
+      updating={save.isPending || sendRows.isPending}
       send={send && { sent: send.sent, onSend: (fields) => sendRows.mutate(send.bodyFor(fields)) }}
       pull={pull && { ...pull, onPull: (fields) => save.mutate({ assignment: pull.itemWith(fields), moduleName, assignmentName, previousModuleName: moduleName, previousAssignmentName: assignmentName, courseName }) }}
       updateNote="Update Canvas pushes the file's dates, group settings, rubric and description, and moves the assignment to the file's module. Submissions and grades are untouched."
@@ -205,7 +195,7 @@ export function CompareQuizWithCanvas({
     dataUpdatedAt,
   } = useCanvasQuizzesQuery();
   const { data: canvasAssignments } = useCanvasAssignmentsQuery();
-  const update = useUpdateQuizInCanvasMutation();
+  const sendQuestion = useSendQuestionToCanvasMutation();
   const save = useUpdateQuizMutation();
   const { courseName } = useCourseContext();
 
@@ -252,9 +242,24 @@ export function CompareQuizWithCanvas({
     ],
   );
 
+  // each differing question moves alone, either way, unless a side has question groups (those go whole: Update in Canvas)
+  const movable = useMemo(
+    () => (canvasQuestions && questionsMoveAlone(quiz.questions, canvasQuestions) ? report.differences.filter((f) => questionRow(f)) : []),
+    [canvasQuestions, quiz.questions, report],
+  );
   const pull = useMemo(
-    () => canvasQuiz && pulling((fields) => pullFromCanvas("quiz", quiz, canvasQuiz, fields, settings, descriptionRenderer("quiz", quiz, settings, { assignments: canvasAssignments, quizzes: canvasQuizzes })), report.differences),
-    [quiz, canvasQuiz, canvasAssignments, canvasQuizzes, report, settings],
+    () =>
+      canvasQuiz &&
+      pulling((fields) => {
+        const settingsPulled = pullFromCanvas("quiz", quiz, canvasQuiz, fields, settings, descriptionRenderer("quiz", quiz, settings, { assignments: canvasAssignments, quizzes: canvasQuizzes }));
+        const questions = fields.filter((f) => movable.some((m) => m.key === f.key));
+        return {
+          item: { ...settingsPulled.item, questions: pullQuestions(quiz.questions, canvasQuestions ?? [], questions.map((f) => questionRow(f)!)) },
+          pulled: [...settingsPulled.pulled, ...questions],
+          left: settingsPulled.left.filter((f) => !questions.includes(f)),
+        };
+      }, report.differences),
+    [quiz, canvasQuiz, canvasAssignments, canvasQuizzes, canvasQuestions, movable, report, settings],
   );
 
   const sendRows = useMutation({
@@ -298,12 +303,18 @@ export function CompareQuizWithCanvas({
           refetchVersions();
         }
       }}
-      onUpdate={() =>
-        canvasQuiz &&
-        update.mutate({ quiz, canvasQuizId: canvasQuiz.id, moduleName })
+      updating={sendQuestion.isPending || save.isPending || sendRows.isPending}
+      send={
+        send && {
+          sent: [...send.sent, ...movable],
+          onSend: (fields) => {
+            const questions = fields.filter((f) => movable.includes(f));
+            const rest = fields.filter((f) => !movable.includes(f));
+            if (rest.length) sendRows.mutate(send.bodyFor(rest));
+            for (const f of questions) sendQuestion.mutate({ quiz, canvasQuiz: canvasQuiz!, row: questionRow(f)!, canvasQuestions: canvasQuestions! }, { onSuccess: () => refetchQuestions() });
+          },
+        }
       }
-      updating={update.isPending || save.isPending || sendRows.isPending}
-      send={send && { sent: send.sent, onSend: (fields) => sendRows.mutate(send.bodyFor(fields)) }}
       pull={pull && { ...pull, onPull: (fields) => save.mutate({ quiz: pull.itemWith(fields), moduleName, quizName, previousModuleName: moduleName, previousQuizName: quizName, courseName }) }}
       updateNote="Update Canvas pushes the file's settings, moves the quiz to the file's module and, if any question differs, replaces the questions in Canvas with the file's. When it replaces them on a published quiz, students keep getting the old questions until you click Save it now on the quiz page in Canvas (the API can't do that). If students have started, it warns first: they keep the questions they got and are not regraded. It refuses to change the point total they were scored out of."
     >
@@ -398,10 +409,6 @@ export function ComparePageWithCanvas({
         refetch();
         refetchModules();
       }}
-      onUpdate={() =>
-        canvasPage &&
-        update.mutate({ page, canvasPage, moduleName })
-      }
       updating={update.isPending || save.isPending}
       // a page's one row is its content, which is all Update sends
       send={canvasPage && { sent: report.differences.filter((f) => f.key === "description"), onSend: () => update.mutate({ page, canvasPage, moduleName }) }}
@@ -461,7 +468,6 @@ const CompareLayout: FC<{
   canvasPublished?: boolean;
   canvasUrl?: string;
   onRefresh: () => void;
-  onUpdate: () => void;
   updating: boolean;
   updateNote: string;
   /** Pull from Canvas (see pullFromCanvas): what it would set in the file, what it leaves, and doing it. */
@@ -482,7 +488,6 @@ const CompareLayout: FC<{
   canvasPublished,
   canvasUrl,
   onRefresh,
-  onUpdate,
   updating,
   updateNote,
   pull,
@@ -499,7 +504,6 @@ const CompareLayout: FC<{
     setAsking({ to, fields });
     confirm.openModal();
   };
-  const differenceCount = report.differences.length;
 
   return (
     <div className="h-full flex flex-col">
@@ -585,17 +589,6 @@ const CompareLayout: FC<{
             left={asking.to === "file" && asking.fields.length === pull?.pulled.length ? pull.left : []}
             onConfirm={() => (asking.to === "file" ? pull?.onPull(asking.fields) : send?.onSend(asking.fields))}
           />
-          <button
-            disabled={!inCanvas || updating || differenceCount === 0}
-            title={
-              differenceCount === 0 && inCanvas
-                ? "Canvas already matches the file"
-                : undefined
-            }
-            onClick={onUpdate}
-          >
-            Send all to Canvas →
-          </button>
         </div>
       </div>
     </div>
@@ -716,6 +709,13 @@ const Pill: FC<{ className: string; children: ReactNode }> = ({
   </span>
 );
 
+/** An arrow toward the side a value moves to: left into the file, right to Canvas. */
+const ArrowIcon: FC<{ to: "canvas" | "file" }> = ({ to }) => (
+  <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="inline-block align-[-2px]">
+    {to === "canvas" ? <path d="M3 8h10M9 4l4 4-4 4" /> : <path d="M13 8H3M7 4 3 8l4 4" />}
+  </svg>
+);
+
 const Dot: FC<{ className: string }> = ({ className }) => (
   <span className={"inline-block w-2 h-2 rounded-full " + className} />
 );
@@ -736,12 +736,12 @@ const FieldsTable: FC<{
 }> = ({ fields, title, canvasLabel = "Canvas now", pullable = [], sendable = [], onMove }) => {
   const arrow = (f: SyncField, to: "canvas" | "file") => (
     <button
-      className="unstyled px-1 rounded text-slate-400 hover:bg-slate-700 hover:text-slate-100"
+      className="unstyled p-0.5 rounded text-slate-400 hover:bg-slate-700 hover:text-slate-100"
       title={to === "canvas" ? `Send to Canvas: Canvas's ${f.label.toLowerCase()} becomes the file's…` : `Pull into the file: the file's ${f.label.toLowerCase()} becomes Canvas's…`}
       aria-label={to === "canvas" ? `Send ${f.label} to Canvas` : `Pull ${f.label} from Canvas`}
       onClick={() => onMove?.(to, f)}
     >
-      {to === "canvas" ? "→" : "←"}
+      <ArrowIcon to={to} />
     </button>
   );
   const has = (list: SyncField[], f: SyncField) => list.some((x) => x.key === f.key);
@@ -765,9 +765,9 @@ const FieldsTable: FC<{
           <colgroup>
             <col className="w-1/3 md:w-1/4" />
             <col />
-            <col className="w-14" />
-            <col />
             <col className="w-8" />
+            <col />
+            <col className="w-16" />
           </colgroup>
           <thead>
             <tr className="text-xs uppercase tracking-wider text-slate-400">
@@ -801,22 +801,17 @@ const FieldsTable: FC<{
                     <Cell field={f} side="local" />
                   </td>
                   <td className="text-center text-slate-600 align-top whitespace-nowrap">
-                    {f.same ? (
-                      ""
-                    ) : has(pullable, f) || has(sendable, f) ? (
-                      <>
-                        {has(sendable, f) && arrow(f, "canvas")}
-                        {has(pullable, f) && arrow(f, "file")}
-                      </>
-                    ) : (
-                      <span title="This row goes with the whole item: Send all to Canvas">≠</span>
-                    )}
+                    {/* a difference that can't move alone goes with the whole item: Update in Canvas, in the editor's footer */}
+                    {!f.same && !has(pullable, f) && !has(sendable, f) && <span title="This row goes with the whole item: Update in Canvas, in the editor's footer">≠</span>}
                   </td>
                   <td className="align-top">
                     <Cell field={f} side="canvas" />
                   </td>
-                  <td className="text-end align-top w-8">
-                    <Dot className={f.same ? "bg-green-600" : "bg-rose-500"} />
+                  <td className="text-end align-top whitespace-nowrap">
+                    {/* each way it can move on its own, beside the dot that says it differs */}
+                    {!f.same && has(pullable, f) && arrow(f, "file")}
+                    {!f.same && has(sendable, f) && arrow(f, "canvas")}
+                    <Dot className={"ms-1 " + (f.same ? "bg-green-600" : "bg-rose-500")} />
                   </td>
                 </tr>
               );

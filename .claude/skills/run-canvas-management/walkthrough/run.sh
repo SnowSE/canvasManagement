@@ -31,7 +31,7 @@ docker run -d --name $NAME -e TZ=America/Denver -e NODE_ENV=production -e SETTIN
   node sh -c "node /fake/fakeCanvas.mjs $INSIDE 0.0.0.0 & node --import ./.output/websocket/websocket-standalone.js .output/server/index.mjs" >/dev/null
 for i in $(seq 1 60); do curl -sf -o /dev/null --max-time 3 http://localhost:$PORT/ && break; sleep 1; done
 
-docker run --rm --network host -v "$PWD/$HERE":/skill:ro -v "$WORK/storage":/course:ro \
+docker run --rm --network host -v "$PWD/$HERE":/skill:ro -v "$WORK/storage":/course \
   -e BASE=http://localhost:$PORT -e FAKE=http://localhost:$FAKE_PORT -e COURSE_DIR=/course/Walkthrough -e PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
   mcr.microsoft.com/playwright:v1.56.0-noble \
   sh -c 'mkdir -p /tmp/pw && cp /skill/walkthrough.mjs /tmp/pw/ && cd /tmp/pw && npm i playwright@1.56.0 --silent --no-audit --no-fund >/dev/null 2>&1 && node walkthrough.mjs' | tee "$WORK/result.txt"

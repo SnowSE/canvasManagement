@@ -421,7 +421,8 @@ function dropdownQuestion(
   };
 }
 
-function convertQuestion(question: CanvasQuizQuestion): LocalQuizQuestion {
+/** A Canvas question as the quiz file writes it. */
+export function convertQuestion(question: CanvasQuizQuestion): LocalQuizQuestion {
   const base = {
     points: question.points_possible ?? 0,
     matchDistractors: [] as string[],
