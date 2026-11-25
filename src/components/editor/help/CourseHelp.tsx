@@ -8,7 +8,7 @@ import { AssignmentHelp } from "@/app/course/[courseName]/modules/[moduleName]/a
 import { QuizHelp } from "@/app/course/[courseName]/modules/[moduleName]/quiz/[quizName]/QuizHelp";
 import { PageHelp } from "@/app/course/[courseName]/modules/[moduleName]/page/[pageName]/PageHelp";
 import { CurrentItem } from "@/app/course/[courseName]/currentItem";
-import { HelpLinks, HelpPanel, HelpType } from "./HelpParts";
+import { HelpLinks, HelpPanel } from "./HelpParts";
 import {
   EncodedBlocksHelp,
   ImagesHelp,
@@ -18,7 +18,6 @@ import {
   MermaidHelp,
 } from "./MarkdownHelpSections";
 
-const typeOf: Record<string, HelpType> = { Assignment: "assignment", Quiz: "quiz", Page: "page" };
 
 /**
  * The Help pane: every topic for assignments, quizzes and pages plus the
@@ -30,7 +29,7 @@ export function CourseHelp({ item }: { item?: CurrentItem }) {
   const { data: groupSetsData } = useRosterGroupSetsQuery();
   const { data: globalSettings } = useGlobalSettingsQuery();
   return (
-    <HelpPanel defaultType={item?.kind === "item" ? typeOf[item.type] : "all"}>
+    <HelpPanel defaultType={item?.kind === "item" ? item.type : "all"}>
       <AssignmentHelp settings={settings} groupSetNames={groupSetsData?.groupSets.map((g) => g.name) ?? []} />
       <QuizHelp
         settings={settings}

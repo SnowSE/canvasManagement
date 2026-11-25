@@ -1,5 +1,5 @@
 import { RightSingleChevron } from "@/components/icons/RightSingleChevron";
-import { ItemTypeIcon } from "../../../../ItemTypeIcon";
+import { QuizIcon } from "../../../../itemIcons";
 
 export default function EditQuizHeader({ quizName }: { quizName: string }) {
   return (
@@ -8,7 +8,7 @@ export default function EditQuizHeader({ quizName }: { quizName: string }) {
         <RightSingleChevron />
       </span>
       <div className="w-5 ms-3 max-md:ms-1 shrink-0 my-auto">
-        <ItemTypeIcon type="quiz" />
+        <QuizIcon />
       </div>
       <div className="my-auto px-2 max-md:px-1 truncate min-w-10 flex-auto">{quizName}</div>
     </div>

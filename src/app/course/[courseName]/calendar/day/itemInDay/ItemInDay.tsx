@@ -10,12 +10,9 @@ import { DraggableItem } from "../../../context/drag/draggingContext";
 import ClientOnly from "@/components/ClientOnly";
 import { useDragStyleContext } from "../../../context/drag/dragStyleContext";
 import { Tooltip } from "../../../../../../components/Tooltip";
-import { AssignmentDayItemContextMenu } from "./AssignmentDayItemContextMenu";
-import { QuizDayItemContextMenu } from "./QuizDayItemContextMenu";
-import { PageDayItemContextMenu } from "./PageDayItemContextMenu";
-import { GetPreviewContent } from "./GetPreviewContent";
 import { useModal } from "@/components/Modal";
-import { ItemTypeIcon } from "../../../ItemTypeIcon";
+import { ItemTypeIcon } from "../../../itemKinds";
+import { itemKindViews } from "../../../itemKindViews";
 import { AssignmentScheduleEntry } from "@/features/local/assignments/models/localAssignment";
 import { formatHumanReadableDate } from "@/services/utils/dateFormat";
 import { useRosterStudentsQuery } from "@/features/canvas/roster/rosterHooks";
@@ -49,9 +46,9 @@ export const ItemInDay: FC<{
   const { visible, targetRef, showTooltip, hideTooltip, tooltipProps } =
     useTooltip(500);
   const modalControl = useModal();
+  const { Menu, Preview } = itemKindViews[type];
 
   const handleContextMenu = (e: React.MouseEvent) => {
-    if (type !== "assignment" && type !== "quiz" && type !== "page") return;
     e.preventDefault();
     e.stopPropagation();
     modalControl.openModal({ x: e.clientX, y: e.clientY });
@@ -138,16 +135,18 @@ export const ItemInDay: FC<{
             {...tooltipProps}
           />
         ) : status === "published" ? (
-          <Tooltip
-            message={
-              <div className="max-w-md">
-                <GetPreviewContent type={type} item={item} />
-              </div>
-            }
-            targetRef={targetRef}
-            visible={visible}
-            {...tooltipProps}
-          />
+          Preview && (
+            <Tooltip
+              message={
+                <div className="max-w-md">
+                  <Preview item={item} />
+                </div>
+              }
+              targetRef={targetRef}
+              visible={visible}
+              {...tooltipProps}
+            />
+          )
         ) : (
           <Tooltip
             message={
@@ -169,29 +168,7 @@ export const ItemInDay: FC<{
         )}
         {/* a menu is built when it opens: with one on every item, their query
             hooks were most of what a calendar re-render cost */}
-        {modalControl.isOpen && type === "assignment" && (
-          <AssignmentDayItemContextMenu
-            modalControl={modalControl}
-            item={item}
-            moduleName={moduleName}
-            differenceCount={differences.length}
-          />
-        )}
-        {modalControl.isOpen && type === "quiz" && (
-          <QuizDayItemContextMenu
-            modalControl={modalControl}
-            item={item}
-            moduleName={moduleName}
-            differenceCount={differences.length}
-          />
-        )}
-        {modalControl.isOpen && type === "page" && (
-          <PageDayItemContextMenu
-            modalControl={modalControl}
-            item={item}
-            moduleName={moduleName}
-          />
-        )}
+        {modalControl.isOpen && <Menu modalControl={modalControl} item={item} moduleName={moduleName} differenceCount={differences.length} />}
       </ClientOnly>
     </div>
   );

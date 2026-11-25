@@ -9,7 +9,7 @@ import { useSaveRawItemMutation } from "@/features/local/modules/rawItemHooks";
 import { useCourseContext } from "@/app/course/[courseName]/context/courseContext";
 import { getCourseUrl, getModuleItemUrl } from "@/services/urlUtils";
 import { useGitStatusQuery } from "@/features/local/git/gitHooks";
-import { ItemTypeIcon } from "@/app/course/[courseName]/ItemTypeIcon";
+import { ItemTypeIcon } from "@/app/course/[courseName]/itemKinds";
 import { RightSingleChevron } from "@/components/icons/RightSingleChevron";
 import {
   useErrorLogQuery,

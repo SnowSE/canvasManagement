@@ -1,21 +1,12 @@
+"use client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { showActionNeededToast, showErrorToast } from "@/app/MyToaster";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
-import { baseCanvasUrl } from "../services/canvasServiceUtils";
-import { canvasAssignmentService } from "../services/canvasAssignmentService";
-import { canvasQuizService } from "../services/canvasQuizService";
-import { canvasPageService } from "../services/canvasPageService";
-import { useRefreshCanvasAssignment } from "./canvasAssignmentHooks";
-import { useRefreshCanvasQuiz } from "./canvasQuizHooks";
-import { useRefreshCanvasPage } from "./canvasPageHooks";
-import {
-  canvasCourseModuleKeys,
-  useCanvasModulesQuery,
-  useRefreshCanvasModules,
-} from "./canvasModuleHooks";
-
-export type PublishableItemType = "assignment" | "quiz" | "page";
+import { ItemKind } from "@/features/local/course/courseItemTypes";
+import { baseCanvasUrl } from "@/features/canvas/services/canvasServiceUtils";
+import { canvasCourseModuleKeys, useCanvasModulesQuery, useRefreshCanvasModules } from "@/features/canvas/hooks/canvasModuleHooks";
+import { useEachKind } from "./itemKinds";
 
 /**
  * Publishes an item that is already in Canvas. Only the item: if its module
@@ -28,11 +19,9 @@ export const usePublishInCanvasMutation = () => {
   const { data: canvasModules } = useCanvasModulesQuery();
   const queryClient = useQueryClient();
   const refreshModules = useRefreshCanvasModules();
-  const refresh = {
-    assignment: useRefreshCanvasAssignment(),
-    quiz: useRefreshCanvasQuiz(),
-    page: useRefreshCanvasPage(),
-  };
+  const publishKind = useEachKind((kind) => kind.usePublish());
+  const refreshKind = useEachKind((kind) => kind.useRefresh());
+  const canvasModuleOf = (moduleName: string) => canvasModules?.find((m) => m.name === moduleName);
 
   return useMutation({
     mutationFn: async ({
@@ -40,29 +29,21 @@ export const usePublishInCanvasMutation = () => {
       canvasItemId,
       moduleName,
     }: {
-      type: PublishableItemType;
+      type: ItemKind;
       canvasItemId: number;
       name: string;
       moduleName: string;
     }) => {
-      if (type === "assignment")
-        await canvasAssignmentService.publish(settings.canvasId, canvasItemId);
-      else if (type === "quiz")
-        await canvasQuizService.publish(settings.canvasId, canvasItemId);
-      else await canvasPageService.publish(settings.canvasId, canvasItemId);
+      await publishKind[type](canvasItemId);
       // the item's module shows it as published too
-      const canvasModule = canvasModules?.find((m) => m.name === moduleName);
+      const canvasModule = canvasModuleOf(moduleName);
       await Promise.all([
-        refresh[type](canvasItemId),
-        canvasModule
-          ? refreshModules([canvasModule.id])
-          : queryClient.invalidateQueries({
-              queryKey: canvasCourseModuleKeys.modules(settings.canvasId),
-            }),
+        refreshKind[type](canvasItemId),
+        canvasModule ? refreshModules([canvasModule.id]) : queryClient.invalidateQueries({ queryKey: canvasCourseModuleKeys.modules(settings.canvasId) }),
       ]);
     },
     onSuccess: (_, { name, moduleName }) => {
-      const canvasModule = canvasModules?.find((m) => m.name === moduleName);
+      const canvasModule = canvasModuleOf(moduleName);
       if (canvasModule && canvasModule.published === false) {
         showActionNeededToast(
           `Published "${name}", but its module "${moduleName}" is unpublished in Canvas, so students can't see it yet.`,

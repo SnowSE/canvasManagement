@@ -1,4 +1,5 @@
 "use client";
+import { itemKindViews } from "../../../itemKindViews";
 import { FC, ReactNode } from "react";
 import { ItemKind } from "@/features/local/course/courseItemTypes";
 import { getModuleItemUrl } from "@/services/urlUtils";
@@ -74,13 +75,15 @@ export const SyncDifferencesTooltip: FC<{
         <div className="text-rose-300 pt-1">not published in canvas</div>
       )}
       <div className="border-t border-slate-700 mt-2 pt-1 flex justify-between gap-3 text-xs">
-        <ShowPaneLink
-          pane="compare"
-          to={getModuleItemUrl(courseName, moduleName, type, itemName)}
-          className="text-blue-300 hover:underline"
-        >
-          Compare with Canvas →
-        </ShowPaneLink>
+        {itemKindViews[type].Compare && (
+          <ShowPaneLink
+            pane="compare"
+            to={getModuleItemUrl(courseName, moduleName, type, itemName)}
+            className="text-blue-300 hover:underline"
+          >
+            Compare with Canvas →
+          </ShowPaneLink>
+        )}
         {rightClickHint && (
           <span className="text-slate-500">right-click for more</span>
         )}

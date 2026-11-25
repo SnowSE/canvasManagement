@@ -1,26 +1,22 @@
+import { itemKinds } from "./itemKinds";
 import { useRouterState } from "@tanstack/react-router";
-import { CourseItemType } from "@/features/local/course/courseItemTypes";
+import { ItemKind } from "@/features/local/course/courseItemTypes";
 import { getDayOfWeek, LocalCourseSettings } from "@/features/local/course/localCourseSettings";
 import { getDateFromString, getDateOnlyMarkdownString } from "@/features/local/utils/timeUtils";
 
 export type CurrentItem =
-  | { kind: "item"; moduleName: string; type: CourseItemType; name: string }
+  | { kind: "item"; moduleName: string; type: ItemKind; name: string }
   | { kind: "lecture"; lectureDay: string };
-
-const typeByUrl: Record<string, CourseItemType> = {
-  assignment: "Assignment",
-  quiz: "Quiz",
-  page: "Page",
-};
 
 /** The item a course url is about, which the item panes (editor, compare, history, …) show; none on the course page. */
 export function currentItemFromPath(pathname: string): CurrentItem | undefined {
-  const item = /^\/course\/[^/]+\/modules\/([^/]+)\/(assignment|quiz|page)\/([^/]+)/.exec(pathname);
-  if (item)
+  // the kind is the url's word for it (see itemKinds): a word that is no kind's opens nothing
+  const item = /^\/course\/[^/]+\/modules\/([^/]+)\/([a-z]+)\/([^/]+)/.exec(pathname);
+  if (item && Object.hasOwn(itemKinds, item[2]))
     return {
       kind: "item",
       moduleName: decodeURIComponent(item[1]),
-      type: typeByUrl[item[2]],
+      type: item[2] as ItemKind,
       name: decodeURIComponent(item[3]),
     };
   const lecture = /^\/course\/[^/]+\/lecture\/([^/]+)/.exec(pathname);

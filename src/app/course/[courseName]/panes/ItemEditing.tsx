@@ -1,8 +1,7 @@
 "use client";
 import { CurrentItem } from "../currentItem";
-import EditAssignment from "../modules/[moduleName]/assignment/[assignmentName]/EditAssignment";
-import EditQuiz from "../modules/[moduleName]/quiz/[quizName]/EditQuiz";
-import EditPage from "../modules/[moduleName]/page/[pageName]/EditPage";
+import { itemKinds } from "../itemKinds";
+import { itemKindViews } from "../itemKindViews";
 import EditLecture from "../lecture/[lectureDay]/EditLecture";
 import { UnparsableItemFallback } from "../modules/[moduleName]/unparsable/UnparsableItemFallback";
 import { SuspenseAndErrorHandling } from "@/components/SuspenseAndErrorHandling";
@@ -25,12 +24,17 @@ export function ItemEditing({ item }: { item?: CurrentItem }) {
       </SuspenseAndErrorHandling>
     );
   const { moduleName, type, name } = item;
-  return (
-    <UnparsableItemFallback moduleName={moduleName} type={type} name={name} loading={<LoadingItem />}>
-      {type === "Assignment" && <EditAssignment moduleName={moduleName} assignmentName={name} />}
-      {type === "Quiz" && <EditQuiz moduleName={moduleName} quizName={name} />}
-      {type === "Page" && <EditPage moduleName={moduleName} pageName={name} />}
+  const kind = itemKinds[type];
+  if (!kind) return <NoItem />;
+  const { Editor } = itemKindViews[type];
+  const editor = <Editor moduleName={moduleName} name={name} />;
+  // a markdown file that can't be parsed is fixed as its raw text
+  return kind.markdown ? (
+    <UnparsableItemFallback moduleName={moduleName} type={kind.markdown} name={name} loading={<LoadingItem />}>
+      {editor}
     </UnparsableItemFallback>
+  ) : (
+    <SuspenseAndErrorHandling fallback={<LoadingItem />}>{editor}</SuspenseAndErrorHandling>
   );
 }
 

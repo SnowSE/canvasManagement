@@ -75,6 +75,17 @@ describe("updateEach", () => {
     expect(progress.mock.calls).toEqual([[1], [2]]);
   });
 
+  it("goes on past an item that is refused outright, before any request, and says it failed", async () => {
+    const done: string[] = [];
+    const refuseB = (item: string) => {
+      if (item === "b") throw new Error("b isn't unpublished in Canvas, so it stays");
+      done.push(item);
+      return Promise.resolve();
+    };
+    expect(await updateEach(["a", "b", "c"], refuseB, () => {})).toEqual(["b"]);
+    expect(done).toEqual(["a", "c"]);
+  });
+
   it("goes on past an item that fails, and says which failed", async () => {
     const failed = await updateEach(
       ["a", "b", "c"],

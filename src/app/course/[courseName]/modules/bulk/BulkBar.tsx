@@ -7,7 +7,7 @@ import { useItemSyncStatus } from "../../calendar/day/useItemSyncStatus";
 import { useModuleNamesQuery } from "@/features/local/modules/localCourseModuleHooks";
 import { kinds, settled, updateEach } from "./rules";
 import { keyOf, ModuleItemRef, useModuleSelection } from "./moduleSelection";
-import { useAddOrUpdateInCanvas, useRemoveUnpublishedFromCanvas } from "./canvasActions";
+import { useEachKind } from "../../itemKinds";
 import { ReviewDialog } from "./ReviewDialog";
 
 const BarButton = (props: { onClick: () => void; children: ReactNode }) => (
@@ -23,8 +23,11 @@ const danger = `${menuButton} bg-rose-900/30 hover:bg-rose-950 text-rose-50 bord
  */
 export function BulkBar() {
   const selection = useModuleSelection();
-  const addOrUpdate = useAddOrUpdateInCanvas();
-  const removeUnpublished = useRemoveUnpublishedFromCanvas();
+  // each item's own right-click actions, as its kind does them
+  const send = useEachKind((kind) => kind.useSendToCanvas());
+  const remove = useEachKind((kind) => kind.useRemoveUnpublished());
+  const addOrUpdate = (ref: ModuleItemRef) => send[ref.type](ref);
+  const removeUnpublished = (ref: ModuleItemRef) => remove[ref.type](ref);
   const { statusOf, ready } = useItemSyncStatus();
   const { data: moduleNames } = useModuleNamesQuery();
   const counted = settled(ready, moduleNames, selection.reportedModules);

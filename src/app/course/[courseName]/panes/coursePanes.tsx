@@ -1,6 +1,8 @@
 "use client";
 import { ComponentType, memo, ReactNode, useEffect } from "react";
 import { CurrentItem } from "../currentItem";
+import { itemKinds } from "../itemKinds";
+import { itemKindViews } from "../itemKindViews";
 import { useItemParts } from "./itemParts";
 import { editorShows, jumpToClickedText } from "@/components/editor/previewJump";
 import ClientOnly from "@/components/ClientOnly";
@@ -28,11 +30,6 @@ import ImportFromCanvas from "../import/ImportFromCanvas";
 import ErrorLogPage from "@/app/errors/ErrorLogPage";
 import { ItemHistory } from "../modules/[moduleName]/history/ItemHistory";
 import { CourseHelp } from "@/components/editor/help/CourseHelp";
-import {
-  CompareAssignmentWithCanvas,
-  ComparePageWithCanvas,
-  CompareQuizWithCanvas,
-} from "../modules/[moduleName]/compare/CompareWithCanvas";
 
 /** What a pane's content can read: the course and the item open (the url's, or the course page's lecture of the day). */
 export type PaneContext = {
@@ -67,8 +64,8 @@ export type CoursePane = {
   Content: ComponentType<PaneContext>;
 };
 
-const courseItem = (ctx: PaneContext) => (ctx.item?.kind === "item" ? ctx.item : undefined);
-const itemKey = (ctx: PaneContext) => courseItem(ctx) && `${courseItem(ctx)!.moduleName}/${courseItem(ctx)!.name}`;
+// the item open, where it is of a kind (see itemKinds)
+const courseItem = (ctx: PaneContext) => (ctx.item?.kind === "item" && itemKinds[ctx.item.type] ? { ...ctx.item, key: `${ctx.item.moduleName}/${ctx.item.name}` } : undefined);
 const notAnItem = <PaneNote>This applies to an assignment, quiz or page; open one.</PaneNote>;
 
 // its own boundary: the course list and today's lectures fetch, and a
@@ -133,12 +130,6 @@ function Preview() {
       </div>
     </SuspenseAndErrorHandling>
   );
-}
-
-function Compare({ moduleName, type, name }: { moduleName: string; type: string; name: string }) {
-  if (type === "Assignment") return <CompareAssignmentWithCanvas moduleName={moduleName} assignmentName={name} />;
-  if (type === "Quiz") return <CompareQuizWithCanvas moduleName={moduleName} quizName={name} />;
-  return <ComparePageWithCanvas moduleName={moduleName} pageName={name} />;
 }
 
 /**
@@ -236,16 +227,19 @@ export const coursePanes: CoursePane[] = [
     icon: <CompareIcon />,
     keepMounted: false,
     collapsedByDefault: () => true,
-    Content: (ctx) =>
-      courseItem(ctx) ? (
+    Content: (ctx) => {
+      const item = courseItem(ctx);
+      const Compare = item && itemKindViews[item.type].Compare;
+      return Compare ? (
         <ClientOnly>
           <SuspenseAndErrorHandling>
-            <Compare key={itemKey(ctx)} {...courseItem(ctx)!} />
+            <Compare key={item.key} moduleName={item.moduleName} name={item.name} />
           </SuspenseAndErrorHandling>
         </ClientOnly>
       ) : (
         notAnItem
-      ),
+      );
+    },
   },
   {
     id: "history",
@@ -256,16 +250,19 @@ export const coursePanes: CoursePane[] = [
     icon: <HistoryIcon />,
     keepMounted: false,
     collapsedByDefault: () => true,
-    Content: (ctx) =>
-      courseItem(ctx) ? (
+    Content: (ctx) => {
+      const item = courseItem(ctx);
+      const type = item && itemKinds[item.type].markdown;
+      return type ? (
         <ClientOnly>
           <SuspenseAndErrorHandling>
-            <ItemHistory key={itemKey(ctx)} {...courseItem(ctx)!} />
+            <ItemHistory key={item.key} type={type} moduleName={item.moduleName} name={item.name} />
           </SuspenseAndErrorHandling>
         </ClientOnly>
       ) : (
         notAnItem
-      ),
+      );
+    },
   },
   {
     id: "import",

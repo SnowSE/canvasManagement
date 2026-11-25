@@ -1,4 +1,6 @@
 "use client";
+import { ItemKind } from "@/features/local/course/courseItemTypes";
+import { itemKinds } from "./itemKinds";
 import { Link } from "@tanstack/react-router";
 import { showPane } from "@/components/panes/PaneStrip";
 import { ShowPaneLink } from "@/components/panes/ShowPaneLink";
@@ -22,9 +24,8 @@ import {
 } from "@/components/icons/ActionIcons";
 import { useReloadCanvasData } from "@/features/canvas/hooks/useReloadCanvasData";
 import {
-  PublishableItemType,
   usePublishInCanvasMutation,
-} from "@/features/canvas/hooks/canvasPublishHooks";
+} from "./usePublishInCanvas";
 import { getCourseUrl, getModuleItemUrl } from "@/services/urlUtils";
 import { useGitStatusQuery } from "@/features/local/git/gitHooks";
 import { useCourseContext } from "./context/courseContext";
@@ -73,7 +74,7 @@ export function EditorFooter({
   nextUrl,
   children,
 }: {
-  type: PublishableItemType;
+  type: ItemKind;
   name: string;
   moduleName: string;
   canvasLoading: boolean;
@@ -237,7 +238,8 @@ export function EditorFooter({
       </span>
     );
 
-  const history: FooterAction | undefined = git?.status.available
+  // (for a kind that is a markdown file: see ItemKindDef.markdown)
+  const history: FooterAction | undefined = git?.status.available && itemKinds[type].markdown
     ? {
         label: "File history",
         icon: <HistoryIcon />,

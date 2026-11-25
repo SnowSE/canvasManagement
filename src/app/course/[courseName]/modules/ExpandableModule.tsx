@@ -1,7 +1,6 @@
 "use client";
 import { useEffect } from "react";
 import { ItemKind, kindOf } from "@/features/local/course/courseItemTypes";
-import { usePagesQueries } from "@/features/local/pages/pageHooks";
 import { IModuleItem } from "@/features/local/modules/IModuleItem";
 import {
   getDateFromStringOrThrow,
@@ -19,19 +18,14 @@ import { getLectureUrl, getModuleItemUrl } from "@/services/urlUtils";
 import { useCourseContext } from "../context/courseContext";
 import { Expandable } from "../../../../components/Expandable";
 import { SectionTitle } from "@/components/panes/PaneHeader";
-import { useQuizzesQueries } from "@/features/local/quizzes/quizHooks";
-import { useAssignmentsQueries } from "@/features/local/assignments/assignmentHooks";
 import { useReorderCanvasModuleItemsMutation } from "@/features/canvas/hooks/canvasModuleHooks";
 import {
   useCanvasModulesQuery,
   useCanvasModulesWithItemsQuery,
 } from "@/features/canvas/hooks/canvasModuleHooks";
-import {
-  byOrderingDate,
-  canvasOrderDiffers,
-} from "@/features/local/modules/moduleItemOrder";
+import { byOrderingDate, canvasOrderDiffers } from "@/features/local/modules/moduleItemOrder";
 import { Spinner } from "@/components/Spinner";
-import { ItemTypeIcon } from "../ItemTypeIcon";
+import { ItemTypeIcon, useModuleItems } from "../itemKinds";
 import { useInvalidItemsQuery } from "@/features/local/modules/rawItemHooks";
 import { ItemInDay } from "../calendar/day/itemInDay/ItemInDay";
 import { useItemSyncStatus } from "../calendar/day/useItemSyncStatus";
@@ -47,9 +41,6 @@ export default function ExpandableModule({
 }) {
   const { itemDropOnModule } = useDraggingContext();
   const { courseName } = useCourseContext();
-  const { data: assignments } = useAssignmentsQueries(moduleName);
-  const { data: quizzes } = useQuizzesQueries(moduleName);
-  const { data: pages } = usePagesQueries(moduleName);
   const modal = useModal();
   const reorderMutation = useReorderCanvasModuleItemsMutation();
   const { data: canvasModules } = useCanvasModulesQuery();
@@ -58,11 +49,7 @@ export default function ExpandableModule({
   const { statusOf, ready } = useItemSyncStatus();
   const selection = useModuleSelection();
 
-  const moduleItems = [
-    ...(assignments ?? []).map((item): ModuleItem => ({ type: "assignment", item })),
-    ...quizzes.map((item): ModuleItem => ({ type: "quiz", item })),
-    ...pages.map((item): ModuleItem => ({ type: "page", item })),
-  ].sort((a, b) => byOrderingDate(a.item, b.item));
+  const moduleItems: ModuleItem[] = useModuleItems(moduleName).sort((a, b) => byOrderingDate(a.item, b.item));
 
   const canvasModuleItems = canvasModulesWithItems?.find(
     (m) => m.name === moduleName,
@@ -89,14 +76,13 @@ export default function ExpandableModule({
   const searched = !query || has(moduleName) ? moduleItems : moduleItems.filter((i) => has(i.item.name));
   // what the bar's filters let through (everything with none on); a module
   // with nothing to show is hidden
-  const shownItems = searched.filter(({ type, item }) =>
-    shown(kindsOf(statusOf(type, item, moduleName)), selection.filters),
-  );
+  const kinds = ({ type, item }: ModuleItem) => kindsOf(statusOf(type, item, moduleName));
+  const shownItems = searched.filter((i) => shown(kinds(i), selection.filters));
   const shownRefs = shownItems.map(({ type, item }) => ({ type, item, moduleName }));
   // nothing is counted until Canvas has answered, so no count changes later
-  const itemKinds = ready
+  const statusKinds = ready
     ? [
-        ...moduleItems.flatMap(({ type, item }) => kindsOf(statusOf(type, item, moduleName))),
+        ...moduleItems.flatMap(kinds),
         ...(invalidItems ?? []).map(() => "withErrors" as const),
       ]
     : [];
@@ -106,10 +92,10 @@ export default function ExpandableModule({
       moduleItems.filter(({ type, item }) => statusOf(type, item, moduleName).problem).length
     : 0;
   const { report } = selection;
-  const reported = shownRefs.map((r) => r.type + r.item.name).join("\n") + itemKinds.join(",");
+  const reported = shownRefs.map((r) => r.type + r.item.name).join("\n") + statusKinds.join(",");
   useEffect(() => {
     if (!ready) return;
-    report(moduleName, shownRefs, itemKinds);
+    report(moduleName, shownRefs, statusKinds);
     // the refs change whenever reported does
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [report, moduleName, reported, ready]);
@@ -155,6 +141,41 @@ export default function ExpandableModule({
   );
   if ((selection.filters.length > 0 || query) && shownItems.length === 0 && shownInvalid.length === 0)
     return null;
+
+  // an item's row: its checkbox, and the item as the calendar shows it
+  const itemRow = ({ type, item }: ModuleItem) => {
+    const status = statusOf(type, item, moduleName);
+    const ref = { type, item, moduleName };
+    return (
+      <div
+        key={item.name + type}
+        className="flex items-start"
+        // a checked item's right-click acts on every checked item
+        onContextMenuCapture={(e) => {
+          if (!selection.isSelected(ref)) return;
+          e.preventDefault();
+          e.stopPropagation();
+          selection.openMenu({ x: e.clientX, y: e.clientY });
+        }}
+      >
+        <input
+          type="checkbox"
+          className="mt-1.5 me-1 flex-none"
+          aria-label={`Select ${item.name}`}
+          checked={selection.isSelected(ref)}
+          onChange={() => selection.toggle(ref)}
+        />
+        <div className="flex-1 min-w-0">
+          <ItemInDay
+            type={type}
+            item={item}
+            moduleName={moduleName}
+            {...status}
+          />
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div
@@ -274,39 +295,7 @@ export default function ExpandableModule({
                     >
                       {weekLabel}
                     </Link>
-                    {items.map(({ type, item }) => {
-                      const status = statusOf(type, item, moduleName);
-                      const ref = { type, item, moduleName };
-                      return (
-                        <div
-                          key={item.name + type}
-                          className="flex items-start"
-                          // a checked item's right-click acts on every checked item
-                          onContextMenuCapture={(e) => {
-                            if (!selection.isSelected(ref)) return;
-                            e.preventDefault();
-                            e.stopPropagation();
-                            selection.openMenu({ x: e.clientX, y: e.clientY });
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            className="mt-1.5 me-1 flex-none"
-                            aria-label={`Select ${item.name}`}
-                            checked={selection.isSelected(ref)}
-                            onChange={() => selection.toggle(ref)}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <ItemInDay
-                              type={type}
-                              item={item}
-                              moduleName={moduleName}
-                              {...status}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
+                    {items.map(itemRow)}
                   </div>
                 ))}
               </div>

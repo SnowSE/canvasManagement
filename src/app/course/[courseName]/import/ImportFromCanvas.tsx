@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Spinner } from "@/components/Spinner";
 import { useCourseContext } from "../context/courseContext";
-import { ItemTypeIcon } from "../ItemTypeIcon";
+import { ItemTypeIcon } from "../itemKinds";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import { useModuleNamesQuery } from "@/features/local/modules/localCourseModuleHooks";
 import { useCanvasAssignmentsQuery } from "@/features/canvas/hooks/canvasAssignmentHooks";
