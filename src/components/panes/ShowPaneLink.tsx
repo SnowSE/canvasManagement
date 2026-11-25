@@ -2,14 +2,16 @@
 import { MouseEvent, ReactNode } from "react";
 import { Link, useRouter } from "@tanstack/react-router";
 import { showPane } from "./PaneStrip";
-import { popOutUrl } from "@/app/course/[courseName]/panes/popOut";
+import { openPopOut, popOutUrl } from "@/app/course/[courseName]/panes/popOut";
+import { viewClick } from "./viewClick";
 
 /**
  * A link that also shows a pane of where it goes (an item with its Compare
- * with Canvas pane, say). Its address is the pane's pop-out url, so opened
- * in a new tab or window (the middle button, Ctrl, Shift, the context menu)
- * it shows just that view; a plain click shows the pane here and goes to
- * the item within the app.
+ * with Canvas pane, say), clicked as a view icon is (see viewClick): a plain
+ * click or Ctrl shows the pane in this window and goes to the item there;
+ * Shift opens just that view in a window of its own. Its address is the
+ * pane's pop-out url, so the middle button and the browser's "open in new
+ * tab" show just that view in a tab.
  */
 export function ShowPaneLink({
   pane,
@@ -42,10 +44,11 @@ export function ShowPaneLink({
       title={title}
       onClick={(e) => {
         onClick?.(e);
-        // a modified click or the middle button: the browser opens the view in a new tab or window
-        if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return;
+        const click = viewClick(e);
+        if (e.defaultPrevented || click === "browser") return;
         e.preventDefault();
-        showPane(pane);
+        if (click === "window") return openPopOut(to, pane, true);
+        showPane(pane, click !== "default");
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         router.navigate({ to: to as any });
       }}

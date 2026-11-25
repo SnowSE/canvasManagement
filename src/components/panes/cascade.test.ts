@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { carriesOn, dragEdge, Effect, fit, growOrShrink, Layout, LetGo, makeRoom, openPanes, pushEdge, resize, restore, Row, Slab } from "./cascade";
+import { carriesOn, comingBack, dragEdge, gainsFromAsked, Effect, fit, fitAsked, growOrShrink, roomOf, rowAsked, windowGain, Layout, LetGo, makeRoom, openPanes, pushEdge, resize, restore, Row, Slab } from "./cascade";
 
 // modules, calendar, editor and preview open, 500 wide, each 100 past its narrowest; bars 20 wide, no gaps
 const row: Layout = {
@@ -168,4 +168,76 @@ describe("a drag let go and picked up again", () => {
     ["starts afresh after what was displaced changed", () => carriesOn(last, "1:", { ...last.left, records: [] }), false],
     ["starts afresh after a limit changed", () => carriesOn(last, "1:", { ...last.left, limits: { editor: { min: 450 } } }), false],
   ]);
+});
+
+describe("a row a link asked for, fitted to the window before it is shown (Modules and Calendar collapsed, the editor at 600 and the preview at 500)", () => {
+  const asked = (free: number) => edit({ modules: { collapsed: true }, calendar: { collapsed: true }, editor: { width: 600, minWidth: 300 }, preview: { width: 500 } }, { free });
+  const at = (free: number) => fitAsked(asked(free));
+  rules([
+    ["with room for what was asked: nothing gives way", () => at(0), undefined],
+    ["a little short: the bars before the panes asked open leave the page, farthest first, only as many as it takes", () => [look(at(-15)!.layout), kinds(at(-15)!.records)], ["modules- calendar_ editor600 preview500", ["hide modules"]]],
+    ["shorter: both bars leave", () => look(at(-30)!.layout), "modules- calendar- editor600 preview500"],
+    ["shorter than the bars make up: the first open pane keeps the width asked, the next narrows", () => look(at(-100)!.layout), "modules- calendar- editor600 preview440"],
+    ["shorter still: the rest give way as in any row too wide", () => look(at(-400)!.layout), "modules- calendar- editor600 preview_"],
+    ["remembers every effect, from the widths asked", () => at(-400)!.records, [
+      { id: "modules", kind: "hide", width: 500 },
+      { id: "calendar", kind: "hide", width: 500 },
+      { id: "preview", kind: "narrow", width: 500 },
+      { id: "preview", kind: "collapse", width: 400 },
+    ]],
+    ["so the row asked for comes back as the window grows", () => look(restore({ ...at(-400)!.layout, free: 1000 }, at(-400)!.records).layout), "modules_ calendar_ editor600 preview500"],
+    ["a row with nothing open is left as asked", () => fitAsked(edit(Object.fromEntries(row.slabs.map((s) => [s.id, { collapsed: true }])), { free: -10 })), undefined],
+  ]);
+});
+
+describe("the room a row has, for a row not on the page yet", () => {
+  const onPage = edit({ modules: { collapsed: true }, calendar: { hidden: true }, editor: { width: 600 } }, { free: 37, lead: 5, gap: 2 });
+  it("is such that the row on the page, asked for again as it is, is left with the empty room it has", () => {
+    expect(rowAsked(onPage.slabs, roomOf(onPage)).free).toBe(37 + 5);
+    expect(rowAsked(onPage.slabs, roomOf(onPage))).toMatchObject({ lead: 0, bar: 20, gap: 2, least: 20 });
+  });
+  it("leaves a wider row less, a pane's bar counting for a collapsed pane and nothing for one off the page", () => {
+    const room = roomOf({ ...row, free: 0 });
+    expect(rowAsked(edit({ editor: { width: 700 } }).slabs, room).free).toBe(-200);
+    expect(rowAsked(edit({ editor: { collapsed: true } }).slabs, room).free).toBe(480);
+    expect(rowAsked(edit({ editor: { hidden: true } }).slabs, room).free).toBe(500);
+  });
+  it("counts the gaps between the panes on the page", () => {
+    const room = roomOf({ ...row, free: 0, gap: 10 });
+    expect(rowAsked(edit({ editor: { hidden: true }, preview: { hidden: true } }).slabs, room).free).toBe(1000 + 20);
+  });
+  it("shares what is left among the open panes asked for with no width, each at least its narrowest", () => {
+    const room = roomOf({ ...row, free: 0 });
+    const asked = edit({ modules: { collapsed: true }, calendar: { collapsed: true } }).slabs;
+    expect(look(rowAsked(asked, room, ["editor", "preview"]))).toBe("modules_ calendar_ editor980 preview980");
+    expect(look(rowAsked(asked, room, ["preview"]))).toBe("modules_ calendar_ editor500 preview1460");
+    expect(look(rowAsked(edit({}).slabs, { ...room, total: 1500 }, ["editor", "preview"]))).toBe("modules500 calendar500 editor400 preview400");
+  });
+});
+
+describe("how much wider the window is than when what is waiting gave way", () => {
+  rules([
+    ["nothing waiting: nothing gained, and the window as it is is where gains count from", () => windowGain(1000, 1400, false), { gained: 0, from: 1400 }],
+    ["something waiting: every bit of growth since counts, however small each step was", () => [windowGain(1000, 1010, true), windowGain(1000, 1300, true)], [{ gained: 10, from: 1000 }, { gained: 300, from: 1000 }]],
+    ["narrower than that: nothing gained, and gains count from the narrower window", () => windowGain(1000, 900, true), { gained: 0, from: 900 }],
+    ["a row asked for in a window too narrow for it: the room it leaves empty counts as gained already, so what gave way is back as soon as it fits", () => windowGain(gainsFromAsked(900, 200), 1150, true).gained, 450],
+    ["a row asked for that leaves no room: gains count from the window as it is", () => gainsFromAsked(900, -3), 900],
+  ]);
+});
+
+describe("what a wider window would bring back", () => {
+  const records: Effect[] = [
+    { id: "modules", kind: "hide", width: 400 },
+    { id: "calendar", kind: "hide", width: 400 },
+    { id: "preview", kind: "narrow", width: 500 },
+    { id: "preview", kind: "collapse", width: 400 },
+  ];
+  it("is each pane waiting, once, the first to come back first, with what happened to it last", () => {
+    expect(comingBack(records)).toEqual([
+      { id: "preview", kind: "collapse" },
+      { id: "calendar", kind: "hide" },
+      { id: "modules", kind: "hide" },
+    ]);
+    expect(comingBack([])).toEqual([]);
+  });
 });

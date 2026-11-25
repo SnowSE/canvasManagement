@@ -1,8 +1,10 @@
 "use client";
+import { viewClick } from "./viewClick";
 import { CSSProperties, ReactNode, RefObject, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { previewWidths, usePaneRegistration, usePanes } from "./PaneStrip";
 import { MinRule } from "./PaneRules";
+import { copyTextToClipboard } from "../CopyableCommand";
 import { HideButton, PaneBar, Side, useDragHandlers } from "./PaneBar";
 import { OnView, ViewChoice } from "./ViewIcons";
 import { useRouterState } from "@tanstack/react-router";
@@ -64,7 +66,7 @@ export function Pane({
   children: ReactNode;
 }) {
   usePaneRegistration({ id, label, icon, minWidth, defaultWidth, collapsedByDefault, hiddenByDefault, ssr });
-  const { panes, narrow, showing, flashing, previewing, setCollapsed, close, addPane, switchView, setLimits, grow, move, restoreDefaults } = usePanes();
+  const { panes, narrow, showing, flashing, previewing, setCollapsed, close, addPane, switchView, setLimits, grow, move, restoreDefaults, layoutLink } = usePanes();
   const rowDrag = useRowDrag();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const popOutHref = { pathname, pane: viewOf(id) };
@@ -77,9 +79,10 @@ export function Pane({
   const toggle = () => setCollapsed(id, !remembered);
   /** A view icon on this pane's bar: the pane shows that view; Ctrl: a new pane of it after this one; Ctrl+Shift: at the end; Shift: a new window following this one. */
   const onView: OnView = (view, e) => {
-    if (e.shiftKey && !e.ctrlKey && !e.metaKey) return openPopOut(pathname, view, true);
-    if (e.ctrlKey || e.metaKey) return addPane(view, e.shiftKey ? undefined : place + 1);
-    switchView(id, view);
+    const click = viewClick(e);
+    if (click === "window") return openPopOut(pathname, view, true);
+    if (click === "pane" || click === "paneAtEnd") return addPane(view, click === "pane" ? place + 1 : undefined);
+    if (click === "default") switchView(id, view);
   };
   const hide = () => close([id]);
   // a drag of the pane (its name, its menu icon or its title): the pane leaves the row for
@@ -203,6 +206,7 @@ export function Pane({
           { label: "Close the panes to the left", onClick: () => close(panes.slice(0, place).map((p) => p.id)) },
           { label: "Close the panes to the right", onClick: () => close(panes.slice(place + 1).map((p) => p.id)) },
           { label: "Restore the default layout", onClick: restoreDefaults },
+          ...(layoutLink ? [{ label: "Copy a link to this layout", onClick: () => void copyTextToClipboard(`${location.origin}${location.pathname}?panes=${layoutLink()}`) }] : []),
         ]}
         square={{ left: leftPane?.label, right: rightPane?.label }}
         onMove={onMove}

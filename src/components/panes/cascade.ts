@@ -174,6 +174,81 @@ export function fit(layout: Layout, records: Effect[], sized: (id: string) => bo
   return { layout: made.layout, records: [...records, ...made.effects.filter((e) => e.kind !== "narrow" || sized(e.id))] };
 }
 
+/** What a row has to give its panes: the room between its ends, a bar's width, the gap between panes, the least an open pane may be. */
+export type Room = { total: number; bar: number; gap: number; least: number };
+
+const taken = (slabs: Slab[], bar: number, gap: number) => {
+  const shown = slabs.filter((s) => !s.hidden);
+  return shown.reduce((sum, s) => sum + (s.collapsed ? bar : s.width), 0) + gap * Math.max(shown.length - 1, 0);
+};
+
+/** The room the row on the page has (see Room): what its panes take, and the empty room at both ends. */
+export const roomOf = (layout: Layout): Room => ({
+  total: layout.free + layout.lead + taken(layout.slabs, layout.bar, layout.gap),
+  bar: layout.bar,
+  gap: layout.gap,
+  least: layout.least,
+});
+
+/**
+ * A row not on the page yet, in the room there is for it: the panes as
+ * asked for, and the empty room they would leave (below zero: too wide,
+ * see fitAsked). The open panes asked for with no width (`share`) share
+ * what the others leave, each at least its narrowest.
+ */
+export function rowAsked(asked: Slab[], room: Room, share: string[] = []): Layout {
+  const sharing = (s: Slab) => open(s) && share.includes(s.id);
+  const others = asked.map((s) => (sharing(s) ? { ...s, width: 0 } : s));
+  const each = (room.total - taken(others, room.bar, room.gap)) / Math.max(asked.filter(sharing).length, 1);
+  const slabs = asked.map((s) => (sharing(s) ? { ...s, width: Math.max(each, s.minWidth) } : { ...s }));
+  return { slabs, lead: 0, free: room.total - taken(slabs, room.bar, room.gap), bar: room.bar, gap: room.gap, least: room.least };
+}
+
+/**
+ * How much wider the window is than when what is waiting gave way (see
+ * fit): every bit of growth since counts, so a window widened little by
+ * little brings a pane back as surely as one widened at once. `from` is
+ * the width gains count from next: with nothing waiting, or narrower than
+ * before, the window as it is; the caller also starts from the window as
+ * it is once a fit has brought something back.
+ */
+export const windowGain = (from: number, width: number, waiting: boolean) =>
+  waiting && width >= from ? { gained: width - from, from } : { gained: 0, from: width };
+
+/**
+ * Where gains count from (see windowGain) for a row just asked for and
+ * fitted (see fitAsked) in a window `width` wide: narrower than the window
+ * by the room the fitted row leaves empty. Nobody dragged that room open;
+ * it is there because what gave way gave way whole, so it counts toward
+ * bringing that back.
+ */
+export const gainsFromAsked = (width: number, free: number) => width - Math.max(free, 0);
+
+/** The panes waiting to come back (see restore), the first to come back first, each with what happened to it last. */
+export const comingBack = (records: Effect[]) =>
+  [...records].reverse().filter((r, i, all) => all.findIndex((x) => x.id === r.id) === i).map(({ id, kind }) => ({ id, kind }));
+
+/**
+ * A row just asked for (by a link, see paneLink), not on the page yet,
+ * fitted to its room: the widths are the ones asked for, `free` what the
+ * window would leave after them (below zero: too wide). Too wide: the
+ * panes asked open keep their widths and the bars before them leave the
+ * page (see makeRoom); still too wide, the first open pane alone keeps its
+ * width and the rest give way, as in any row too wide (see fit). Every
+ * effect is remembered, so the row asked for comes back as the window
+ * grows. Undefined: it fits.
+ */
+export function fitAsked(layout: Layout): Changed | undefined {
+  if (layout.free >= -1) return;
+  const opened = layout.slabs.filter(open).map((s) => s.id);
+  if (!opened.length) return;
+  const together = makeRoom(layout, opened, 0);
+  // what is still missing after everything around them gave way
+  if (together.got >= -1 || opened.length < 2) return { layout: together.layout, records: together.effects };
+  const alone = makeRoom({ ...together.layout, free: together.got }, [opened[0]], 0);
+  return { layout: alone.layout, records: [...together.effects, ...alone.effects] };
+}
+
 /**
  * A double-click on an open pane's title: the pane as wide as its widest
  * (as wide as the row can make it when it is already wider than that, past
