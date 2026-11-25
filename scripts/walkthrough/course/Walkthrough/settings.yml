@@ -1,0 +1,11 @@
+name: Walkthrough
+assignmentGroups: []
+daysOfWeek: [Monday, Wednesday, Friday]
+canvasId: 1
+startDate: 08/26/2026 00:00:00
+endDate: 12/11/2026 23:59:00
+defaultDueTime: {hour: 23, minute: 59}
+defaultAssignmentSubmissionTypes: []
+defaultFileUploadTypes: []
+holidays: []
+assets: []
