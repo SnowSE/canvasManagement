@@ -2,7 +2,7 @@ const canvasOrigin = "https://snow.instructure.com/";
 
 /**
  * Where the server sends a Canvas request: to Canvas, or with a fake Canvas
- * set (CANVAS_FAKE_URL, for the walkthrough: scripts/walkthrough) to the
+ * set (CANVAS_FAKE_URL, for the walkthrough in the run-canvas-management skill) to the
  * same path there. The fake must be on this machine: the Canvas token goes
  * with every request.
  */

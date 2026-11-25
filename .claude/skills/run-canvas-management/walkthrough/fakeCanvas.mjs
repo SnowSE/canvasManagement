@@ -3,7 +3,10 @@
 // as the app can tell (ids, a page's url from its title, unpublished on
 // creation, uploads in two steps). Anything else is answered 404 and listed
 // at GET /__unknown, so a walkthrough can say what the app asked for that
-// this fake doesn't know. GET /__state shows everything it holds.
+// this fake doesn't know. GET /__state shows everything it holds. GET
+// /__requests says how many Canvas requests came since the last time it was
+// asked: on a real course each is a round trip to Canvas, so the count matters
+// as much as the time.
 //
 //   node fakeCanvas.mjs <port> [host]      (the app: CANVAS_FAKE_URL=http://127.0.0.1:<port>)
 import http from "node:http";
@@ -31,6 +34,7 @@ const state = {
   uploads: {},
 };
 const unknown = [];
+let requests = [];
 
 const slug = (title) => title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 const unwrap = (body, key) => (body && typeof body[key] === "object" ? body[key] : body ?? {});
@@ -216,6 +220,8 @@ http
     };
     if (url.pathname === "/__state") return send(200, state);
     if (url.pathname === "/__unknown") return send(200, unknown);
+    if (url.pathname === "/__requests") return send(200, requests.splice(0));
+    requests.push(`${req.method} ${url.pathname.replace(/\/\d+/g, "/:id")}`);
     const upload = /^\/__upload\/(\d+)$/.exec(url.pathname);
     if (upload && req.method === "POST") {
       const pending = state.uploads[upload[1]];

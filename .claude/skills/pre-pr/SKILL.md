@@ -23,20 +23,23 @@ those live in the walkthrough below.
 ## 2. The walkthrough, as a new user (a few minutes; once the feature looks done)
 
 ```bash
-scripts/walkthrough/run.sh   # builds, serves a fresh copy of the walkthrough course and a fake Canvas on free ports
+.claude/skills/run-canvas-management/walkthrough/run.sh   # builds, serves a fresh copy of the walkthrough course and a fake Canvas on free ports
 ```
 
 - Every line must be `PASS`. The fake Canvas (`fakeCanvas.mjs`) holds the
   course in memory, so items really are added, published and compared; a
   request it doesn't know fails a check by name, and the fix is usually a route
   in the fake, written as Canvas answers it. It stops its servers itself.
-- It appends the timings (build size, course page ready, item open, save after
-  typing) to `scripts/benchmarks.tsv`. Commit that line with the change, and
-  compare with the previous lines: a jump in any column needs an explanation in
-  the PR or a fix.
+- It appends a line to `walkthrough/benchmarks.tsv` beside it: build size; the
+  time until the course page is ready, an item opens, and typing is saved; and
+  how many Canvas requests the course page, opening an item, and adding and
+  publishing an item each make. On a real course every request is a round trip
+  to Canvas, so a count that grows matters even when the fake's time doesn't.
+  Commit that line with the change, and compare with the previous lines: a jump
+  in any column needs an explanation in the PR or a fix.
 - A change to something the walkthrough doesn't touch gets a new check in
   `walkthrough.mjs` (one line of what a user would see), not a screenshot.
-- The walkthrough course (`scripts/walkthrough/course/`) is generic and
+- The walkthrough course (`walkthrough/course/`) is generic and
   invented: no course names, people, or real course content.
 
 ## 3. Security review (once per feature, before its PR)

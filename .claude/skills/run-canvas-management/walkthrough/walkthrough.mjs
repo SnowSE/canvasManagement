@@ -2,7 +2,7 @@
 // Canvas holding its course in memory (fakeCanvas.mjs): every item starts
 // not in Canvas, and is added and published there along the way.
 // Each check prints PASS or FAIL; timings print as BENCH lines. Run by
-// scripts/walkthrough/run.sh inside the playwright container.
+// run.sh beside it, inside the playwright container.
 import { chromium } from "playwright";
 import fs from "fs/promises";
 
@@ -10,6 +10,8 @@ import fs from "fs/promises";
 const { BASE: base, FAKE: fake } = process.env;
 if (!base || !fake) throw new Error("BASE and FAKE (the app's and the fake Canvas's addresses) are set by run.sh");
 const canvas = async (what) => (await fetch(`${fake}/${what}`)).json();
+// the Canvas requests since the last call: on a real course each is a round trip
+const canvasRequests = async () => (await canvas("__requests")).length;
 const course = process.env.COURSE_DIR ?? "/course/Walkthrough"; // the served copy, to read what the app wrote
 const results = [];
 const bench = {};
@@ -44,9 +46,13 @@ const shape = { kind: "file", name: "shape.svg" };
 {
   const { ctx, page } = await newPage();
   const t0 = Date.now();
+  await canvasRequests();
   await page.goto(`${base}/course/Walkthrough`, { waitUntil: "load" });
   const ready = await waitFor(page, async () => (await page.locator(".draggingModule").count()) > 0 || (await page.getByText("Expand all").count()) > 0);
   bench.course_ready_ms = ready === undefined ? undefined : Date.now() - t0;
+  // what the page asks Canvas for once it has settled
+  await page.waitForTimeout(3000);
+  bench.course_page_canvas_requests = await canvasRequests();
   check("the course page opens", ready !== undefined);
   const show = page.locator('[aria-label="Show Modules"]').last();
   if (await show.count()) await show.click();
@@ -71,16 +77,21 @@ const shape = { kind: "file", name: "shape.svg" };
 {
   const { ctx, page } = await newPage();
   const opened = [];
+  const openRequests = [];
   for (const it of items) {
+    await canvasRequests();
     const t0 = Date.now();
     await page.goto(`${base}/course/Walkthrough/modules/${M}/${it.kind}/${encodeURIComponent(it.name)}?panes=e,v`, { waitUntil: "load" });
     const took = await waitFor(page, async () => (await page.locator(".view-lines").first().innerText()).includes(it.text));
     if (took !== undefined) opened.push(Date.now() - t0);
+    await page.waitForTimeout(1500);
+    openRequests.push(await canvasRequests());
     const body = await page.locator("body").innerText();
     check(`${it.name} opens in the editor`, took !== undefined);
     check(`${it.name}'s footer offers Add to Canvas`, /Add to Canvas/.test(body));
   }
   bench.item_open_ms = opened.length ? Math.round(opened.reduce((a, b) => a + b) / opened.length) : undefined;
+  bench.item_open_canvas_requests = Math.round(openRequests.reduce((a, b) => a + b, 0) / openRequests.length);
 
   // a file's preview runs its script, which imports a file of another module, styled by its sibling
   await page.goto(`${base}/course/Walkthrough/modules/${M}/file/demo.html?panes=e,v`, { waitUntil: "load" });
@@ -114,7 +125,8 @@ const shape = { kind: "file", name: "shape.svg" };
   await page.getByText("Make a page for it").click().catch(() => {});
   const made = await waitFor(page, async () => (await fs.readFile(`${course}/02 - Basics/pages/shape.md`, "utf-8")).includes("](../files/shape.svg)"));
   check("Make a page for it writes a page that links to the file", made !== undefined);
-  check("…and opens it", decodeURIComponent(page.url()).includes("/page/shape"), decodeURIComponent(page.url()));
+  const openedPage = await waitFor(page, async () => decodeURIComponent(page.url()).includes("/page/shape"));
+  check("…and opens it", openedPage !== undefined, decodeURIComponent(page.url()));
   await ctx.close();
 }
 
@@ -136,9 +148,12 @@ const shape = { kind: "file", name: "shape.svg" };
     await button.click();
     return true;
   };
+  const sendRequests = [];
   for (const it of [items[3], shape, items[0], items[1], items[2]]) {
     await page.goto(`${base}/course/Walkthrough/modules/${M}/${it.kind}/${encodeURIComponent(it.name)}?panes=e,d`, { waitUntil: "load" });
     await waitFor(page, async () => /Add to Canvas/.test(await page.locator("body").innerText()));
+    await page.waitForTimeout(1500);
+    await canvasRequests();
     await clickFooter("Add to Canvas");
     await page.waitForTimeout(1500);
     const said = await page.locator('[role="status"]').allInnerTexts().catch(() => []);
@@ -149,7 +164,9 @@ const shape = { kind: "file", name: "shape.svg" };
     await clickFooter("Publish in Canvas");
     const published = await waitFor(page, async () => /In sync · Published/.test(await page.locator("body").innerText()), 20000);
     check(`${it.name} is published, and its footer then reads in sync and published`, published !== undefined, await footer());
+    sendRequests.push(await canvasRequests());
   }
+  bench.add_and_publish_canvas_requests = Math.round(sendRequests.reduce((a, b) => a + b, 0) / sendRequests.length);
   const held = await canvas("__state");
   check("Canvas has the assignment, the quiz with its 2 questions, the page and the file, each published", held.assignments.some((a) => a.name === "Lab 1" && a.published) && held.quizzes.some((q) => q.title === "Quiz 1" && q.published && (held.questions[q.id] ?? []).length === 2) && held.pages.some((p) => p.title === "Day 2" && p.published) && held.files.some((f) => f.display_name === "demo.html" && !f.locked), JSON.stringify({ assignments: held.assignments.map((a) => [a.name, a.published]), quizzes: held.quizzes.map((q) => [q.title, q.published, (held.questions[q.id] ?? []).length]), pages: held.pages.map((p) => [p.title, p.published]), files: held.files.map((f) => [f.display_name, f.locked]) }));
   const page2 = held.pages.find((p) => p.title === "Day 2");

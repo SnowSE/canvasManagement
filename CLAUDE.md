@@ -7,7 +7,8 @@ or test the app, use the `run-canvas-management` skill
 ## Before every push or PR
 
 Follow the `pre-pr` skill (`.claude/skills/pre-pr/SKILL.md`): `scripts/check.sh`,
-then `scripts/walkthrough/run.sh` (a browser pass with recorded timings), a
+then, once a feature looks done, the walkthrough in the `run-canvas-management`
+skill (a browser pass against a fake Canvas, with recorded timings), a
 security review, and the docs below.
 
 ## Keep the docs current

@@ -100,6 +100,31 @@ Course names come from `globalSettings.yml`. Prefer a name without an apostrophe
 `Mobile ('26 Fall)` needs both URL-encoding and shell quoting inside the `sh -c`,
 which is miserable to get right.
 
+## The walkthrough: a new user's pass, against a fake Canvas
+
+```bash
+.claude/skills/run-canvas-management/walkthrough/run.sh
+```
+
+For when a feature looks done (see the `pre-pr` skill), not every iteration:
+about 90 s. It builds this checkout and serves it with a fresh copy of the
+invented course in `walkthrough/course/`, beside a **fake Canvas**
+(`walkthrough/fakeCanvas.mjs`) that holds that course in memory, both on free
+ports of 127.0.0.1. Then `walkthrough.mjs` runs in the Playwright container:
+the four item kinds in the module list, their menus, editors and footers, a
+file's preview, typing saved to disk, Make a page for it, and adding and
+publishing each kind in Canvas until it reads in sync. It prints PASS/FAIL per
+check, stops its servers, and appends timings and Canvas request counts to
+`walkthrough/benchmarks.tsv`.
+
+- The app reaches the fake through `CANVAS_FAKE_URL` (server only, refused for
+  anything but this machine: the token goes with every request).
+- A Canvas request the fake doesn't know fails a check by name; add the route
+  to `fakeCanvas.mjs`, answering as Canvas does.
+- The fake works for a manual run too: `node walkthrough/fakeCanvas.mjs <port>`
+  and start the app with `CANVAS_FAKE_URL=http://127.0.0.1:<port>`.
+- Keep the course generic and invented: no course names, people or real content.
+
 ## Run (human path)
 
 ```bash
