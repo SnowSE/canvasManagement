@@ -70,3 +70,11 @@ export async function updateEach<T>(
   }
   return failed;
 }
+
+/**
+ * Adds or updates the items in Canvas one at a time (see updateEach), but
+ * for the ones with a problem (dates Canvas won't save, a name another
+ * file has too), which can't be sent. Returns the ones not sent.
+ */
+export const sendEach = <T>(items: T[], problemOf: (item: T) => string | undefined, send: (item: T) => Promise<unknown>, onProgress: (done: number) => void) =>
+  updateEach(items, (item) => (problemOf(item) ? Promise.reject(new Error(problemOf(item))) : send(item)), onProgress);

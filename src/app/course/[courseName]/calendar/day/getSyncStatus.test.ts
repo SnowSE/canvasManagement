@@ -252,6 +252,37 @@ describe("rubricInSync", () => {
   });
 });
 
+describe("two files of one name, which Canvas keeps as one item (teichert#26)", () => {
+  const problemOf = (sharedWith?: string[]) =>
+    getSyncStatus({ item: baseLocalAssignment, canvasItem: baseCanvasAssignment, type: "assignment", settings: baseSettings, sharedWith }).problem;
+  it("is a problem that names every module holding one", () => {
+    expect(problemOf(["04 - Trees", "06 - Heaps"])).toMatch(/04 - Trees.*06 - Heaps/);
+  });
+  it("is a problem before the item is in Canvas too", () => {
+    expect(getSyncStatus({ item: baseLocalAssignment, canvasItem: undefined, type: "assignment", settings: baseSettings, sharedWith: ["04 - Trees", "06 - Heaps"] }).problem).toMatch(/04 - Trees/);
+  });
+  it("is no problem for a name only one file has", () => {
+    expect(problemOf(["04 - Trees"])).toBeUndefined();
+  });
+});
+
+describe("a rubric Update in Canvas must send again (teichert#88)", () => {
+  const local = [{ label: "Code Quality", points: 10 }];
+  const rating = (description: string, points: number, long_description = "") => ({ id: description, description, points, long_description });
+  // the row as Canvas keeps it after the app sent it: the two ratings a row without its own gets
+  const sent = (more: Partial<CanvasRubricCriteria> = {}): CanvasRubricCriteria => ({
+    id: "1", description: "Code Quality", long_description: "", points: 10, ratings: [rating("Full Marks", 10), rating("No Marks", 0)], ...more,
+  });
+  it.each<[string, CanvasRubricCriteria[], boolean | undefined, boolean]>([
+    ["not one Canvas keeps as it was sent", [sent()], true, true],
+    ["one whose row was given a long description in Canvas", [sent({ long_description: "Edited in Canvas" })], true, false],
+    ["one whose rating was given a long description in Canvas", [sent({ ratings: [rating("Full Marks", 10, "Edited"), rating("No Marks", 0)] })], true, false],
+    ["one whose rating was renamed in Canvas, the file's row having no ratings of its own", [sent({ ratings: [rating("Great", 10), rating("No Marks", 0)] })], true, false],
+    ["one given another rating in Canvas, the file's row having no ratings of its own", [sent({ ratings: [rating("Full Marks", 10), rating("Half", 5), rating("No Marks", 0)] })], true, false],
+    ["one Canvas no longer grades with", [sent()], false, false],
+  ])("%s", (_, canvas, usedForGrading, inSync) => expect(rubricInSync(local, canvas, usedForGrading)).toBe(inSync));
+});
+
 describe("getSyncStatus - rubric comparison", () => {
   const baseCanvasRubricItem: CanvasRubricCriteria = {
     id: "crit-1",

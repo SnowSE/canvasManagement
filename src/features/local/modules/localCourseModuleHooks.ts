@@ -91,6 +91,24 @@ export const useCourseQuizzesByModuleByDateQuery = () => {
   return quizzesByModuleByDate;
 };
 
+/**
+ * The modules holding a file of a type and name: more than one is two files
+ * Canvas would keep as one item (see sharedNameProblem). From the lists the
+ * calendar and the module list already hold.
+ */
+export const useModulesOfName = () => {
+  const { courseName } = useCourseContext();
+  const { data: moduleNames } = useModuleNamesQuery();
+  const trpc = useTRPC();
+  const lists = {
+    assignment: useSuspenseQueries({ queries: moduleNames.map((moduleName: string) => trpc.assignment.getAllAssignments.queryOptions({ courseName, moduleName })) }),
+    quiz: useSuspenseQueries({ queries: moduleNames.map((moduleName: string) => trpc.quiz.getAllQuizzes.queryOptions({ courseName, moduleName })) }),
+    page: useSuspenseQueries({ queries: moduleNames.map((moduleName: string) => trpc.page.getAllPages.queryOptions({ courseName, moduleName })) }),
+  };
+  return (type: "assignment" | "quiz" | "page", name: string) =>
+    moduleNames.filter((_: string, i: number) => (lists[type][i].data ?? []).some((item: { name: string }) => item.name === name));
+};
+
 export const useCoursePagesQuery = () => {
   const { courseName } = useCourseContext();
   const { data: moduleNames } = useModuleNamesQuery();

@@ -1,3 +1,4 @@
+import { rubricRatings } from "@/features/canvas/services/canvasRubricUtils";
 import { CanvasAssignment } from "@/features/canvas/models/assignments/canvasAssignment";
 import { CanvasRubricCriteria } from "@/features/canvas/models/assignments/canvasRubricCriteria";
 import { CanvasPage } from "@/features/canvas/models/pages/canvasPageModel";
@@ -80,8 +81,9 @@ export type ItemSyncStatus = {
    */
   unpublished?: boolean;
   /**
-   * Dates Canvas won't save (see dateOrderProblem), in Canvas or not: the
-   * module list counts it as an error, and the item can't be sent.
+   * Dates Canvas won't save (see dateOrderProblem), or a name another
+   * file has too (see sharedNameProblem), in Canvas or not: the module list
+   * counts it as an error, and the item can't be sent.
    */
   problem?: string;
 };
@@ -332,12 +334,33 @@ function checkExternalTool(
   });
 }
 
+/**
+ * The rubric as the file has it against Canvas's, by everything Update in
+ * Canvas sends (see getRubricCriterion): the rows, their ratings (the two
+ * the app sends for a row without its own included), no long descriptions,
+ * and the rubric used for grading (`usedForGrading`: as Canvas reports it).
+ * Whatever this doesn't show as different, Update leaves alone (see
+ * rubricInSync).
+ */
 function checkRubric(
   localRubric: RubricItem[],
   canvasRubric: CanvasRubricCriteria[] | undefined,
+  usedForGrading?: boolean,
 ): SyncField[] {
   const fields: SyncField[] = [];
   const canvasItems = canvasRubric ?? [];
+  if (localRubric.length > 0 && usedForGrading === false)
+    fields.push(
+      field({
+        key: "rubricGrading",
+        label: "Rubric used for grading",
+        section: "rubric",
+        local: "yes",
+        canvas: "no",
+        same: false,
+        message: "rubric is not used for grading in Canvas",
+      }),
+    );
   if (localRubric.length !== canvasItems.length) {
     fields.push(
       field({
@@ -375,38 +398,51 @@ function checkRubric(
       }),
     );
 
-    if (!local || !canvas || !local.ratings || local.ratings.length === 0)
-      continue;
+    if (!local || !canvas) continue;
+    if (canvas.long_description)
+      fields.push(
+        field({
+          key: `rubric:${i}:long`,
+          label: `Rubric ${i + 1} long description`,
+          section: "rubric",
+          local: UNSET,
+          canvas: canvas.long_description,
+          same: false,
+          message: "rubric long description is only in Canvas",
+        }),
+      );
+    // a row without ratings of its own has the two the app sends: shown only where Canvas's differ
+    const own = !!local.ratings && local.ratings.length > 0;
+    if (!own && canvas.ratings === undefined) continue;
+    const ratings = rubricRatings(local);
     const canvasRatings = canvas.ratings ?? [];
-    if (local.ratings.length !== canvasRatings.length) {
+    if (ratings.length !== canvasRatings.length) {
       fields.push(
         field({
           key: `rubric:${i}:ratingCount`,
           label: `Rubric ${i + 1} ratings`,
           section: "rubric",
-          local: String(local.ratings.length),
+          local: String(ratings.length),
           canvas: String(canvasRatings.length),
           same: false,
           message: "rubric ratings count is different",
         }),
       );
     }
-    const ratingRows = Math.max(local.ratings.length, canvasRatings.length);
+    const ratingRows = Math.max(ratings.length, canvasRatings.length);
     for (let j = 0; j < ratingRows; j++) {
-      const lr = local.ratings[j];
+      const lr = ratings[j];
       const cr = canvasRatings[j];
+      const same = !!lr && !!cr && lr.description === cr.description && lr.points === cr.points && !cr.long_description;
+      if (!own && same) continue;
       fields.push(
         field({
           key: `rubric:${i}:rating:${j}`,
           label: `Rubric ${i + 1} rating ${j + 1}`,
           section: "rubric",
           local: lr ? `${lr.description} · ${lr.points}` : UNSET,
-          canvas: cr ? `${cr.description} · ${cr.points}` : UNSET,
-          same:
-            !!lr &&
-            !!cr &&
-            lr.description === cr.description &&
-            lr.points === cr.points,
+          canvas: cr ? `${cr.description} · ${cr.points}${cr.long_description ? ` · ${cr.long_description}` : ""}` : UNSET,
+          same,
           message: "rubric rating description or points is different",
         }),
       );
@@ -419,7 +455,8 @@ function checkRubric(
 export const rubricInSync = (
   localRubric: RubricItem[],
   canvasRubric: CanvasRubricCriteria[] | undefined,
-) => checkRubric(localRubric, canvasRubric).every((f) => f.same);
+  usedForGrading?: boolean,
+) => checkRubric(localRubric, canvasRubric, usedForGrading).every((f) => f.same);
 
 /**
  * How the compare page renders an item's description (a page's text), for
@@ -678,6 +715,16 @@ function checkSchedule(
   return fields;
 }
 
+/**
+ * Why an item can't be sent while another file of its type has its name:
+ * Canvas keeps one item per name, so each update would overwrite the
+ * other's and move it between their modules.
+ */
+export const sharedNameProblem = (type: string, name: string, modules: string[] = []) =>
+  modules.length > 1
+    ? `${modules.length} ${type} files are named "${name}" (in ${modules.join(", ")}). Canvas keeps one ${type} per name, so they would overwrite each other: rename all but one.`
+    : undefined;
+
 /** Dates Canvas won't save (see dateOrderProblem): a difference until fixed. */
 function checkDateOrder(item: {
   unlockAt?: string;
@@ -738,7 +785,7 @@ function checkAssignment(
   if (group) fields.push(group);
   const externalTool = checkExternalTool(assignment, canvasAssignment);
   if (externalTool) fields.push(externalTool);
-  fields.push(...checkRubric(assignment.rubric, canvasAssignment.rubric));
+  fields.push(...checkRubric(assignment.rubric, canvasAssignment.rubric, canvasAssignment.use_rubric_for_grading));
   const points = checkPoints(
     assignment.rubric,
     canvasAssignment.points_possible,
@@ -881,6 +928,7 @@ export function getSyncReport({
   roster,
   canvasQuestions,
   module,
+  sharedWith,
 }: {
   item: LocalQuiz | LocalAssignment | LocalCoursePage;
   canvasItem: CanvasQuiz | CanvasAssignment | CanvasPage | undefined;
@@ -892,8 +940,10 @@ export function getSyncReport({
   canvasQuestions?: CanvasQuizQuestion[];
   /** The file's module and the Canvas modules holding the item; without them the module is not compared. */
   module?: { file: string; canvas: string[] };
+  /** The modules holding a file of this type and name (see sharedNameProblem); more than one is a problem. */
+  sharedWith?: string[];
 }): SyncReport {
-  const problem = dateOrderProblem(item);
+  const problem = dateOrderProblem(item) ?? sharedNameProblem(type, item.name, sharedWith);
   if (!canvasItem)
     return {
       status: "localOnly",

@@ -1,7 +1,8 @@
 const scriptTagRegex = /<script.*?<\/script>/g;
 const linkTagRegex = /<link\s+rel="[^"]*"\s+href="[^"]*"[^>]*>/g;
+// every attribute but where a link goes and what an image shows: Canvas adds and reorders the rest
 const nonHrefAttributeRegex =
-  /\s+(?!href\s*=)[\w-]+="[^"]*"|\s+(?!href\s*=)[\w-]+='[^']*'|\s+(?!href\s*=)[\w-]+=[^\s>]+/g;
+  /\s+(?!(?:href|src)\s*=)[\w-]+="[^"]*"|\s+(?!(?:href|src)\s*=)[\w-]+='[^']*'|\s+(?!(?:href|src)\s*=)[\w-]+=[^\s>]+/g;
 const courseIdInImageUrlRegex =
   /(<img[^>]*src=")([^"]*)(\/courses\/\d+)([^"]*")/g;
 const queryParametersInImageUrlRegex = /(<img[^>]*src="[^"]*)\?[^"]*"/g;
@@ -36,7 +37,7 @@ export const removeHtmlDetails = (html: string) => {
     .replaceAll(scriptTagRegex, "")
     .replaceAll(linkTagRegex, "");
 
-  // Remove all non-href attributes (including data-* attributes)
+  // Remove every attribute but href and src (data-* attributes included)
   processed = processed.replaceAll(nonHrefAttributeRegex, "");
 
   // Normalize image URLs by removing /courses/courseID pattern and query parameters

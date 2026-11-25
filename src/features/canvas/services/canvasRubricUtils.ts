@@ -1,21 +1,21 @@
 import { RubricItem } from "@/features/local/assignments/models/rubricItem";
 
+/** The ratings a rubric row has in Canvas: its own, or the two the app sends for a row without any. */
+export const rubricRatings = (rubricItem: RubricItem): { description: string; points: number }[] =>
+  rubricItem.ratings && rubricItem.ratings.length > 0
+    ? rubricItem.ratings.map(({ description, points }) => ({ description, points }))
+    : [
+        { description: "Full Marks", points: rubricItem.points },
+        { description: "No Marks", points: 0 },
+      ];
+
 export const getRubricCriterion = (rubric: RubricItem[]) => {
   const criterion = rubric
     .map((rubricItem) => {
-      const ratings =
-        rubricItem.ratings && rubricItem.ratings.length > 0
-          ? rubricItem.ratings.reduce(
-              (acc, rating, i) => ({
-                ...acc,
-                [i]: { description: rating.description, points: rating.points },
-              }),
-              {} as { [key: number]: { description: string; points: number } }
-            )
-          : {
-              0: { description: "Full Marks", points: rubricItem.points },
-              1: { description: "No Marks", points: 0 },
-            };
+      const ratings = rubricRatings(rubricItem).reduce(
+        (acc, rating, i) => ({ ...acc, [i]: rating }),
+        {} as { [key: number]: { description: string; points: number } }
+      );
 
       return {
         description: rubricItem.label,

@@ -1,4 +1,5 @@
 import { useSettingsWithCanvasFiles } from "@/features/canvas/hooks/canvasCourseFileHooks";
+import { useModulesOfName } from "@/features/local/modules/localCourseModuleHooks";
 import {
   EditorFooter,
   FooterAction,
@@ -21,7 +22,7 @@ import {
 import { useCanvasAssignmentsQuery } from "@/features/canvas/hooks/canvasAssignmentHooks";
 import { useCanvasQuizzesQuery } from "@/features/canvas/hooks/canvasQuizHooks";
 import { useCanvasModuleNames } from "@/features/canvas/hooks/canvasModuleHooks";
-import { getSyncReport } from "@/app/course/[courseName]/calendar/day/getAssignmentSyncStatus";
+import { getSyncReport, sharedNameProblem } from "@/app/course/[courseName]/calendar/day/getAssignmentSyncStatus";
 import { getCanvasHomeUrlFor, getCourseUrl, getModuleItemUrl } from "@/services/urlUtils";
 import { useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
@@ -60,6 +61,7 @@ export default function EditPageButtons({
   const { names: canvasModules } = useCanvasModuleNames("page", pageInCanvas);
   const { data: canvasAssignments } = useCanvasAssignmentsQuery();
   const { data: canvasQuizzes } = useCanvasQuizzesQuery();
+  const modulesOfName = useModulesOfName();
   const differences = useMemo(
     () =>
       pageInCanvas
@@ -119,6 +121,7 @@ export default function EditPageButtons({
     <EditorFooter
       type="page"
       name={pageName}
+      problem={sharedNameProblem("page", pageName, modulesOfName("page", pageName))}
       moduleName={moduleName}
       canvasLoading={canvasPages === undefined}
       canvasItem={
