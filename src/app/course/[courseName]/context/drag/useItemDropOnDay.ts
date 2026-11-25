@@ -4,7 +4,6 @@ import {
   useLectureUpdateMutation,
 } from "@/features/local/lectures/lectureHooks";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
-import { useUpdatePageMutation } from "@/features/local/pages/pageHooks";
 import { LocalAssignment } from "@/features/local/assignments/models/localAssignment";
 import { Lecture } from "@/features/local/lectures/lectureModel";
 import { getLectureForDay } from "@/features/local/utils/lectureUtils";
@@ -14,12 +13,10 @@ import {
 } from "@/features/local/utils/timeUtils";
 import { Dispatch, SetStateAction, useCallback, DragEvent } from "react";
 import { DraggableItem } from "./draggingContext";
-import { daysUntil, shiftDays } from "./shiftDays";
-import { useUpdateQuizMutation } from "@/features/local/quizzes/quizHooks";
+import { movedToDay } from "./shiftDays";
+import { useSaveMovedItem } from "./useSaveMovedItem";
+import { itemKinds } from "../../itemKinds";
 import { useCourseContext } from "../courseContext";
-import { useUpdateAssignmentMutation } from "@/features/local/assignments/assignmentHooks";
-import { LocalCoursePage } from "@/features/local/pages/localCoursePageModels";
-import { LocalQuiz } from "@/features/local/quizzes/models/localQuiz";
 
 export function useItemDropOnDay({
   setIsDragging,
@@ -37,10 +34,8 @@ export function useItemDropOnDay({
   const { data: settings } = useLocalCourseSettingsQuery();
   const { courseName } = useCourseContext();
   const { data: weeks } = useLecturesSuspenseQuery();
-  const updateQuizMutation = useUpdateQuizMutation();
   const updateLectureMutation = useLectureUpdateMutation();
-  const updateAssignmentMutation = useUpdateAssignmentMutation();
-  const updatePageMutation = useUpdatePageMutation();
+  const saveMoved = useSaveMovedItem();
 
   return useCallback(
     (e: DragEvent, day: string) => {
@@ -48,18 +43,12 @@ export function useItemDropOnDay({
       if (!rawData) return;
       const itemBeingDragged: DraggableItem = JSON.parse(rawData);
 
-      if (itemBeingDragged) {
-        const dayAsDate = getDateWithDefaultDueTime();
-        if (itemBeingDragged.type === "quiz") {
-          updateQuiz();
-        } else if (itemBeingDragged.type === "assignment") {
-          updateAssignment(dayAsDate);
-        } else if (itemBeingDragged.type === "page") {
-          updatePage();
-        } else if (itemBeingDragged.type === "lecture") {
-          updateLecture(dayAsDate);
-        }
-      }
+      const { type, sourceModuleName } = itemBeingDragged;
+      if (type === "lecture") updateLecture(getDateWithDefaultDueTime());
+      else if (!sourceModuleName) console.error("error dropping item on day, sourceModuleName is undefined");
+      else if (itemBeingDragged.scheduleDate) moveScheduleBatch(sourceModuleName, itemBeingDragged.scheduleDate);
+      // an item of a kind with no day isn't given one by a drop
+      else if (!itemKinds[type].undated) saveMoved(type, movedToDay(itemBeingDragged.item, day), sourceModuleName, sourceModuleName);
       setIsDragging(false);
 
       function getDateWithDefaultDueTime() {
@@ -117,94 +106,14 @@ export function useItemDropOnDay({
           });
         }
       }
-      function updateQuiz() {
-        const previousQuiz = itemBeingDragged.item as LocalQuiz;
-        if (!itemBeingDragged.sourceModuleName) {
-          console.error(
-            "error dropping quiz on day, sourceModuleName is undefined"
-          );
-          return;
-        }
-
-        const days = daysUntil(previousQuiz.dueAt, day);
-        const quiz: LocalQuiz = {
-          ...previousQuiz,
-          dueAt: shiftDays(previousQuiz.dueAt, days),
-          lockAt: shiftDays(previousQuiz.lockAt, days),
-          unlockAt: shiftDays(previousQuiz.unlockAt, days),
-          dateForOrdering: shiftDays(previousQuiz.dateForOrdering, days),
-        };
-        updateQuizMutation.mutate({
-          quiz,
-          quizName: quiz.name,
-          moduleName: itemBeingDragged.sourceModuleName,
-          previousModuleName: itemBeingDragged.sourceModuleName,
-          previousQuizName: quiz.name,
-          courseName: settings.name,
-        });
-      }
-      function updatePage() {
-        const previousPage = itemBeingDragged.item as LocalCoursePage;
-        if (!itemBeingDragged.sourceModuleName) {
-          console.error(
-            "error dropping page on day, sourceModuleName is undefined"
-          );
-          return;
-        }
-        const page: LocalCoursePage = {
-          ...previousPage,
-          dueAt: shiftDays(previousPage.dueAt, daysUntil(previousPage.dueAt, day)),
-        };
-        updatePageMutation.mutate({
-          page,
-          moduleName: itemBeingDragged.sourceModuleName,
-          pageName: page.name,
-          previousPageName: page.name,
-          previousModuleName: itemBeingDragged.sourceModuleName,
-          courseName: settings.name,
-        });
-      }
-      function updateAssignment(dayAsDate: Date) {
-        if (!itemBeingDragged.sourceModuleName) {
-          console.error(
-            "error dropping assignment on day, sourceModuleName is undefined"
-          );
-          return;
-        }
-        const previousAssignment = itemBeingDragged.item as LocalAssignment;
-        if (itemBeingDragged.scheduleDate) {
-          // only this batch moves; the assignment's own dates stay put
-          const newDay = getDateOnlyMarkdownString(dayAsDate);
-          const scheduleDate = itemBeingDragged.scheduleDate;
-          const schedule = (previousAssignment.schedule ?? []).map((entry) =>
-            entry.date === scheduleDate ? { ...entry, date: newDay } : entry
-          );
-          updateAssignmentMutation.mutate({
-            assignment: { ...previousAssignment, schedule },
-            previousModuleName: itemBeingDragged.sourceModuleName,
-            moduleName: itemBeingDragged.sourceModuleName,
-            assignmentName: previousAssignment.name,
-            previousAssignmentName: previousAssignment.name,
-            courseName: settings.name,
-          });
-          return;
-        }
-        const days = daysUntil(previousAssignment.dueAt, day);
-        const assignment: LocalAssignment = {
-          ...previousAssignment,
-          dueAt: shiftDays(previousAssignment.dueAt, days),
-          lockAt: shiftDays(previousAssignment.lockAt, days),
-          unlockAt: shiftDays(previousAssignment.unlockAt, days),
-          dateForOrdering: shiftDays(previousAssignment.dateForOrdering, days),
-        };
-        updateAssignmentMutation.mutate({
-          assignment,
-          previousModuleName: itemBeingDragged.sourceModuleName,
-          moduleName: itemBeingDragged.sourceModuleName,
-          assignmentName: assignment.name,
-          previousAssignmentName: assignment.name,
-          courseName: settings.name,
-        });
+      // one batch of an assignment's Schedule: only it moves; the assignment's own dates stay put
+      function moveScheduleBatch(moduleName: string, scheduleDate: string) {
+        const assignment = itemBeingDragged.item as LocalAssignment;
+        const newDay = getDateOnlyMarkdownString(getDateWithDefaultDueTime());
+        const schedule = (assignment.schedule ?? []).map((entry) =>
+          entry.date === scheduleDate ? { ...entry, date: newDay } : entry
+        );
+        saveMoved("assignment", { ...assignment, schedule } as LocalAssignment, moduleName, moduleName);
       }
     },
     [
@@ -215,10 +124,8 @@ export function useItemDropOnDay({
       setModalCallback,
       setModalText,
       settings,
-      updateAssignmentMutation,
+      saveMoved,
       updateLectureMutation,
-      updatePageMutation,
-      updateQuizMutation,
       weeks,
     ]
   );

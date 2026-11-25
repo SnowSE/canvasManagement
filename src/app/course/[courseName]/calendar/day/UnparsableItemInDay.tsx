@@ -1,5 +1,6 @@
 "use client";
 import { Link } from "@tanstack/react-router";
+import { kindOf } from "@/features/local/course/courseItemTypes";
 import { getModuleItemUrl } from "@/services/urlUtils";
 import { useCourseContext } from "../../context/courseContext";
 import { useTooltip } from "@/components/useTooltip";
@@ -12,7 +13,6 @@ import { useInvalidItemsForCourseQuery } from "@/features/local/modules/rawItemH
 
 export type InvalidItemInDay = InvalidCourseItem & { moduleName: string };
 
-const urlType = { Assignment: "assignment", Quiz: "quiz", Page: "page" } as const;
 
 /** Unparsable files whose date line still reads, due on this day. */
 export function useUnparsableItemsOnDay(day: string): InvalidItemInDay[] {
@@ -30,7 +30,7 @@ export function useUnparsableItemsOnDay(day: string): InvalidItemInDay[] {
 }
 
 export const unparsableItemUrl = (courseName: string, item: InvalidItemInDay) =>
-  getModuleItemUrl(courseName, item.moduleName, urlType[item.type], item.name);
+  getModuleItemUrl(courseName, item.moduleName, kindOf[item.type], item.name);
 
 /**
  * A file that doesn't parse, on the day its DueAt line names. Hover shows the

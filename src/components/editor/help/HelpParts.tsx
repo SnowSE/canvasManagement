@@ -4,12 +4,13 @@ import { copyTextToClipboard } from "@/components/CopyableCommand";
 import { PaneHeader, SectionTitle } from "@/components/panes/PaneHeader";
 
 /** The kinds of item a help topic is about; a topic with none is about all of them. */
-export type HelpType = "assignment" | "quiz" | "page";
+export type HelpType = "assignment" | "quiz" | "page" | "file";
 const helpTypes: { value: HelpType | "all"; label: string }[] = [
   { value: "all", label: "All" },
   { value: "assignment", label: "Assignments" },
   { value: "quiz", label: "Quizzes" },
   { value: "page", label: "Pages" },
+  { value: "file", label: "Files" },
 ];
 
 // The app's --font-mono is DM Sans, which is proportional. Examples need real

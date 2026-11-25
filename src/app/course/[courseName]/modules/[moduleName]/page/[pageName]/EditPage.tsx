@@ -1,6 +1,7 @@
 "use client";
+import { useDelayedSave } from "@/app/course/[courseName]/utils/useDelayedSave";
 import { MonacoEditor } from "@/components/editor/MonacoEditor";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import PagePreview from "./PagePreview";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import EditPageButtons from "./EditPageButtons";
@@ -43,58 +44,45 @@ export default function EditPage({
   const settledText = useSettledText(text, `${moduleName}/${pageName}`);
   const draft = useMemo(() => (settledText === undefined ? undefined : parsedOrNothing(() => localPageMarkdownUtils.parseMarkdown(settledText, pageName))), [settledText, pageName]);
 
-  useEffect(() => {
-    const delay = 500;
-    const save = () => {
-      if (isFetching || updatePage.isPending) {
-        console.log("network requests in progress, not updating page");
-        return;
-      }
+  // the item's text written to its file; on the way out of the item (`leaving`) only that, never the editor's own state, which is the next item's by then
+  const save = (leaving: boolean) => {
+    if (!leaving && (isFetching || updatePage.isPending)) {
+      console.log("network requests in progress, not updating page");
+      return;
+    }
 
-      try {
-        const updatedPage = localPageMarkdownUtils.parseMarkdown(
-          text,
-          pageName,
-        );
-        const updatedMarkdown = localPageMarkdownUtils.toMarkdown(updatedPage);
-        if (localPageMarkdownUtils.toMarkdown(page) !== updatedMarkdown) {
-          if (clientIsAuthoritative) {
-            console.log("updating page");
-            textSaved(updatedMarkdown);
-            updatePage.mutateAsync({
-              page: updatedPage,
-              moduleName,
-              pageName,
-              previousModuleName: moduleName,
-              previousPageName: pageName,
-              courseName,
-            });
-          } else {
-            console.log(
-              "client not authoritative, updating client with server page",
-            );
-            textUpdate(localPageMarkdownUtils.toMarkdown(page), true);
-          }
+    try {
+      const updatedPage = localPageMarkdownUtils.parseMarkdown(
+        text,
+        pageName,
+      );
+      const updatedMarkdown = localPageMarkdownUtils.toMarkdown(updatedPage);
+      if (localPageMarkdownUtils.toMarkdown(page) !== updatedMarkdown) {
+        if (clientIsAuthoritative) {
+          console.log("updating page");
+          if (!leaving) textSaved(updatedMarkdown);
+          updatePage.mutateAsync({
+            page: updatedPage,
+            moduleName,
+            pageName,
+            previousModuleName: moduleName,
+            previousPageName: pageName,
+            courseName,
+          });
+        } else if (!leaving) {
+          console.log(
+            "client not authoritative, updating client with server page",
+          );
+          textUpdate(localPageMarkdownUtils.toMarkdown(page), true);
         }
-        setError("");
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } catch (e: any) {
-        setError(e.toString());
       }
-    };
-    const handler = setTimeout(save, delay);
-    // a pending save goes out when the window loses focus, before typing goes on elsewhere
-    const flush = () => {
-      clearTimeout(handler);
-      save();
-    };
-    window.addEventListener("blur", flush, { once: true });
-
-    return () => {
-      clearTimeout(handler);
-      window.removeEventListener("blur", flush);
-    };
-  }, [
+      if (!leaving) setError("");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (e: any) {
+      if (!leaving) setError(e.toString());
+    }
+  };
+  useDelayedSave(`page:${moduleName}/${pageName}`, 500, save, [
     clientIsAuthoritative,
     courseName,
     isFetching,

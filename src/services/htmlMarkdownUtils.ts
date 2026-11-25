@@ -1,4 +1,5 @@
 "use client";
+import { courseFileFor, rewriteFileHrefs } from "./courseFileLinks";
 import { marked } from "marked";
 import DOMPurify from "isomorphic-dompurify";
 import markedKatex from "marked-katex-extension";
@@ -213,6 +214,7 @@ export function markdownToHTMLSafe({
   convertImages = true,
   replaceText = [],
   canvasLinkTargets,
+  fileHref = (link) => settings.assets.find((a) => a.sourceUrl === courseFileFor(link, settings.assets.map((sent) => sent.sourceUrl)))?.canvasUrl,
 }: {
   markdownString: string;
   settings: LocalCourseSettings;
@@ -220,7 +222,10 @@ export function markdownToHTMLSafe({
   replaceText?: { source: string; destination: string; strict?: boolean }[];
   // canvas assignments/quizzes, used to resolve relative .md links to them
   canvasLinkTargets?: CanvasLinkTargets;
+  // where a link to a file beside the markdown goes (see courseFileLinks): its uploaded copy, unless a preview says otherwise
+  fileHref?: (link: string) => string | undefined;
 }) {
+  const withFiles = (html: string) => rewriteFileHrefs(html, fileHref);
   const html = resolveRelativeMdHrefsForCanvas(
     markdownToHtmlNoImages(markdownString),
     settings.canvasId,
@@ -245,8 +250,9 @@ export function markdownToHTMLSafe({
     html
   );
 
-  if (convertImages) return convertImagesToCanvasImages(replacedHtml, settings);
-  return replacedHtml;
+  // the files first: an SVG shown as an image is one of them, not an image of the images folder
+  const filed = withFiles(replacedHtml);
+  return convertImages ? convertImagesToCanvasImages(filed, settings) : filed;
 }
 
 export function markdownToHtmlNoImages(markdownString: string) {

@@ -6,10 +6,12 @@ const InnerMonacoEditor = lazy(() => import("./InnerMonacoEditorOther"));
 export const MonacoEditor: React.FC<{
   value: string;
   onChange: (value: string) => void;
-}> = ({ value, onChange }) => {
+  /** What to colour the text as; markdown unless given. */
+  language?: string;
+}> = ({ value, onChange, language }) => {
   return (
     <Suspense fallback={null}>
-      <InnerMonacoEditor value={value} onChange={onChange} />
+      <InnerMonacoEditor value={value} onChange={onChange} language={language} />
     </Suspense>
   );
 };

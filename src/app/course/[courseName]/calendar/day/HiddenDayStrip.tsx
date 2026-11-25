@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { getModuleItemUrl } from "@/services/urlUtils";
 import { useCourseContext } from "../../context/courseContext";
 import { useDraggingContext } from "../../context/drag/draggingContext";
-import { ItemTypeIcon } from "../../ItemTypeIcon";
+import { ItemTypeIcon } from "../../itemKinds";
 import { TodayItem } from "./useTodaysItems";
 import { WarningIcon } from "@/components/icons/ActionIcons";
 import { InvalidItemInDay, unparsableItemUrl } from "./UnparsableItemInDay";

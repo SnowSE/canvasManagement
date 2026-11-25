@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { removeHtmlDetails } from "./htmlIsCloseEnough";
+import { htmlIsCloseEnough, removeHtmlDetails } from "./htmlIsCloseEnough";
 
 describe("html can be close enough", () => {
   it("scenario 1", () => {
@@ -57,5 +57,18 @@ describe("html can be close enough", () => {
 <script src="https://instructure-uploads-2.s3.amazonaws.com/account_20000000000010/attachments/182339931/Canvas%20Mobile%20Theme%20%2528August%2025%2529%20Verity.js"></script>`;
 
     expect(removeHtmlDetails(localHTML)).toBe(removeHtmlDetails(canvasHTML));
+  });
+});
+
+describe("a link to an uploaded file", () => {
+  const sent = '<a href="https://snow.instructure.com/courses/42/files/7/download#top">demo</a>';
+  it("is the same link with the key Canvas adds for whoever reads the page", () => {
+    expect(htmlIsCloseEnough(sent, '<a href="https://snow.instructure.com/courses/42/files/7/download?verifier=abc123#top">demo</a>')).toBe(true);
+  });
+  it("is a different link to another file", () => {
+    expect(htmlIsCloseEnough(sent, '<a href="https://snow.instructure.com/courses/42/files/8/download#top">demo</a>')).toBe(false);
+  });
+  it("leaves the query of any other link to count", () => {
+    expect(htmlIsCloseEnough('<a href="https://example.com/a?x=1">a</a>', '<a href="https://example.com/a?x=2">a</a>')).toBe(false);
   });
 });

@@ -54,7 +54,7 @@ export function toggleAll<T>(selected: Record<string, T>, these: Record<string, 
 
 /**
  * Updates the items one at a time (Canvas requests are queued anyway), going
- * on past any that fail. Returns the ones that failed.
+ * on past any that fail or are refused outright. Returns the ones that failed.
  */
 export async function updateEach<T>(
   items: T[],
@@ -63,7 +63,9 @@ export async function updateEach<T>(
 ) {
   const failed: T[] = [];
   for (const [i, item] of items.entries()) {
-    await update(item).catch(() => failed.push(item));
+    await Promise.resolve()
+      .then(() => update(item))
+      .catch(() => failed.push(item));
     onProgress(i + 1);
   }
   return failed;

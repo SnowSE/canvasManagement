@@ -1,3 +1,4 @@
+import { useSettingsWithCanvasFiles } from "@/features/canvas/hooks/canvasCourseFileHooks";
 import {
   EditorFooter,
   FooterAction,
@@ -17,7 +18,6 @@ import {
   useUpdateQuizInCanvasMutation,
 } from "@/features/canvas/hooks/canvasQuizHooks";
 import { baseCanvasUrl } from "@/features/canvas/services/canvasServiceUtils";
-import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import {
   useDeleteQuizMutation,
   useQuizQuery,
@@ -40,7 +40,8 @@ export function QuizButtons({
 }) {
   const navigate = useNavigate();
   const { courseName } = useCourseContext();
-  const { data: settings } = useLocalCourseSettingsQuery();
+  // with each course file's address in Canvas, as the item's links to files are sent
+  const settings = useSettingsWithCanvasFiles();
   const { data: canvasQuizzes } = useCanvasQuizzesQuery();
   const { data: canvasAssignments } = useCanvasAssignmentsQuery();
 

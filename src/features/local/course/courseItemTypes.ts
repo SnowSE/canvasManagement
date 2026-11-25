@@ -1,8 +1,20 @@
 import { LocalCoursePage } from "@/features/local/pages/localCoursePageModels";
 import { LocalAssignment } from "../assignments/models/localAssignment";
+import { z } from "zod";
 import { LocalQuiz } from "@/features/local/quizzes/models/localQuiz";
 
-export type CourseItemType = "Assignment" | "Quiz" | "Page";
+export const courseItemTypes = ["Assignment", "Quiz", "Page"] as const;
+export type CourseItemType = (typeof courseItemTypes)[number];
+export const zodCourseItemType = z.enum(courseItemTypes);
+
+/** Each type's name in the app's urls and in the page's own lists. */
+export const kindOf = {
+  Assignment: "assignment",
+  Quiz: "quiz",
+  Page: "page",
+} as const;
+/** Those, and a file of a module's files folder (see localCourseFileModels), which is listed and sent to Canvas but has no settings to parse. */
+export type ItemKind = (typeof kindOf)[CourseItemType] | "file";
 export type CourseItemReturnType<T extends CourseItemType> =
   T extends "Assignment"
     ? LocalAssignment

@@ -1,11 +1,12 @@
 "use client";
+import { ItemKind } from "@/features/local/course/courseItemTypes";
 import { IModuleItem } from "@/features/local/modules/IModuleItem";
 import { createContext, useContext, DragEvent } from "react";
 
 export interface DraggableItem {
   item: IModuleItem;
   sourceModuleName: string | undefined; // undefined for lectures
-  type: "quiz" | "assignment" | "page" | "lecture";
+  type: ItemKind | "lecture";
   // when dragging one batch of an assignment's Schedule: that batch's date
   scheduleDate?: string;
 }

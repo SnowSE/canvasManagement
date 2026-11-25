@@ -1,6 +1,7 @@
 "use client";
+import { useDelayedSave } from "@/app/course/[courseName]/utils/useDelayedSave";
 import { MonacoEditor } from "@/components/editor/MonacoEditor";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import QuizPreview from "./QuizPreview";
 import { QuizButtons } from "./QuizButton";
 import { parsedOrNothing, useSettledText } from "@/app/course/[courseName]/utils/draft";
@@ -66,75 +67,62 @@ export default function EditQuiz({
     [settledText, quizName, feedbackDelimiters, bankFiles],
   );
 
-  useEffect(() => {
-    const delay = 1000;
-    const save = async () => {
-      if (isFetching || updateQuizMutation.isPending) {
-        console.log("network requests in progress, not updating page");
-        return;
+  // the item's text written to its file; on the way out of the item (`leaving`) only that, never the editor's own state, which is the next item's by then
+  const save = async (leaving: boolean) => {
+    if (!leaving && (isFetching || updateQuizMutation.isPending)) {
+      console.log("network requests in progress, not updating page");
+      return;
+    }
+    // wait for the banks the text names before reading it
+    if (bankPaths.some((p) => !bankFiles?.[p])) return;
+    try {
+      const banks: Record<string, string> = {};
+      for (const p of bankPaths) {
+        const bank = bankFiles![p];
+        if ("error" in bank) throw new Error(bank.error);
+        banks[p] = bank.text;
       }
-      // wait for the banks the text names before reading it
-      if (bankPaths.some((p) => !bankFiles?.[p])) return;
-      try {
-        const banks: Record<string, string> = {};
-        for (const p of bankPaths) {
-          const bank = bankFiles![p];
-          if ("error" in bank) throw new Error(bank.error);
-          banks[p] = bank.text;
-        }
-        const updatedQuiz = quizMarkdownUtils.parseMarkdown(
-          text,
-          quizName,
-          feedbackDelimiters,
-          banks,
-        );
-        quizMarkdownUtils.assertCanRoundTrip(updatedQuiz, feedbackDelimiters);
+      const updatedQuiz = quizMarkdownUtils.parseMarkdown(
+        text,
+        quizName,
+        feedbackDelimiters,
+        banks,
+      );
+      quizMarkdownUtils.assertCanRoundTrip(updatedQuiz, feedbackDelimiters);
 
-        const serverMarkdown = quizMarkdownUtils.toMarkdown(
-          quiz,
-          feedbackDelimiters,
-        );
-        const updatedMarkdown = quizMarkdownUtils.toMarkdown(
-          updatedQuiz,
-          feedbackDelimiters,
-        );
-        if (serverMarkdown !== updatedMarkdown) {
-          if (clientIsAuthoritative) {
-            textSaved(updatedMarkdown);
-            await updateQuizMutation.mutateAsync({
-              quiz: updatedQuiz,
-              moduleName,
-              quizName: quizName,
-              previousModuleName: moduleName,
-              previousQuizName: quizName,
-              courseName,
-            });
-          } else {
-            console.log(
-              "client not authoritative, updating client with server quiz",
-            );
-            textUpdate(serverMarkdown, true);
-          }
+      const serverMarkdown = quizMarkdownUtils.toMarkdown(
+        quiz,
+        feedbackDelimiters,
+      );
+      const updatedMarkdown = quizMarkdownUtils.toMarkdown(
+        updatedQuiz,
+        feedbackDelimiters,
+      );
+      if (serverMarkdown !== updatedMarkdown) {
+        if (clientIsAuthoritative) {
+          if (!leaving) textSaved(updatedMarkdown);
+          await updateQuizMutation.mutateAsync({
+            quiz: updatedQuiz,
+            moduleName,
+            quizName: quizName,
+            previousModuleName: moduleName,
+            previousQuizName: quizName,
+            courseName,
+          });
+        } else if (!leaving) {
+          console.log(
+            "client not authoritative, updating client with server quiz",
+          );
+          textUpdate(serverMarkdown, true);
         }
-        setError("");
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } catch (e: any) {
-        setError(e.toString());
       }
-    };
-    const handler = setTimeout(save, delay);
-    // a pending save goes out when the window loses focus, before typing goes on elsewhere
-    const flush = () => {
-      clearTimeout(handler);
-      save();
-    };
-    window.addEventListener("blur", flush, { once: true });
-
-    return () => {
-      clearTimeout(handler);
-      window.removeEventListener("blur", flush);
-    };
-  }, [
+      if (!leaving) setError("");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (e: any) {
+      if (!leaving) setError(e.toString());
+    }
+  };
+  useDelayedSave(`quiz:${moduleName}/${quizName}`, 1000, save, [
     bankFiles,
     bankPaths,
     clientIsAuthoritative,

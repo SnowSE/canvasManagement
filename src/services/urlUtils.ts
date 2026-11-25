@@ -1,3 +1,4 @@
+import type { ItemKind } from "@/features/local/course/courseItemTypes";
 // Defined here (not in canvasServiceUtils) so pure url helpers don't pull in axios.
 export const baseCanvasUrl = "https://snow.instructure.com";
 
@@ -8,7 +9,7 @@ export const getCanvasHomeUrlFor = (page: { addToHome?: boolean }, canvasId: num
 export function getModuleItemUrl(
   courseName: string,
   moduleName: string,
-  type: "assignment" | "page" | "quiz",
+  type: ItemKind,
   itemName: string
 ) {
   return (

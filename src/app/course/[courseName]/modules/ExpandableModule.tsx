@@ -1,6 +1,6 @@
 "use client";
 import { useEffect } from "react";
-import { usePagesQueries } from "@/features/local/pages/pageHooks";
+import { ItemKind, kindOf } from "@/features/local/course/courseItemTypes";
 import { IModuleItem } from "@/features/local/modules/IModuleItem";
 import {
   getDateFromStringOrThrow,
@@ -18,24 +18,23 @@ import { getLectureUrl, getModuleItemUrl } from "@/services/urlUtils";
 import { useCourseContext } from "../context/courseContext";
 import { Expandable } from "../../../../components/Expandable";
 import { SectionTitle } from "@/components/panes/PaneHeader";
-import { useQuizzesQueries } from "@/features/local/quizzes/quizHooks";
-import { useAssignmentsQueries } from "@/features/local/assignments/assignmentHooks";
 import { useReorderCanvasModuleItemsMutation } from "@/features/canvas/hooks/canvasModuleHooks";
 import {
   useCanvasModulesQuery,
   useCanvasModulesWithItemsQuery,
 } from "@/features/canvas/hooks/canvasModuleHooks";
-import {
-  byOrderingDate,
-  canvasOrderDiffers,
-} from "@/features/local/modules/moduleItemOrder";
+import { canvasOrderDiffers } from "@/features/local/modules/moduleItemOrder";
 import { Spinner } from "@/components/Spinner";
-import { ItemTypeIcon } from "../ItemTypeIcon";
+import { itemKinds, ItemTypeIcon, useModuleItems } from "../itemKinds";
+import { NewEmptyFile } from "./[moduleName]/file/NewEmptyFile";
 import { useInvalidItemsQuery } from "@/features/local/modules/rawItemHooks";
 import { ItemInDay } from "../calendar/day/itemInDay/ItemInDay";
 import { useItemSyncStatus } from "../calendar/day/useItemSyncStatus";
+import { arrangeItems } from "../itemKindRules";
 import { useModuleSelection } from "./bulk/moduleSelection";
 import { kindsOf, shown, showsErrors } from "./bulk/rules";
+
+type ModuleItem = { type: ItemKind; item: IModuleItem };
 
 export default function ExpandableModule({
   moduleName,
@@ -44,9 +43,6 @@ export default function ExpandableModule({
 }) {
   const { itemDropOnModule } = useDraggingContext();
   const { courseName } = useCourseContext();
-  const { data: assignments } = useAssignmentsQueries(moduleName);
-  const { data: quizzes } = useQuizzesQueries(moduleName);
-  const { data: pages } = usePagesQueries(moduleName);
   const modal = useModal();
   const reorderMutation = useReorderCanvasModuleItemsMutation();
   const { data: canvasModules } = useCanvasModulesQuery();
@@ -55,24 +51,9 @@ export default function ExpandableModule({
   const { statusOf, ready } = useItemSyncStatus();
   const selection = useModuleSelection();
 
-  const moduleItems: {
-    type: "assignment" | "quiz" | "page";
-    item: IModuleItem;
-  }[] = (assignments ?? [])
-    .map(
-      (
-        a,
-      ): {
-        type: "assignment" | "quiz" | "page";
-        item: IModuleItem;
-      } => ({
-        type: "assignment",
-        item: a,
-      }),
-    )
-    .concat(quizzes.map((q) => ({ type: "quiz", item: q })))
-    .concat(pages.map((p) => ({ type: "page", item: p })))
-    .sort((a, b) => byOrderingDate(a.item, b.item));
+  const everyItem: ModuleItem[] = useModuleItems(moduleName);
+  // the items with a day, in order: what Canvas's module holds
+  const moduleItems = arrangeItems(everyItem, itemKinds).dated;
 
   const canvasModuleItems = canvasModulesWithItems?.find(
     (m) => m.name === moduleName,
@@ -96,40 +77,40 @@ export default function ExpandableModule({
   // only the items whose name has it; one with nothing to show is hidden
   const query = selection.search.trim().toLowerCase();
   const has = (name: string) => name.toLowerCase().includes(query);
-  const searched = !query || has(moduleName) ? moduleItems : moduleItems.filter((i) => has(i.item.name));
+  const searched = !query || has(moduleName) ? everyItem : everyItem.filter((i) => has(i.item.name));
   // what the bar's filters let through (everything with none on); a module
   // with nothing to show is hidden
-  const shownItems = searched.filter(({ type, item }) =>
-    shown(kindsOf(statusOf(type, item, moduleName)), selection.filters),
-  );
+  const kinds = ({ type, item }: ModuleItem) => kindsOf(statusOf(type, item, moduleName));
+  const shownItems = searched.filter((i) => shown(kinds(i), selection.filters));
   const shownRefs = shownItems.map(({ type, item }) => ({ type, item, moduleName }));
   // nothing is counted until Canvas has answered, so no count changes later
-  const itemKinds = ready
+  const statusKinds = ready
     ? [
-        ...moduleItems.flatMap(({ type, item }) => kindsOf(statusOf(type, item, moduleName))),
+        ...everyItem.flatMap(kinds),
         ...(invalidItems ?? []).map(() => "withErrors" as const),
       ]
     : [];
   // files that can't be read, plus ones with dates Canvas won't save
   const errorCount = ready
     ? (invalidItems?.length ?? 0) +
-      moduleItems.filter(({ type, item }) => statusOf(type, item, moduleName).problem).length
+      everyItem.filter(({ type, item }) => statusOf(type, item, moduleName).problem).length
     : 0;
   const { report } = selection;
-  const reported = shownRefs.map((r) => r.type + r.item.name).join("\n") + itemKinds.join(",");
+  const reported = shownRefs.map((r) => r.type + r.item.name).join("\n") + statusKinds.join(",");
   useEffect(() => {
     if (!ready) return;
-    report(moduleName, shownRefs, itemKinds);
+    report(moduleName, shownRefs, statusKinds);
     // the refs change whenever reported does
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [report, moduleName, reported, ready]);
 
-  const groupedItems = shownItems.reduce(
+  const shownArranged = arrangeItems(shownItems, itemKinds);
+  const groupedItems = shownArranged.dated.reduce(
     (
       groups: {
         dateKey: string;
         weekLabel: string;
-        items: { type: "assignment" | "quiz" | "page"; item: IModuleItem }[];
+        items: ModuleItem[];
       }[],
       moduleItem,
     ) => {
@@ -165,6 +146,41 @@ export default function ExpandableModule({
   );
   if ((selection.filters.length > 0 || query) && shownItems.length === 0 && shownInvalid.length === 0)
     return null;
+
+  // an item's row: its checkbox, and the item as the calendar shows it
+  const itemRow = ({ type, item }: ModuleItem) => {
+    const status = statusOf(type, item, moduleName);
+    const ref = { type, item, moduleName };
+    return (
+      <div
+        key={item.name + type}
+        className="flex items-start"
+        // a checked item's right-click acts on every checked item
+        onContextMenuCapture={(e) => {
+          if (!selection.isSelected(ref)) return;
+          e.preventDefault();
+          e.stopPropagation();
+          selection.openMenu({ x: e.clientX, y: e.clientY });
+        }}
+      >
+        <input
+          type="checkbox"
+          className="mt-1.5 me-1 flex-none"
+          aria-label={`Select ${item.name}`}
+          checked={selection.isSelected(ref)}
+          onChange={() => selection.toggle(ref)}
+        />
+        <div className="flex-1 min-w-0">
+          <ItemInDay
+            type={type}
+            item={item}
+            moduleName={moduleName}
+            {...status}
+          />
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div
@@ -244,6 +260,7 @@ export default function ExpandableModule({
                   </div>
                 )}
               </Modal>
+              <NewEmptyFile moduleName={moduleName} />
               <div className="flex flex-col">
                 {shownInvalid.length > 0 && (
                   <div>
@@ -263,11 +280,7 @@ export default function ExpandableModule({
                           to={getModuleItemUrl(
                             courseName,
                             moduleName,
-                            invalid.type === "Assignment"
-                              ? "assignment"
-                              : invalid.type === "Quiz"
-                                ? "quiz"
-                                : "page",
+                            kindOf[invalid.type],
                             invalid.name,
                           )}
                           className="ps-1 text-rose-300 underline decoration-wavy decoration-rose-600 hover:text-rose-100"
@@ -288,39 +301,15 @@ export default function ExpandableModule({
                     >
                       {weekLabel}
                     </Link>
-                    {items.map(({ type, item }) => {
-                      const status = statusOf(type, item, moduleName);
-                      const ref = { type, item, moduleName };
-                      return (
-                        <div
-                          key={item.name + type}
-                          className="flex items-start"
-                          // a checked item's right-click acts on every checked item
-                          onContextMenuCapture={(e) => {
-                            if (!selection.isSelected(ref)) return;
-                            e.preventDefault();
-                            e.stopPropagation();
-                            selection.openMenu({ x: e.clientX, y: e.clientY });
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            className="mt-1.5 me-1 flex-none"
-                            aria-label={`Select ${item.name}`}
-                            checked={selection.isSelected(ref)}
-                            onChange={() => selection.toggle(ref)}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <ItemInDay
-                              type={type}
-                              item={item}
-                              moduleName={moduleName}
-                              {...status}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
+                    {items.map(itemRow)}
+                  </div>
+                ))}
+                {shownArranged.listed.map(({ type, title, hint, items }) => (
+                  <div key={type}>
+                    <div className="text-slate-500 text-sm mt-1 ps-1" title={hint}>
+                      {title}
+                    </div>
+                    {items.map(itemRow)}
                   </div>
                 ))}
               </div>

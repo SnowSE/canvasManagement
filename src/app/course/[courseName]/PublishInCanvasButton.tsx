@@ -1,8 +1,8 @@
 "use client";
+import { ItemKind } from "@/features/local/course/courseItemTypes";
 import {
-  PublishableItemType,
   usePublishInCanvasMutation,
-} from "@/features/canvas/hooks/canvasPublishHooks";
+} from "./usePublishInCanvas";
 
 /**
  * "Publish in Canvas" for an item already in Canvas. Once Canvas has it
@@ -19,7 +19,7 @@ export function PublishInCanvasButton({
   publishedClassName = "",
   onPublish,
 }: {
-  type: PublishableItemType;
+  type: ItemKind;
   canvasItemId: number;
   published: boolean;
   name: string;

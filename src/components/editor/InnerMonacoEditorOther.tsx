@@ -75,9 +75,11 @@ function pickerContextFor(ctx: LineContext): Omit<
 export default function InnerMonacoEditorOther({
   value,
   onChange,
+  language = "markdown",
 }: {
   value: string;
   onChange: (value: string) => void;
+  language?: string;
 }) {
   // the editor's change listener is set once, at mount, so it calls the latest
   const onChangeRef = useRef(onChange);
@@ -280,7 +282,7 @@ export default function InnerMonacoEditorOther({
             suggest: { showWords: false, preview: false },
             inlayHints: { enabled: "on" },
           }}
-          defaultLanguage="markdown"
+          defaultLanguage={language}
           theme="vs-dark"
           defaultValue={value}
           onMount={handleEditorDidMount}

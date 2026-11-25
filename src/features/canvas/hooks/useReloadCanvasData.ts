@@ -1,3 +1,4 @@
+import { canvasFileKeys } from "./canvasCourseFileHooks";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import { canvasAssignmentKeys, useCanvasAssignmentsQuery } from "./canvasAssignmentHooks";
@@ -28,6 +29,7 @@ export const useReloadCanvasData = () => {
       canvasCourseModuleKeys.modules(settings.canvasId),
       canvasPageKeys.pagesInCourse(settings.canvasId),
       canvasQuizKeys.quizzes(settings.canvasId),
+      canvasFileKeys.files(settings.canvasId),
     ])
       queryClient.invalidateQueries({ queryKey });
   };

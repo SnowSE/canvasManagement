@@ -17,7 +17,9 @@ const getFileSize = async (pathToFile: string): Promise<number> => {
 
 export const uploadToCanvasPart1 = async (
   pathToUpload: string,
-  canvasCourseId: number
+  canvasCourseId: number,
+  /** The folder of the course's Canvas files it goes in, made if it isn't there; the course's own when left out. */
+  canvasFolder?: string
 ) => {
   try {
     const url = `${canvasApi}/courses/${canvasCourseId}/files`;
@@ -26,6 +28,7 @@ export const uploadToCanvasPart1 = async (
 
     formData.append("name", path.basename(pathToUpload));
     formData.append("size", (await getFileSize(pathToUpload)).toString());
+    if (canvasFolder) formData.append("parent_folder_path", canvasFolder);
 
     const response = await rateLimitAwarePost<{
       upload_url: string;
@@ -62,7 +65,7 @@ export const uploadToCanvasPart2 = async ({
     const fileName = path.basename(pathToUpload);
     formData.append("file", fileBuffer, fileName);
 
-    const response = await rateLimitAwarePost<{ url: string }>(
+    const response = await rateLimitAwarePost<{ id: number; url: string }>(
       upload_url,
       formData,
       {
@@ -83,7 +86,8 @@ export const uploadToCanvasPart2 = async ({
       console.log("redirect response", redirectResponse.data);
     }
     // console.log("returning from part 2", JSON.stringify(response.data));
-    return response.data.url;
+    // the file as Canvas stored it: its id, and the address that downloads it
+    return response.data;
   } catch (error) {
     console.error("Error uploading file to Canvas part 2:", error);
     throw error;

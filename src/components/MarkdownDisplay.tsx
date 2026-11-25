@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef } from "react";
 import { useLocalCourseSettingsQuery } from "@/features/local/course/localCoursesHooks";
 import { SuspenseAndErrorHandling } from "./SuspenseAndErrorHandling";
 import { markdownToHTMLSafe } from "@/services/htmlMarkdownUtils";
+import { courseFileFor, localFileUrl } from "@/services/courseFileLinks";
+import { useCourseFilePathsQuery, usePreviewBase } from "@/features/local/files/fileHooks";
 import { LocalCourseSettings } from "@/features/local/course/localCourseSettings";
 import {
   resolveCanvasPageHrefsInHtml,
@@ -61,6 +63,8 @@ function DangerousInnerMarkdown({
   convertImages?: boolean;
   resolveMdLinks?: boolean;
 }) {
+  const previewBase = usePreviewBase();
+  const { data: courseFiles } = useCourseFilePathsQuery();
   const pages = useCoursePagesQuery().map(({ moduleName, page }) => ({
     moduleName,
     name: page.name,
@@ -71,6 +75,11 @@ function DangerousInnerMarkdown({
       convertImages,
       settings,
       replaceText,
+      // the file as it is on disk, not its uploaded copy
+      fileHref: (link) => {
+        const path = courseFileFor(link, courseFiles ?? []);
+        return previewBase && path && localFileUrl(previewBase, settings.name, path);
+      },
     }),
     settings.name,
     pages

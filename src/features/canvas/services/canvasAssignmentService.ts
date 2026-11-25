@@ -35,6 +35,41 @@ const asListed = (a: CanvasAssignment): CanvasAssignment => ({
   unlock_at: a.unlock_at ? new Date(a.unlock_at).toLocaleString() : undefined, // timezones?
 });
 
+/** An assignment's own fields (everything but its rubric and overrides) as the Canvas API wants them. */
+export const assignmentSettingsForCanvas = (
+  localAssignment: LocalAssignment,
+  settings: LocalCourseSettings,
+  canvasAssignmentGroupId?: number,
+  canvasLinkTargets?: CanvasLinkTargets,
+  publishOptions?: CanvasAssignmentPublishOptions
+) => ({
+  name: localAssignment.name,
+  submission_types: localAssignment.submissionTypes.map((t) =>
+    t.toString()
+  ),
+  allowed_extensions: localAssignment.allowedFileUploadExtensions.map(
+    (e) => e.toString()
+  ),
+  description: markdownToHTMLSafe({
+    markdownString: localAssignment.description,
+    settings,
+    replaceText: getClassroomReplaceText({
+      assignment: localAssignment,
+      settings,
+      strict: true,
+    }),
+    canvasLinkTargets,
+  }),
+  due_at: getDateFromString(localAssignment.dueAt)?.toISOString(),
+  // null clears a date in Canvas, so the file decides either way
+  lock_at: localAssignment.lockAt ? getDateFromString(localAssignment.lockAt)?.toISOString() : null,
+  unlock_at: localAssignment.unlockAt ? getDateFromString(localAssignment.unlockAt)?.toISOString() : null,
+  points_possible: assignmentPoints(localAssignment.rubric),
+  assignment_group_id: canvasAssignmentGroupId,
+  ...groupFields(publishOptions),
+  ...externalToolFields(localAssignment),
+});
+
 export const canvasAssignmentService = {
   async getAll(courseId: number): Promise<CanvasAssignment[]> {
     const url = `${canvasApi}/courses/${courseId}/assignments?${ownDates}`;
@@ -106,41 +141,19 @@ export const canvasAssignmentService = {
   ) {
     console.log(`Updating assignment: ${localAssignment.name}`);
     const url = `${canvasApi}/courses/${courseId}/assignments/${canvasAssignmentId}`;
-    const body = {
-      assignment: {
-        name: localAssignment.name,
-        submission_types: localAssignment.submissionTypes.map((t) =>
-          t.toString()
-        ),
-        allowed_extensions: localAssignment.allowedFileUploadExtensions.map(
-          (e) => e.toString()
-        ),
-        description: markdownToHTMLSafe({
-          markdownString: localAssignment.description,
-          settings,
-          replaceText: getClassroomReplaceText({
-            assignment: localAssignment,
-            settings,
-            strict: true,
-          }),
-          canvasLinkTargets,
-        }),
-        due_at: getDateFromString(localAssignment.dueAt)?.toISOString(),
-        // null clears a date in Canvas, so the file decides either way
-        lock_at: localAssignment.lockAt ? getDateFromString(localAssignment.lockAt)?.toISOString() : null,
-        unlock_at: localAssignment.unlockAt ? getDateFromString(localAssignment.unlockAt)?.toISOString() : null,
-        points_possible: assignmentPoints(localAssignment.rubric),
-        assignment_group_id: canvasAssignmentGroupId,
-        ...groupFields(publishOptions),
-        ...externalToolFields(localAssignment),
-      },
-    };
+    const body = { assignment: assignmentSettingsForCanvas(localAssignment, settings, canvasAssignmentGroupId, canvasLinkTargets, publishOptions) };
 
     const { data: canvasAssignment } = await axiosClient.put<CanvasAssignment>(
       url,
       body
     );
     return asListed(canvasAssignment);
+  },
+
+  /** Only these fields of the assignment, as assignmentSettingsForCanvas has them: a row sent on its own (see sendToCanvas). */
+  async sendFields(courseId: number, canvasAssignmentId: number, fields: Record<string, unknown>) {
+    const { data } = await axiosClient.put<CanvasAssignment>(`${canvasApi}/courses/${courseId}/assignments/${canvasAssignmentId}`, { assignment: fields });
+    return asListed(data);
   },
 
   /**

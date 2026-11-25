@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { zodCourseItemType } from "@/features/local/course/courseItemTypes";
 import publicProcedure from "@/services/serverFunctions/publicProcedure";
 import { router } from "@/services/serverFunctions/trpcSetup";
 import {
@@ -10,7 +11,7 @@ import { gitService } from "./gitService";
 const zodItemRef = z.object({
   courseName: z.string(),
   moduleName: z.string(),
-  type: z.enum(["Assignment", "Quiz", "Page"]),
+  type: zodCourseItemType,
   name: z.string(),
 });
 

@@ -33,8 +33,18 @@ describe("currentItemFromPath", () => {
     expect(currentItemFromPath("/course/c/lecture/9%2F9%2F2026")).toEqual({ kind: "lecture", lectureDay: "09/09/2026" });
     expect(currentItemFromPath("/course/c/lecture/not-a-date")).toBeUndefined();
   });
+  it("is nothing for an address whose word for the kind is no kind's", () => {
+    expect(currentItemFromPath("/course/c/modules/01%20Intro/slides/Deck%201")).toBeUndefined();
+    expect(currentItemFromPath("/course/c/modules/01%20Intro/constructor/x")).toBeUndefined();
+  });
   it("reads an item's module, type and name", () => {
-    expect(currentItemFromPath("/course/c/modules/01%20Intro/quiz/Quiz%201")).toEqual({ kind: "item", moduleName: "01 Intro", type: "Quiz", name: "Quiz 1" });
+    expect(currentItemFromPath("/course/c/modules/01%20Intro/quiz/Quiz%201")).toEqual({ kind: "item", moduleName: "01 Intro", type: "quiz", name: "Quiz 1" });
     expect(currentItemFromPath("/course/c")).toBeUndefined();
+  });
+});
+
+describe("the item a course url is about", () => {
+  it("is a module's file, by its whole name", () => {
+    expect(currentItemFromPath("/course/Survey/modules/7%20-%20Arrays/file/k-koans.html")).toEqual({ kind: "item", moduleName: "7 - Arrays", type: "file", name: "k-koans.html" });
   });
 });

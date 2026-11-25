@@ -1,5 +1,5 @@
 import { RightSingleChevron } from "@/components/icons/RightSingleChevron";
-import { ItemTypeIcon } from "../../../../ItemTypeIcon";
+import { AssignmentIcon } from "../../../../itemIcons";
 
 export default function EditAssignmentHeader({
   assignmentName,
@@ -12,7 +12,7 @@ export default function EditAssignmentHeader({
         <RightSingleChevron />
       </span>
       <div className="w-5 ms-3 max-md:ms-1 shrink-0 my-auto">
-        <ItemTypeIcon type="assignment" />
+        <AssignmentIcon />
       </div>
       <div className="my-auto px-2 max-md:px-1 truncate min-w-10 flex-auto">{assignmentName}</div>
     </div>
