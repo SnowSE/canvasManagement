@@ -114,6 +114,21 @@ describe("useAuthoritativeUpdates", () => {
     expect(result.current.clientIsAuthoritative).toBe(true);
   });
 
+  it("takes the server's text when the rewrite was announced in another window of this browser (Compare popped out beside the editor)", async () => {
+    const { result, rerender } = renderForItem("quiz:Week 1/Quiz 3", "co mpiling");
+    act(() => result.current.textUpdate("co mpiling, typed"));
+    act(() => result.current.textSaved("co mpiling, typed"));
+
+    // another window announces its pull, as Compare in its own window does
+    const otherWindow = new BroadcastChannel("canvas-manager-rewrites");
+    otherWindow.postMessage({ itemKey: "quiz:Week 1/Quiz 3" });
+    otherWindow.close();
+    await new Promise((delivered) => setTimeout(delivered, 50));
+
+    rerender({ itemKey: "quiz:Week 1/Quiz 3", startingText: "co mpiling" });
+    expect(result.current.clientIsAuthoritative).toBe(false);
+  });
+
   it("is not told to take the next server text for another item's rewrite", () => {
     const { result, rerender } = renderForItem("quiz:Week 1/Quiz 1", "a");
     act(() => result.current.textUpdate("a typed"));

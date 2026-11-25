@@ -30,12 +30,20 @@ import { useState, useMemo, useCallback } from "react";
  */
 // the items the app has just rewritten outside their editor (see takeNextFromServer)
 const rewritten = new Set<string>();
+// every window of this browser hears it: Compare often sits in a window of its own, beside the editor's
+const rewrites = typeof BroadcastChannel === "undefined" ? undefined : new BroadcastChannel("canvas-manager-rewrites");
+rewrites?.addEventListener("message", (e: MessageEvent<{ itemKey?: string }>) => {
+  if (e.data?.itemKey) rewritten.add(e.data.itemKey);
+});
 
 /** The key an editor opens an item under, and the app names the item by when it rewrites it (see takeNextFromServer). */
 export const editorItemKey = (kind: "assignment" | "quiz" | "page", moduleName: string, name: string) => `${kind}:${moduleName}/${name}`;
 
 /** Before the app rewrites an item outside its editor: the editor open on it takes the server's next text, whatever it is. */
-export const takeNextFromServer = (itemKey: string) => void rewritten.add(itemKey);
+export const takeNextFromServer = (itemKey: string) => {
+  rewritten.add(itemKey);
+  rewrites?.postMessage({ itemKey });
+};
 
 export function useAuthoritativeUpdates({
   itemKey,

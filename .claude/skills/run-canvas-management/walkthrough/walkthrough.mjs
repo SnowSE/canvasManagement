@@ -226,10 +226,8 @@ time("into Canvas");
     return [...(held.questions[quiz.id] ?? [])].sort((a, b) => a.position - b.position)[0]?.question_text ?? "";
   };
   const differingRows = () => page.evaluate(() => [...document.querySelectorAll("tr")].filter((tr) => tr.querySelector(".bg-rose-500")).map((tr) => tr.innerText.replace(/\s+/g, " ").slice(0, 60)));
-  const move = async (label) => {
-    await page.getByRole("button", { name: label }).first().click();
-    await page.locator("div.fixed.inset-0 button", { hasText: /^Replace/ }).first().click();
-  };
+  // a row's slab moves it at a click, with nothing to confirm
+  const move = (label) => page.getByRole("button", { name: label }).first().click();
   const openCompare = async () => {
     await page.goto(`${base}/course/Walkthrough/modules/${M}/quiz/Quiz%201?panes=d`, { waitUntil: "load" });
     // the heading is shown in capitals, and innerText reports it so

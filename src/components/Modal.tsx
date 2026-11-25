@@ -1,4 +1,5 @@
 "use client";
+import { createPortal } from "react-dom";
 import React, { ReactNode, useCallback, useMemo, useState } from "react";
 
 export interface ModalControl {
@@ -65,12 +66,10 @@ export default function Modal({
             </button>
           )}
 
+      {/* drawn at the top of the page: inside a bar with a blurred background, a fixed box is held to the bar and the dialog was cut off */}
+      {modalControl.isOpen && typeof document !== "undefined" && createPortal(
       <div
-        className={
-          modalControl.isOpen
-            ? `transition-all duration-400 fixed inset-0 ${modalControl.position ? "" : "flex items-center justify-center"} h-screen ${backgroundCoverColor} z-50 w-screen`
-            : "hidden h-0 w-0 p-1 -z-50"
-        }
+        className={`transition-all duration-400 fixed inset-0 ${modalControl.position ? "" : "flex items-center justify-center"} h-screen ${backgroundCoverColor} z-50 w-screen`}
         onClick={modalControl.closeModal}
       >
         <div
@@ -90,10 +89,11 @@ export default function Modal({
               : undefined
           }
         >
-          {modalControl.isOpen &&
-            children({ closeModal: modalControl.closeModal })}
+          {children({ closeModal: modalControl.closeModal })}
         </div>
-      </div>
+      </div>,
+      document.body,
+      )}
     </>
   );
 }

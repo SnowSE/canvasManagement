@@ -552,7 +552,13 @@ const CompareLayout: FC<{
 
         {inCanvas && (
           <>
-            <FieldsTable fields={report.fields} pullable={pull?.movable} sendable={send?.sent} onMove={(to, field) => ask(to, [field])} />
+            <FieldsTable
+              fields={report.fields}
+              pullable={pull?.movable}
+              sendable={send?.sent}
+              // one row moves at a click: its slab says which way, and only Pull all asks first
+              onMove={(to, field) => (to === "file" ? pull?.onPull([field]) : send?.onSend([field]))}
+            />
             {children}
             {report.description && (
               <DescriptionDiff
