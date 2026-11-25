@@ -7,7 +7,7 @@ import { useLocalCourseSettingsQuery } from "@/features/local/course/localCourse
 import EditPageButtons from "./EditPageButtons";
 import ClientOnly from "@/components/ClientOnly";
 import { useCourseContext } from "@/app/course/[courseName]/context/courseContext";
-import { useAuthoritativeUpdates } from "@/app/course/[courseName]/utils/useAuthoritativeUpdates";
+import { editorItemKey, useAuthoritativeUpdates } from "@/app/course/[courseName]/utils/useAuthoritativeUpdates";
 import EditPageHeader from "./EditPageHeader";
 import { UpdatePageName } from "./UpdatePageName";
 import { EditLayout } from "@/components/EditLayout";
@@ -34,7 +34,7 @@ export default function EditPage({
 
   const { clientIsAuthoritative, text, textUpdate, textSaved, monacoKey } =
     useAuthoritativeUpdates({
-      itemKey: `page:${moduleName}/${pageName}`,
+      itemKey: editorItemKey("page", moduleName, pageName),
       startingText: localPageMarkdownUtils.toMarkdown(page),
     });
 
@@ -82,7 +82,7 @@ export default function EditPage({
       if (!leaving) setError(e.toString());
     }
   };
-  useDelayedSave(`page:${moduleName}/${pageName}`, 500, save, [
+  useDelayedSave(editorItemKey("page", moduleName, pageName), 500, save, [
     clientIsAuthoritative,
     courseName,
     isFetching,
@@ -97,7 +97,7 @@ export default function EditPage({
 
   return (
     <EditLayout
-      itemKey={`page:${moduleName}/${pageName}`}
+      itemKey={editorItemKey("page", moduleName, pageName)}
       Header={<EditPageHeader pageName={pageName} />}
       HeaderActions={
         <UpdatePageName pageName={pageName} moduleName={moduleName} />

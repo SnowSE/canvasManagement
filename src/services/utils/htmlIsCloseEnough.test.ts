@@ -86,3 +86,26 @@ describe("an image, compared by what it shows (teichert#28)", () => {
     expect(htmlIsCloseEnough(image(7), image(8))).toBe(false);
   });
 });
+
+describe("a code block the app colours", () => {
+  it("is the same as Canvas's plain copy of it: the colours are only how it looks", () => {
+    const plain = '<pre><code class="language-python">x = "a" # c\n</code></pre>';
+    const coloured = '<pre><code class="language-python">x = <span style="color:#0a3069">"a"</span> <span style="color:#6e7781"># c</span>\n</code></pre>';
+    expect(htmlIsCloseEnough(plain, coloured)).toBe(true);
+    expect(htmlIsCloseEnough(plain, coloured.replace('"a"', '"b"'))).toBe(false);
+  });
+});
+
+describe("whitespace, compared as one separator wherever it shows", () => {
+  it("is a difference where a space splits or joins words", () => {
+    expect(htmlIsCloseEnough("<p>Before compiling, it expands</p>", "<p>Before co mpiling, it expands</p>")).toBe(false);
+    expect(htmlIsCloseEnough("<p>a <code>b</code> c</p>", "<p>a <code>b</code>c</p>")).toBe(false);
+  });
+  it("is no difference where only its amount or kind changes, as Canvas re-saves text", () => {
+    expect(htmlIsCloseEnough("<p>one two\nthree</p>", "<p>one  two three</p>")).toBe(true);
+  });
+  it("is no difference between block tags, where it only lays the HTML out", () => {
+    expect(htmlIsCloseEnough("<p>What does this print?</p><pre><code>x</code></pre>", "<p>What does this print?</p>\n<pre><code>x</code></pre>\n")).toBe(true);
+    expect(htmlIsCloseEnough("<ul><li>a</li><li>b</li></ul>", "<ul>\n  <li>a</li>\n  <li>b</li>\n</ul>")).toBe(true);
+  });
+});

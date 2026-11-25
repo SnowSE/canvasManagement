@@ -20,6 +20,8 @@ const UNSET = "—";
 export const plainText = (html: string | null | undefined) =>
   (html ?? "")
     .replace(/<script[\s\S]*?<\/script>/g, "")
+    // a span sits inside a word as often as around one (highlighted code: "fn", "label", "("), so it adds no space
+    .replace(/<\/?span\b[^>]*>/g, "")
     .replace(/<[^>]+>/g, " ")
     .replaceAll("&nbsp;", " ")
     .replaceAll("&lt;", "<")
