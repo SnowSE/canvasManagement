@@ -350,3 +350,19 @@ Local `pnpm dev` runs have no `GIT_SHA` and skip the check.
 - error list for the session, with an AI explanation per error
 - matching questions have distractors
    - `-` in the question can be escaped with `\-`
+
+## Licences
+
+The published image bundles third-party code. `pnpm licenses list --prod`
+(run through the container wrapper above) lists every production package
+with its licence; as of November 2026 they are all permissive: MIT (most),
+Apache-2.0, ISC, BSD-2-Clause, BSD-3-Clause, MIT-0, BlueOak-1.0.0,
+Python-2.0, 0BSD, Zlib, Unlicense, CC0-1.0, and CC-BY-4.0 (caniuse-lite data)
+and MPL-2.0 (lightningcss), the last two used only at build time.
+
+Named here because its licence asks for the notice to be reproduced:
+[highlight.js](https://github.com/highlightjs/highlight.js), BSD-3-Clause,
+Copyright (c) 2006, Ivan Sagalaev, which colours the code blocks. The full
+text is in `node_modules/highlight.js/LICENSE` of a checkout.
+
+Grammars for languages highlight.js lacks (Forth, k, nemo) are this repo's own.

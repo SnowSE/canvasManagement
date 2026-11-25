@@ -10,6 +10,7 @@ import { PageHelp } from "@/app/course/[courseName]/modules/[moduleName]/page/[p
 import { CurrentItem } from "@/app/course/[courseName]/currentItem";
 import { HelpLinks, HelpPanel } from "./HelpParts";
 import {
+  CodeBlocksHelp,
   EncodedBlocksHelp,
   ImagesHelp,
   ListTableHelp,
@@ -41,6 +42,7 @@ export function CourseHelp({ item }: { item?: CurrentItem }) {
       <MathHelp />
       <ListTableHelp />
       <MermaidHelp />
+      <CodeBlocksHelp />
       <EncodedBlocksHelp />
       <HelpLinks
         links={[

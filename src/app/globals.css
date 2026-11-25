@@ -9,7 +9,8 @@
   --container-names: 760px;
   --font-sans: "DM Sans", sans-serif;
   --font-serif: "DM Sans", serif;
-  --font-mono: "DM Sans", monospace;
+  /* a real monospace stack: code has to line up (it was "DM Sans") */
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 }
 
 @layer utilities {
