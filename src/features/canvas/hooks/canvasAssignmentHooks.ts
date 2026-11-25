@@ -140,7 +140,7 @@ export const useUpdateAssignmentInCanvasMutation = () => {
       // module follow, then the item is read back whole if any of them changed
       queryClient.setQueryData(listKey, merge(byId, saved));
       // what Compare with Canvas shows as in sync is left alone: two requests fewer
-      const rubricUnchanged = !!before && rubricInSync(assignment.rubric, before.rubric);
+      const rubricUnchanged = !!before && rubricInSync(assignment.rubric, before.rubric, before.use_rubric_for_grading);
       const [{ overridesChanged }, placed] = await Promise.all([
         canvasAssignmentService.syncRubricAndOverrides(settings.canvasId, saved, assignment, publishOptions?.overrides, { rubricUnchanged }),
         placeInModule(moduleName, assignmentModuleItem(saved)),

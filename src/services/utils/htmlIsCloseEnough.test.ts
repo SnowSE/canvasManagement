@@ -72,3 +72,17 @@ describe("a link to an uploaded file", () => {
     expect(htmlIsCloseEnough('<a href="https://example.com/a?x=1">a</a>', '<a href="https://example.com/a?x=2">a</a>')).toBe(false);
   });
 });
+
+describe("an image, compared by what it shows (teichert#28)", () => {
+  const diagram = (code: string, more = "") => `<p><img src="https://mermaid.ink/img/pako:${code}?type=svg" alt="diagram"${more}></p>`;
+  it("is a difference when a diagram was edited: its picture is another address", () => {
+    expect(htmlIsCloseEnough(diagram("eNpLy8kvT85ILCpRCHHhAgAhnQQ9"), diagram("eNpLy8kvT85ILCpRCHHhUgAAIZ0EPQ"))).toBe(false);
+  });
+  it("is the same diagram with what Canvas adds to an image", () => {
+    expect(htmlIsCloseEnough(diagram("eNpLy8kvT85ILCpR"), diagram("eNpLy8kvT85ILCpR", ' loading="lazy" data-api-returntype="File"'))).toBe(true);
+  });
+  it("is a difference when a page shows another uploaded image", () => {
+    const image = (id: number) => `<img src="https://snow.instructure.com/courses/42/files/${id}/download?verifier=abc">`;
+    expect(htmlIsCloseEnough(image(7), image(8))).toBe(false);
+  });
+});
