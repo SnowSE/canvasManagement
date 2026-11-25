@@ -16,6 +16,7 @@ import { useLocalCourseSettingsQuery } from "@/features/local/course/localCourse
 import { getTermName } from "@/features/local/utils/timeUtils";
 import { CurrentItem, defaultLectureDay, useCurrentItem } from "../currentItem";
 import { coursePanes, PaneContext, PaneNote, paneLetters, paneMinWidth } from "./coursePanes";
+import { defaultMinWidth } from "./minWidths";
 import { usePopOutPane } from "./popOut";
 import { FollowNavigation } from "./FollowNavigation";
 import { ItemEditing } from "./ItemEditing";
@@ -126,7 +127,7 @@ export function CourseFrame({ children }: { children: ReactNode }) {
           <LeadSpacer />
           {panes.map(({ Content, ...pane }) => (
             // the server renders what the first screen shows: the course page's calendar
-            <Pane key={pane.id} {...pane} hiddenByDefault={pane.offByDefault} minWidth={minWidth} views={views} ssr={pane.id === "calendar" && onCoursePage}>
+            <Pane key={pane.id} {...pane} hiddenByDefault={pane.offByDefault} minWidth={defaultMinWidth(pane.id, minWidth)} views={views} ssr={pane.id === "calendar" && onCoursePage}>
               <Content {...ctx} />
             </Pane>
           ))}
