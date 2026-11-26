@@ -604,6 +604,23 @@ describe("getSyncReport - quiz options", () => {
     expect(report({}).fields.filter((f) => !f.same)).toEqual([]);
   });
 
+  it("is not called in sync while its questions haven't been compared: it says so instead", () => {
+    const status = getSyncStatus({ item: quiz, canvasItem: { ...canvasQuiz, published: true }, type: "quiz", settings: baseSettings });
+    expect(status.unchecked).toBe("questions not checked yet");
+    expect(status.message).toBe("questions not checked yet");
+    expect(status.differences).toEqual([]);
+  });
+  it("is in sync without its questions when they matched at the last check and nothing changed since", () => {
+    const status = getSyncStatus({ item: quiz, canvasItem: { ...canvasQuiz, published: true }, type: "quiz", settings: baseSettings, questionsMatchedBefore: true });
+    expect(status.unchecked).toBeUndefined();
+    expect(status.status).toBe("published");
+  });
+  it("is checked once its questions are compared, none or some", () => {
+    const status = getSyncStatus({ item: quiz, canvasItem: { ...canvasQuiz, published: true }, type: "quiz", settings: baseSettings, canvasQuestions: [] });
+    expect(status.unchecked).toBeUndefined();
+    expect(status.status).toBe("published");
+  });
+
   it("reports each option that differs", () => {
     const fields = report({
       access_code: "old",

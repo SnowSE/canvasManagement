@@ -13,6 +13,7 @@ import { LocalCoursePage } from "@/features/local/pages/localCoursePageModels";
 import { useModulesOfName } from "@/features/local/modules/localCourseModuleHooks";
 import { useCalendarQuizQuestions } from "../../context/CalendarQuizQuestionsProvider";
 import { getSyncStatus, ItemSyncStatus } from "./getAssignmentSyncStatus";
+import { checkedQuizzes } from "@/features/canvas/hooks/checkedQuizzes";
 
 // Each item's last status, with what it was compared from. Comparing an item
 // renders its markdown, which is slow, so it's compared again only when one
@@ -39,7 +40,7 @@ export function useMarkdownItemStatusOf(type: "assignment" | "quiz" | "page") {
   const { data: rosterStudents } = useRosterStudentsQuery();
   const { data: rosterGroupSets } = useRosterGroupSetsQuery();
   const roster = { students: rosterStudents, groupSets: rosterGroupSets };
-  // filled in the background for this week's and the next three weeks' quizzes
+  // filled in the background, every quiz in turn (this week's and the next three weeks' first: see quizzesToCheck)
   const quizQuestions = useCalendarQuizQuestions();
   const { data: canvasModules, isFetching: modulesRefetching } = useCanvasModulesWithItemsQuery();
   const canvasLinkTargets = { assignments: canvasAssignments, quizzes: canvasQuizzes };
@@ -55,12 +56,15 @@ export function useMarkdownItemStatusOf(type: "assignment" | "quiz" | "page") {
           ? canvasQuizzes.find((q) => q.title === item.name)
           : canvasPages.find((p) => p.title === item.name);
     const canvasQuestions = type === "quiz" ? quizQuestions[item.name] : undefined;
+    // a quiz whose questions matched at the last check, its file unchanged since, is in sync without fetching them again
+    const questions = type === "quiz" ? (item as LocalQuiz).questions : undefined;
+    const questionsMatchedBefore = !!questions && !canvasQuestions && checkedQuizzes.stillMatches(settings.canvasId, item.name, questions);
     const sharedWith = modulesOfName(type, item.name);
     return remembered(
       `${settings.name}/${type}/${moduleName}/${item.name}`,
-      [item, canvasItem, settings, canvasModules, modulesRefetching, rosterStudents, rosterGroupSets, canvasQuestions, canvasAssignments, canvasQuizzes, sharedWith.join("\n")],
-      () =>
-        getSyncStatus({
+      [item, canvasItem, settings, canvasModules, modulesRefetching, rosterStudents, rosterGroupSets, canvasQuestions, canvasAssignments, canvasQuizzes, sharedWith.join("\n"), questionsMatchedBefore],
+      () => {
+        const status = getSyncStatus({
           item: item as LocalAssignment | LocalQuiz | LocalCoursePage,
           canvasItem,
           type,
@@ -68,10 +72,15 @@ export function useMarkdownItemStatusOf(type: "assignment" | "quiz" | "page") {
           canvasLinkTargets,
           roster,
           canvasQuestions,
+          questionsMatchedBefore,
           sharedWith,
           // not compared while the modules are being refetched (an item was just added to one)
           module: canvasItem && !modulesRefetching ? { file: moduleName, canvas: canvasModuleNames(canvasModules, type, canvasItem) } : undefined,
-        }),
+        });
+        // the questions were compared and none differ: remembered, so the quiz needn't be fetched again until its file changes
+        if (questions && canvasQuestions && !status.differences.some((d) => d.section === "questions")) checkedQuizzes.remember(settings.canvasId, item.name, questions);
+        return status;
+      },
     );
   };
 }

@@ -1,5 +1,6 @@
 "use client";
-import { createContext, ReactNode, useContext, useEffect, useMemo } from "react";
+import { createContext, ReactNode, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { checkedQuizzes, useCheckAllRequests } from "@/features/canvas/hooks/checkedQuizzes";
 import { useQueries, useQueryClient } from "@tanstack/react-query";
 import { CanvasQuizQuestion } from "@/features/canvas/models/quizzes/canvasQuizQuestionModel";
 import {
@@ -30,7 +31,7 @@ export function useCalendarQuizQuestions() {
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
- * Fetches the questions of this week's and the next three weeks' quizzes in
+ * Fetches the questions of the quizzes worth checking (see quizzesToCheck: those edited this session, the next four weeks', and after Reload Canvas Data every one) in
  * the background, one at a time, so the calendar can flag a quiz whose
  * questions differ from Canvas. Shares its cache with the editor and the
  * compare page.
@@ -45,15 +46,32 @@ export default function CalendarQuizQuestionsProvider({
   const calendarItems = useCalendarItemsContext();
   const queryClient = useQueryClient();
 
+  const quizzes = useMemo(
+    () => Object.values(calendarItems).flatMap((modules) => Object.values(modules).flatMap((m) => m.quizzes)),
+    [calendarItems],
+  );
+  // the quizzes whose questions changed in their files this session, by the app or anything else: their status may have changed
+  const seen = useRef(new Map<string, string>());
+  const [edited, setEdited] = useState<string[]>([]);
+  useEffect(() => {
+    const changed = quizzes.filter((q) => {
+      const now = JSON.stringify(q.questions);
+      const before = seen.current.get(q.name);
+      seen.current.set(q.name, now);
+      return before !== undefined && before !== now;
+    });
+    if (changed.length) setEdited((e) => [...changed.map((q) => q.name), ...e.filter((n) => !changed.some((q) => q.name === n))]);
+  }, [quizzes]);
+  const checkAll = useCheckAllRequests() > 0;
+
   const queue = useMemo(() => {
-    const quizzes = Object.values(calendarItems).flatMap((modules) =>
-      Object.values(modules).flatMap((m) => m.quizzes),
-    );
-    return quizzesToCheck(quizzes, new Date()).flatMap((name) => {
+    // a quiz in Canvas with no matching last check is checked once; after that its last check stands until its file changes
+    const unmatched = quizzes.filter((q) => canvasQuizzes?.some((c) => c.title === q.name) && !checkedQuizzes.stillMatches(settings.canvasId, q.name, q.questions)).map((q) => q.name);
+    return quizzesToCheck(quizzes, new Date(), edited, checkAll, unmatched).flatMap((name) => {
       const canvasQuiz = canvasQuizzes?.find((q) => q.title === name);
       return canvasQuiz ? [{ name, canvasQuizId: canvasQuiz.id }] : [];
     });
-  }, [calendarItems, canvasQuizzes]);
+  }, [quizzes, edited, checkAll, canvasQuizzes, settings.canvasId]);
 
   const queryFor = (canvasQuizId: number) => ({
     queryKey: canvasQuizKeys.questions(settings.canvasId, canvasQuizId),
