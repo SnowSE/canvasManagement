@@ -86,6 +86,12 @@ export type ItemSyncStatus = {
    * counts it as an error, and the item can't be sent.
    */
   problem?: string;
+  /**
+   * What couldn't be compared yet (a quiz whose Canvas questions haven't been
+   * fetched): the item isn't called in sync while it is set, nor counted as
+   * differing.
+   */
+  unchecked?: string;
 };
 
 export interface SyncReport extends ItemSyncStatus {
@@ -927,6 +933,7 @@ export function getSyncReport({
   canvasLinkTargets,
   roster,
   canvasQuestions,
+  questionsMatchedBefore,
   module,
   sharedWith,
 }: {
@@ -938,6 +945,8 @@ export function getSyncReport({
   roster?: RosterForStatus;
   /** A quiz's questions in Canvas; without them only its settings are compared. */
   canvasQuestions?: CanvasQuizQuestion[];
+  /** A quiz's questions matched Canvas's at the last check and the file's haven't changed since (see checkedQuizzes): in sync without fetching them. */
+  questionsMatchedBefore?: boolean;
   /** The file's module and the Canvas modules holding the item; without them the module is not compared. */
   module?: { file: string; canvas: string[] };
   /** The modules holding a file of this type and name (see sharedNameProblem); more than one is a problem. */
@@ -1001,18 +1010,17 @@ export function getSyncReport({
         settings,
       ),
     );
-  return buildReport(
-    fields,
-    canvasItem.published,
-    checked.description,
-    problem,
-  );
+  const report = buildReport(fields, canvasItem.published, checked.description, problem);
+  // a quiz's questions are compared only once Canvas's have been fetched; until then it isn't called in sync
+  if (type !== "quiz" || canvasQuestions || questionsMatchedBefore) return report;
+  const unchecked = "questions not checked yet";
+  return { ...report, unchecked, message: report.message || unchecked };
 }
 
 export function getSyncStatus(
   args: Parameters<typeof getSyncReport>[0],
 ): ItemSyncStatus {
-  const { status, message, differences, unpublished, problem } =
+  const { status, message, differences, unpublished, problem, unchecked } =
     getSyncReport(args);
-  return { status, message, differences, unpublished, problem };
+  return { status, message, differences, unpublished, problem, unchecked };
 }

@@ -29,6 +29,8 @@ export const ItemInDay: FC<{
   differences?: SyncField[];
   unpublished?: boolean;
   problem?: string;
+  /** What couldn't be compared yet: not called in sync (a dashed border), not counted as differing. */
+  unchecked?: string;
   scheduleEntry?: AssignmentScheduleEntry;
 }> = ({
   type,
@@ -39,6 +41,7 @@ export const ItemInDay: FC<{
   differences = [],
   unpublished,
   problem,
+  unchecked,
   scheduleEntry,
 }) => {
   const { courseName } = useCourseContext();
@@ -62,11 +65,11 @@ export const ItemInDay: FC<{
           " border rounded-sm px-1 @week:mx-1 mb-1 truncate @week:text-wrap text-nowrap " +
           " bg-slate-800 " +
           " block " +
-          (scheduleEntry ? " border-dashed " : "") +
+          (scheduleEntry || (unchecked && status === "published") ? " border-dashed " : "") +
           (status === "localOnly" ? " text-slate-500 " : "") +
           (status === "incomplete" || problem
             ? " border-rose-900 "
-            : status === "localOnly"
+            : status === "localOnly" || unchecked
               ? " border-slate-600 "
               : " border-green-800 ")
         }
@@ -134,7 +137,7 @@ export const ItemInDay: FC<{
             visible={visible}
             {...tooltipProps}
           />
-        ) : status === "published" ? (
+        ) : status === "published" && !unchecked ? (
           Preview && (
             <Tooltip
               message={
